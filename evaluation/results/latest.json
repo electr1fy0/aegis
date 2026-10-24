@@ -1,0 +1,69 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "model": "lexical-hash-v1",
+  "config_version": "semantic-context-v1+lexical-context-dev-v2",
+  "generated_at": "2026-10-24T14:38:25.246382Z",
+  "results": [
+    {
+      "method": "Lexical Jaccard baseline",
+      "precision": 1.0,
+      "recall": 0.060606,
+      "f1": 0.114286,
+      "false_merges": 0,
+      "missed_pairs": 62,
+      "review_rate": 0.083333
+    },
+    {
+      "method": "Aegis contextual lexical (degraded)",
+      "precision": 1.0,
+      "recall": 0.621212,
+      "f1": 0.766355,
+      "false_merges": 0,
+      "missed_pairs": 25,
+      "review_rate": 1.0
+    }
+  ],
+  "checks": [
+    {
+      "name": "all reports retained",
+      "passed": true,
+      "detail": "60 of 60 input reports have a visible evaluation outcome."
+    },
+    {
+      "name": "held-out fixture cardinality",
+      "passed": true,
+      "detail": "60 reports across 20 incident families; target is 60 reports and 20 families."
+    },
+    {
+      "name": "explicit P0 policy cases",
+      "passed": true,
+      "detail": "P0 returned for 1 of 1 explicit danger cases."
+    },
+    {
+      "name": "negated or hypothetical cases avoid P0",
+      "passed": true,
+      "detail": "No P0 returned for 1 of 1 negative-control groups."
+    },
+    {
+      "name": "contradictory or changing reports stay visible",
+      "passed": true,
+      "detail": "A conflict was returned for 1 of 1 labeled changing-report groups."
+    },
+    {
+      "name": "incomplete reports remain reviewable",
+      "passed": true,
+      "detail": "1 of 1 labeled incomplete groups are unassessed or carry a review reason."
+    }
+  ],
+  "latency": {
+    "p50_ms": 11.843,
+    "p95_ms": 22.564
+  },
+  "limitations": [
+    "All reports and incident labels are synthetic; this small fixed test split does not establish operational accuracy.",
+    "Grouping metrics count report pairs; latency is per-report analysis plus incremental grouping on this process and hardware.",
+    "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF.",
+    "The active Aegis engine used lexical/degraded mode; no semantic result is reported."
+  ],
+  "failures": []
+}
