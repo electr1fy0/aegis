@@ -19,12 +19,13 @@ from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-MODEL_REVISION = "all-MiniLM-L6-v2"
+from .locations import LOCATION_VERSION, canonical_sublocation
+from .model_config import MODEL_COMMIT, MODEL_NAME, MODEL_REVISION
+
 LEXICAL_REVISION = "lexical-hash-v1"
 LEXICAL_DIMENSION = 512
 LEXICAL_CONFIG_VERSION = "lexical-context-dev-v2"
-CONFIG_VERSION = f"semantic-context-v1+{LEXICAL_CONFIG_VERSION}"
+CONFIG_VERSION = f"semantic-context-v1+{LEXICAL_CONFIG_VERSION}+{LOCATION_VERSION}"
 
 _SCORE_WEIGHTS = {
     "semantic": 0.65,
@@ -228,7 +229,9 @@ def _load_local_sentence_transformer() -> Any:
     """Load MiniLM without permitting a hub/network download."""
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(MODEL_NAME, local_files_only=True)
+    return SentenceTransformer(
+        MODEL_NAME, revision=MODEL_COMMIT, local_files_only=True, trust_remote_code=False
+    )
 
 
 def _normalise_text(value: Any) -> str | None:
@@ -532,8 +535,12 @@ def _location_comparison(
     missing: list[str] = []
     left_zone = _normalise_text(incoming.get("zone_id"))
     right_zone = _normalise_text(existing.get("zone_id"))
-    left_sublocation = _normalise_text(incoming.get("sublocation"))
-    right_sublocation = _normalise_text(existing.get("sublocation"))
+    left_sublocation = canonical_sublocation(
+        _normalise_text(incoming.get("sublocation")), left_zone
+    )
+    right_sublocation = canonical_sublocation(
+        _normalise_text(existing.get("sublocation")), right_zone
+    )
     if left_zone is None or right_zone is None:
         missing.append("location")
         reasons.append("Reported zone is missing on at least one report.")

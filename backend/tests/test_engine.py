@@ -142,7 +142,9 @@ def test_local_model_loader_passes_local_files_only(
     assert isinstance(encoder, FakeSentenceTransformer)
     assert received == {
         "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "revision": engine_module.MODEL_COMMIT,
         "local_files_only": True,
+        "trust_remote_code": False,
     }
 
 
@@ -871,7 +873,7 @@ def test_lexical_fallback_uses_dev_calibrated_context_gates_for_grouping() -> No
     }
 
     assert incoming["model_revision"] == LEXICAL_REVISION
-    assert engine.config_version == "semantic-context-v1+lexical-context-dev-v2"
+    assert engine.config_version == "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1"
     evidence = engine.score_pair(incoming, existing)
     assert evidence["semantic_score"] < 0.82
     assert evidence["decision"] == "suggest"
