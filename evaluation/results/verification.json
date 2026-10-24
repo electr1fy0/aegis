@@ -1,0 +1,57 @@
+{
+  "backend": {
+    "covered_lines": 2414,
+    "num_statements": 2414,
+    "percent_covered": 100.0,
+    "covered_branches": 844,
+    "num_branches": 844,
+    "missing_lines": 0,
+    "excluded_lines": 0
+  },
+  "frontend": {
+    "lines": {
+      "total": 745,
+      "covered": 745,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 834,
+      "covered": 834,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 245,
+      "covered": 245,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 565,
+      "covered": 565,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "tests": {
+    "backend": 196,
+    "frontend": 140,
+    "browser": 1
+  },
+  "checks": {
+    "lint": "passed",
+    "format": "passed",
+    "typecheck": "passed",
+    "production_build": "passed",
+    "browser_smoke": "passed",
+    "bun_audit": "no known vulnerabilities",
+    "pip_audit": "no known vulnerabilities"
+  }
+}
