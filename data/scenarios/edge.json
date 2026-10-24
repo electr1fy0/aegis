@@ -1,0 +1,134 @@
+{
+  "scenario": "edge",
+  "version": "aegis-synthetic-2026-10-v1",
+  "reports": [
+    {
+      "text": "No smoke is visible at the hall door; the smell is from toast.",
+      "zone_id": "hall",
+      "sublocation": "north door",
+      "reported_at": "2026-10-25T10:00:00Z",
+      "idempotency_key": "edge-001",
+      "source": "replay"
+    },
+    {
+      "text": "If a fire started here, we would evacuate; this is only a drill briefing.",
+      "zone_id": "hall",
+      "sublocation": "north door",
+      "reported_at": "2026-10-25T10:00:15Z",
+      "idempotency_key": "edge-002",
+      "source": "replay"
+    },
+    {
+      "text": "A possible medical issue was mentioned, but nobody can tell what happened.",
+      "zone_id": null,
+      "sublocation": null,
+      "reported_at": null,
+      "idempotency_key": "edge-003",
+      "source": "replay"
+    },
+    {
+      "text": "A person collapsed and is not responding beside the stage console.",
+      "zone_id": "stage",
+      "sublocation": "console",
+      "reported_at": "2026-10-25T10:00:30Z",
+      "idempotency_key": "edge-004",
+      "source": "replay"
+    },
+    {
+      "text": "The report form says Exit B, but the text says the problem is at Exit A.",
+      "zone_id": "exit-b",
+      "sublocation": "outer gate",
+      "reported_at": "2026-10-25T10:00:45Z",
+      "idempotency_key": "edge-005",
+      "source": "replay"
+    },
+    {
+      "text": "Exit A is blocked by a fallen sign frame.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T10:01:00Z",
+      "idempotency_key": "edge-006",
+      "source": "replay"
+    },
+    {
+      "text": "The inner Exit A doorway is clear and people are passing through.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T10:01:30Z",
+      "idempotency_key": "edge-007",
+      "source": "replay"
+    },
+    {
+      "text": "I cannot tell whether the door is blocked from where I am standing.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T10:02:00Z",
+      "idempotency_key": "edge-008",
+      "source": "replay"
+    },
+    {
+      "text": "A guest is missing near the food area; last seen by the west counter.",
+      "zone_id": "food",
+      "sublocation": "west counter",
+      "reported_at": "2026-10-25T10:02:30Z",
+      "idempotency_key": "edge-009",
+      "source": "replay"
+    },
+    {
+      "text": "The missing guest has been found and is with their family at the west counter.",
+      "zone_id": "food",
+      "sublocation": "west counter",
+      "reported_at": "2026-10-25T10:04:00Z",
+      "idempotency_key": "edge-010",
+      "source": "replay"
+    },
+    {
+      "text": "A cup spilled on the floor at the stage-side refreshment table.",
+      "zone_id": "stage",
+      "sublocation": "refreshment table",
+      "reported_at": "2026-10-25T10:05:00Z",
+      "idempotency_key": "edge-011",
+      "source": "replay"
+    },
+    {
+      "text": "Water is on the floor by the drinks table, creating a slip concern.",
+      "zone_id": "stage",
+      "sublocation": "refreshment table",
+      "reported_at": "2026-10-25T10:05:30Z",
+      "idempotency_key": "edge-012",
+      "source": "replay"
+    },
+    {
+      "text": "Someone reports a loud bang, but cannot identify its source or location.",
+      "zone_id": null,
+      "sublocation": null,
+      "reported_at": null,
+      "idempotency_key": "edge-013",
+      "source": "replay"
+    },
+    {
+      "text": "A visitor appears dizzy but says they are alert and speaking normally.",
+      "zone_id": "registration",
+      "sublocation": "check-in desk",
+      "reported_at": "2026-10-25T10:06:00Z",
+      "idempotency_key": "edge-014",
+      "source": "replay"
+    },
+    {
+      "text": "No one is unconscious at registration; one person is resting after a long walk.",
+      "zone_id": "registration",
+      "sublocation": "check-in desk",
+      "reported_at": "2026-10-25T10:06:15Z",
+      "idempotency_key": "edge-015",
+      "source": "replay"
+    },
+    {
+      "text": "A child was last seen by the west poster table and has not returned to family.",
+      "zone_id": "hall",
+      "sublocation": "west poster table",
+      "reported_at": "2026-10-25T10:07:00Z",
+      "idempotency_key": "edge-016",
+      "source": "replay"
+    }
+  ]
+}

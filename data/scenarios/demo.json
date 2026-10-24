@@ -1,0 +1,198 @@
+{
+  "scenario": "demo",
+  "version": "aegis-synthetic-2026-10-v1",
+  "reports": [
+    {
+      "text": "A guest collapsed beside the west lighting desk and is not responding to people speaking to them.",
+      "zone_id": "stage",
+      "sublocation": "west lighting desk",
+      "reported_at": "2026-10-25T06:30:00Z",
+      "idempotency_key": "demo-001",
+      "source": "replay"
+    },
+    {
+      "text": "Someone near a door might need help, but I cannot say what happened or which door it was.",
+      "zone_id": null,
+      "sublocation": null,
+      "reported_at": null,
+      "idempotency_key": "demo-002",
+      "source": "replay"
+    },
+    {
+      "text": "A visitor twisted an ankle by the north poster aisle and is sitting down.",
+      "zone_id": "hall",
+      "sublocation": "north poster aisle",
+      "reported_at": "2026-10-25T06:34:00Z",
+      "idempotency_key": "demo-003",
+      "source": "replay"
+    },
+    {
+      "text": "People are bunching up because the inner door at Exit A will not open.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T06:38:00Z",
+      "idempotency_key": "demo-004",
+      "source": "replay"
+    },
+    {
+      "text": "A young child is separated from their family at the east information table.",
+      "zone_id": "hall",
+      "sublocation": "east information table",
+      "reported_at": "2026-10-25T06:41:00Z",
+      "idempotency_key": "demo-005",
+      "source": "replay"
+    },
+    {
+      "text": "Water is spreading across the floor under the registration water station.",
+      "zone_id": "registration",
+      "sublocation": "water station",
+      "reported_at": "2026-10-25T06:44:00Z",
+      "idempotency_key": "demo-006",
+      "source": "replay"
+    },
+    {
+      "text": "The projector in the booth has gone dark, so the stage screen is blank.",
+      "zone_id": "stage",
+      "sublocation": "projection booth",
+      "reported_at": "2026-10-25T06:46:00Z",
+      "idempotency_key": "demo-007",
+      "source": "replay"
+    },
+    {
+      "text": "A delivery cart is parked across the outer ramp at Exit B.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T06:48:00Z",
+      "idempotency_key": "demo-008",
+      "source": "replay"
+    },
+    {
+      "text": "There is an attendee with an injured ankle in the poster hall, seated and alert.",
+      "zone_id": "hall",
+      "sublocation": "north poster aisle",
+      "reported_at": "2026-10-25T06:34:45Z",
+      "idempotency_key": "demo-009",
+      "source": "replay"
+    },
+    {
+      "text": "The inside Exit A door seems jammed; the queue has stopped moving through it.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T06:38:45Z",
+      "idempotency_key": "demo-010",
+      "source": "replay"
+    },
+    {
+      "text": "A parent at the east help desk cannot find their small child.",
+      "zone_id": "hall",
+      "sublocation": "east information table",
+      "reported_at": "2026-10-25T06:41:45Z",
+      "idempotency_key": "demo-011",
+      "source": "replay"
+    },
+    {
+      "text": "There is a leak at the drinking-water point by registration, making the tiles wet.",
+      "zone_id": "registration",
+      "sublocation": "water station",
+      "reported_at": "2026-10-25T06:44:45Z",
+      "idempotency_key": "demo-012",
+      "source": "replay"
+    },
+    {
+      "text": "No picture is reaching the main screen from the projection booth.",
+      "zone_id": "stage",
+      "sublocation": "projection booth",
+      "reported_at": "2026-10-25T06:46:45Z",
+      "idempotency_key": "demo-013",
+      "source": "replay"
+    },
+    {
+      "text": "People using Exit B cannot get past a trolley left on the ramp.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T06:48:45Z",
+      "idempotency_key": "demo-014",
+      "source": "replay"
+    },
+    {
+      "text": "At the north display row, one person says their ankle hurts after a misstep.",
+      "zone_id": "hall",
+      "sublocation": "north poster aisle",
+      "reported_at": "2026-10-25T06:35:30Z",
+      "idempotency_key": "demo-015",
+      "source": "replay"
+    },
+    {
+      "text": "I can see the Exit A inner doorway blocked by a fallen sign stand.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T06:39:30Z",
+      "idempotency_key": "demo-016",
+      "source": "replay"
+    },
+    {
+      "text": "Staff are looking for a child last seen beside the hall's eastern information point.",
+      "zone_id": "hall",
+      "sublocation": "east information table",
+      "reported_at": "2026-10-25T06:42:30Z",
+      "idempotency_key": "demo-017",
+      "source": "replay"
+    },
+    {
+      "text": "A puddle is growing beneath the water dispenser near the check-in desks.",
+      "zone_id": "registration",
+      "sublocation": "water station",
+      "reported_at": "2026-10-25T06:45:30Z",
+      "idempotency_key": "demo-018",
+      "source": "replay"
+    },
+    {
+      "text": "The stage display stopped showing slides; the booth projector appears off.",
+      "zone_id": "stage",
+      "sublocation": "projection booth",
+      "reported_at": "2026-10-25T06:47:30Z",
+      "idempotency_key": "demo-019",
+      "source": "replay"
+    },
+    {
+      "text": "The outer Exit B access route is obstructed by a loaded cart.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T06:49:30Z",
+      "idempotency_key": "demo-020",
+      "source": "replay"
+    },
+    {
+      "text": "The person resting beside the posters says they can walk, but their ankle is sore.",
+      "zone_id": "hall",
+      "sublocation": "north poster aisle",
+      "reported_at": "2026-10-25T06:36:15Z",
+      "idempotency_key": "demo-021",
+      "source": "replay"
+    },
+    {
+      "text": "The same Exit A doorway is clear now and people are passing through.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T06:40:15Z",
+      "idempotency_key": "demo-022",
+      "source": "replay"
+    },
+    {
+      "text": "The family reports their child is still missing near the east-side help table.",
+      "zone_id": "hall",
+      "sublocation": "east information table",
+      "reported_at": "2026-10-25T06:43:15Z",
+      "idempotency_key": "demo-023",
+      "source": "replay"
+    },
+    {
+      "text": "The registration fountain is still leaking onto the walkway.",
+      "zone_id": "registration",
+      "sublocation": "water station",
+      "reported_at": "2026-10-25T06:46:15Z",
+      "idempotency_key": "demo-024",
+      "source": "replay"
+    }
+  ]
+}

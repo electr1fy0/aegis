@@ -1,0 +1,239 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "split": "test",
+  "report_groups": {
+    "test-001": "test-G01",
+    "test-002": "test-G02",
+    "test-003": "test-G03",
+    "test-004": "test-G04",
+    "test-005": "test-G05",
+    "test-006": "test-G06",
+    "test-007": "test-G07",
+    "test-008": "test-G08",
+    "test-009": "test-G09",
+    "test-010": "test-G10",
+    "test-011": "test-G11",
+    "test-012": "test-G12",
+    "test-013": "test-G13",
+    "test-014": "test-G14",
+    "test-015": "test-G15",
+    "test-016": "test-G16",
+    "test-017": "test-G17",
+    "test-018": "test-G18",
+    "test-019": "test-G19",
+    "test-020": "test-G20",
+    "test-021": "test-G03",
+    "test-022": "test-G04",
+    "test-023": "test-G05",
+    "test-024": "test-G06",
+    "test-025": "test-G07",
+    "test-026": "test-G08",
+    "test-027": "test-G09",
+    "test-028": "test-G10",
+    "test-029": "test-G11",
+    "test-030": "test-G12",
+    "test-031": "test-G13",
+    "test-032": "test-G14",
+    "test-033": "test-G15",
+    "test-034": "test-G16",
+    "test-035": "test-G17",
+    "test-036": "test-G18",
+    "test-037": "test-G19",
+    "test-038": "test-G20",
+    "test-039": "test-G03",
+    "test-040": "test-G04",
+    "test-041": "test-G05",
+    "test-042": "test-G06",
+    "test-043": "test-G07",
+    "test-044": "test-G08",
+    "test-045": "test-G09",
+    "test-046": "test-G10",
+    "test-047": "test-G11",
+    "test-048": "test-G12",
+    "test-049": "test-G13",
+    "test-050": "test-G14",
+    "test-051": "test-G15",
+    "test-052": "test-G16",
+    "test-053": "test-G17",
+    "test-054": "test-G18",
+    "test-055": "test-G19",
+    "test-056": "test-G20",
+    "test-057": "test-G04",
+    "test-058": "test-G05",
+    "test-059": "test-G06",
+    "test-060": "test-G07"
+  },
+  "groups": [
+    {
+      "id": "test-G01",
+      "report_ids": [
+        "test-001"
+      ]
+    },
+    {
+      "id": "test-G02",
+      "report_ids": [
+        "test-002"
+      ]
+    },
+    {
+      "id": "test-G03",
+      "report_ids": [
+        "test-003",
+        "test-021",
+        "test-039"
+      ]
+    },
+    {
+      "id": "test-G04",
+      "report_ids": [
+        "test-004",
+        "test-022",
+        "test-040",
+        "test-057"
+      ]
+    },
+    {
+      "id": "test-G05",
+      "report_ids": [
+        "test-005",
+        "test-023",
+        "test-041",
+        "test-058"
+      ]
+    },
+    {
+      "id": "test-G06",
+      "report_ids": [
+        "test-006",
+        "test-024",
+        "test-042",
+        "test-059"
+      ]
+    },
+    {
+      "id": "test-G07",
+      "report_ids": [
+        "test-007",
+        "test-025",
+        "test-043",
+        "test-060"
+      ]
+    },
+    {
+      "id": "test-G08",
+      "report_ids": [
+        "test-008",
+        "test-026",
+        "test-044"
+      ]
+    },
+    {
+      "id": "test-G09",
+      "report_ids": [
+        "test-009",
+        "test-027",
+        "test-045"
+      ]
+    },
+    {
+      "id": "test-G10",
+      "report_ids": [
+        "test-010",
+        "test-028",
+        "test-046"
+      ]
+    },
+    {
+      "id": "test-G11",
+      "report_ids": [
+        "test-011",
+        "test-029",
+        "test-047"
+      ]
+    },
+    {
+      "id": "test-G12",
+      "report_ids": [
+        "test-012",
+        "test-030",
+        "test-048"
+      ]
+    },
+    {
+      "id": "test-G13",
+      "report_ids": [
+        "test-013",
+        "test-031",
+        "test-049"
+      ]
+    },
+    {
+      "id": "test-G14",
+      "report_ids": [
+        "test-014",
+        "test-032",
+        "test-050"
+      ]
+    },
+    {
+      "id": "test-G15",
+      "report_ids": [
+        "test-015",
+        "test-033",
+        "test-051"
+      ]
+    },
+    {
+      "id": "test-G16",
+      "report_ids": [
+        "test-016",
+        "test-034",
+        "test-052"
+      ]
+    },
+    {
+      "id": "test-G17",
+      "report_ids": [
+        "test-017",
+        "test-035",
+        "test-053"
+      ]
+    },
+    {
+      "id": "test-G18",
+      "report_ids": [
+        "test-018",
+        "test-036",
+        "test-054"
+      ]
+    },
+    {
+      "id": "test-G19",
+      "report_ids": [
+        "test-019",
+        "test-037",
+        "test-055"
+      ]
+    },
+    {
+      "id": "test-G20",
+      "report_ids": [
+        "test-020",
+        "test-038",
+        "test-056"
+      ]
+    }
+  ],
+  "policy_cases": {
+    "test-G01": "P0",
+    "test-G02": "UNASSESSED",
+    "test-G12": "NOT_P0"
+  },
+  "conflict_groups": [
+    "test-G04"
+  ],
+  "review_groups": [
+    "test-G02"
+  ]
+}

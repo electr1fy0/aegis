@@ -1,0 +1,486 @@
+{
+  "scenario": "busy",
+  "version": "aegis-synthetic-2026-10-v1",
+  "reports": [
+    {
+      "text": "A speaker fell behind the rear cable bridge and does not respond when called; breathing is unclear.",
+      "zone_id": "stage",
+      "sublocation": "rear cable bridge",
+      "reported_at": "2026-10-25T08:00:00Z",
+      "idempotency_key": "busy-001",
+      "source": "replay"
+    },
+    {
+      "text": "A guest may have a problem somewhere, but the reporter does not know what it is or where.",
+      "zone_id": null,
+      "sublocation": null,
+      "reported_at": null,
+      "idempotency_key": "busy-002",
+      "source": "replay"
+    },
+    {
+      "text": "A person stumbled by the northern posters and says their wrist hurts.",
+      "zone_id": "hall",
+      "sublocation": "north poster row",
+      "reported_at": "2026-10-25T08:04:00Z",
+      "idempotency_key": "busy-003",
+      "source": "replay"
+    },
+    {
+      "text": "The inner Exit A door is stuck shut and the line has stopped.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T08:08:00Z",
+      "idempotency_key": "busy-004",
+      "source": "replay"
+    },
+    {
+      "text": "A child wearing a yellow raincoat is separated from their family by the east welcome desk.",
+      "zone_id": "hall",
+      "sublocation": "east welcome desk",
+      "reported_at": "2026-10-25T08:11:00Z",
+      "idempotency_key": "busy-005",
+      "source": "replay"
+    },
+    {
+      "text": "Coffee has spilled across the floor directly in front of the north coffee counter.",
+      "zone_id": "food",
+      "sublocation": "coffee counter",
+      "reported_at": "2026-10-25T08:14:00Z",
+      "idempotency_key": "busy-006",
+      "source": "replay"
+    },
+    {
+      "text": "The left stage monitor has lost its picture; the control booth reports a blank feed.",
+      "zone_id": "stage",
+      "sublocation": "control booth",
+      "reported_at": "2026-10-25T08:17:00Z",
+      "idempotency_key": "busy-007",
+      "source": "replay"
+    },
+    {
+      "text": "A stack of folded chairs blocks half of the outer Exit B ramp.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T08:20:00Z",
+      "idempotency_key": "busy-008",
+      "source": "replay"
+    },
+    {
+      "text": "A blue backpack has been left under the south seating row with nobody nearby.",
+      "zone_id": "food",
+      "sublocation": "south seating",
+      "reported_at": "2026-10-25T08:23:00Z",
+      "idempotency_key": "busy-009",
+      "source": "replay"
+    },
+    {
+      "text": "The front sound desk has lost microphone audio, although the projection still works.",
+      "zone_id": "stage",
+      "sublocation": "front sound desk",
+      "reported_at": "2026-10-25T08:26:00Z",
+      "idempotency_key": "busy-010",
+      "source": "replay"
+    },
+    {
+      "text": "The registration line is crossing the walkway at its east end.",
+      "zone_id": "registration",
+      "sublocation": "east queue",
+      "reported_at": "2026-10-25T08:29:00Z",
+      "idempotency_key": "busy-011",
+      "source": "replay"
+    },
+    {
+      "text": "No smoke is visible by the north hall exit; someone only smelled toasted food.",
+      "zone_id": "hall",
+      "sublocation": "north side exit",
+      "reported_at": "2026-10-25T08:32:00Z",
+      "idempotency_key": "busy-012",
+      "source": "replay"
+    },
+    {
+      "text": "A visitor asks whether the allergen list is available beside the food counters.",
+      "zone_id": "food",
+      "sublocation": "allergen desk",
+      "reported_at": "2026-10-25T08:35:00Z",
+      "idempotency_key": "busy-013",
+      "source": "replay"
+    },
+    {
+      "text": "The badge printer at the west check-in table keeps feeding blank labels.",
+      "zone_id": "registration",
+      "sublocation": "west badge printer",
+      "reported_at": "2026-10-25T08:38:00Z",
+      "idempotency_key": "busy-014",
+      "source": "replay"
+    },
+    {
+      "text": "A handrail cap is loose on the outside steps beside Exit A.",
+      "zone_id": "exit-a",
+      "sublocation": "outer steps",
+      "reported_at": "2026-10-25T08:41:00Z",
+      "idempotency_key": "busy-015",
+      "source": "replay"
+    },
+    {
+      "text": "A visitor in a green scarf is waiting in the south aisle for their group.",
+      "zone_id": "hall",
+      "sublocation": "south aisle",
+      "reported_at": "2026-10-25T08:44:00Z",
+      "idempotency_key": "busy-016",
+      "source": "replay"
+    },
+    {
+      "text": "The tap at the east drinks station will not shut off completely.",
+      "zone_id": "food",
+      "sublocation": "east drinks station",
+      "reported_at": "2026-10-25T08:47:00Z",
+      "idempotency_key": "busy-017",
+      "source": "replay"
+    },
+    {
+      "text": "A visitor says they may have left a phone in the rear stage aisle.",
+      "zone_id": "stage",
+      "sublocation": "rear aisle",
+      "reported_at": "2026-10-25T08:50:00Z",
+      "idempotency_key": "busy-018",
+      "source": "replay"
+    },
+    {
+      "text": "The entrance mat at registration has curled up at its left corner.",
+      "zone_id": "registration",
+      "sublocation": "main entrance mat",
+      "reported_at": "2026-10-25T08:53:00Z",
+      "idempotency_key": "busy-019",
+      "source": "replay"
+    },
+    {
+      "text": "The inside landing near Exit B is crowded by guests waiting for a tour.",
+      "zone_id": "exit-b",
+      "sublocation": "inside landing",
+      "reported_at": "2026-10-25T08:56:00Z",
+      "idempotency_key": "busy-020",
+      "source": "replay"
+    },
+    {
+      "text": "Someone with a painful wrist is seated beside the north poster display.",
+      "zone_id": "hall",
+      "sublocation": "north poster row",
+      "reported_at": "2026-10-25T08:04:45Z",
+      "idempotency_key": "busy-021",
+      "source": "replay"
+    },
+    {
+      "text": "A crowd cannot pass through the jammed inside door at Exit A.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T08:08:45Z",
+      "idempotency_key": "busy-022",
+      "source": "replay"
+    },
+    {
+      "text": "The family is looking for a small child last seen at the eastern help counter.",
+      "zone_id": "hall",
+      "sublocation": "east welcome desk",
+      "reported_at": "2026-10-25T08:11:45Z",
+      "idempotency_key": "busy-023",
+      "source": "replay"
+    },
+    {
+      "text": "The tiles by the coffee stand are slick from a large drink spill.",
+      "zone_id": "food",
+      "sublocation": "coffee counter",
+      "reported_at": "2026-10-25T08:14:45Z",
+      "idempotency_key": "busy-024",
+      "source": "replay"
+    },
+    {
+      "text": "No image is coming from the booth to the stage's left display.",
+      "zone_id": "stage",
+      "sublocation": "control booth",
+      "reported_at": "2026-10-25T08:17:45Z",
+      "idempotency_key": "busy-025",
+      "source": "replay"
+    },
+    {
+      "text": "The ramp at Exit B is narrowed by chairs waiting to be moved.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T08:20:45Z",
+      "idempotency_key": "busy-026",
+      "source": "replay"
+    },
+    {
+      "text": "There is an unattended blue rucksack beneath the southern café seats.",
+      "zone_id": "food",
+      "sublocation": "south seating",
+      "reported_at": "2026-10-25T08:23:45Z",
+      "idempotency_key": "busy-027",
+      "source": "replay"
+    },
+    {
+      "text": "The stage microphone is silent at the front mixing position.",
+      "zone_id": "stage",
+      "sublocation": "front sound desk",
+      "reported_at": "2026-10-25T08:26:45Z",
+      "idempotency_key": "busy-028",
+      "source": "replay"
+    },
+    {
+      "text": "People waiting to check in have spilled into the eastern passage.",
+      "zone_id": "registration",
+      "sublocation": "east queue",
+      "reported_at": "2026-10-25T08:29:45Z",
+      "idempotency_key": "busy-029",
+      "source": "replay"
+    },
+    {
+      "text": "A guest asks about a smoky smell, but says there is no smoke at the north door.",
+      "zone_id": "hall",
+      "sublocation": "north side exit",
+      "reported_at": "2026-10-25T08:32:45Z",
+      "idempotency_key": "busy-030",
+      "source": "replay"
+    },
+    {
+      "text": "The ingredient information is missing from the small desk by the serving area.",
+      "zone_id": "food",
+      "sublocation": "allergen desk",
+      "reported_at": "2026-10-25T08:35:45Z",
+      "idempotency_key": "busy-031",
+      "source": "replay"
+    },
+    {
+      "text": "No names are appearing on badges from the western registration printer.",
+      "zone_id": "registration",
+      "sublocation": "west badge printer",
+      "reported_at": "2026-10-25T08:38:45Z",
+      "idempotency_key": "busy-032",
+      "source": "replay"
+    },
+    {
+      "text": "The outer Exit A stair rail moves at its top fitting.",
+      "zone_id": "exit-a",
+      "sublocation": "outer steps",
+      "reported_at": "2026-10-25T08:41:45Z",
+      "idempotency_key": "busy-033",
+      "source": "replay"
+    },
+    {
+      "text": "Someone wearing a green scarf says their companions have not returned to the southern aisle.",
+      "zone_id": "hall",
+      "sublocation": "south aisle",
+      "reported_at": "2026-10-25T08:44:45Z",
+      "idempotency_key": "busy-034",
+      "source": "replay"
+    },
+    {
+      "text": "Water is dripping continuously from the eastern refill tap.",
+      "zone_id": "food",
+      "sublocation": "east drinks station",
+      "reported_at": "2026-10-25T08:47:45Z",
+      "idempotency_key": "busy-035",
+      "source": "replay"
+    },
+    {
+      "text": "A lost phone is being searched for along the back aisle near the stage.",
+      "zone_id": "stage",
+      "sublocation": "rear aisle",
+      "reported_at": "2026-10-25T08:50:45Z",
+      "idempotency_key": "busy-036",
+      "source": "replay"
+    },
+    {
+      "text": "A raised edge on the check-in entrance mat could catch a shoe.",
+      "zone_id": "registration",
+      "sublocation": "main entrance mat",
+      "reported_at": "2026-10-25T08:53:45Z",
+      "idempotency_key": "busy-037",
+      "source": "replay"
+    },
+    {
+      "text": "Tour visitors have gathered on the indoor Exit B landing and narrowed the passage.",
+      "zone_id": "exit-b",
+      "sublocation": "inside landing",
+      "reported_at": "2026-10-25T08:56:45Z",
+      "idempotency_key": "busy-038",
+      "source": "replay"
+    },
+    {
+      "text": "An attendee reports a wrist injury after tripping near the northern display wall.",
+      "zone_id": "hall",
+      "sublocation": "north poster row",
+      "reported_at": "2026-10-25T08:05:30Z",
+      "idempotency_key": "busy-039",
+      "source": "replay"
+    },
+    {
+      "text": "A display frame is lying across the Exit A inner doorway.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T08:09:30Z",
+      "idempotency_key": "busy-040",
+      "source": "replay"
+    },
+    {
+      "text": "A young visitor in a yellow coat cannot find their parent near the east information point.",
+      "zone_id": "hall",
+      "sublocation": "east welcome desk",
+      "reported_at": "2026-10-25T08:12:30Z",
+      "idempotency_key": "busy-041",
+      "source": "replay"
+    },
+    {
+      "text": "A cup burst near the counter and liquid is spreading into the aisle.",
+      "zone_id": "food",
+      "sublocation": "coffee counter",
+      "reported_at": "2026-10-25T08:15:30Z",
+      "idempotency_key": "busy-042",
+      "source": "replay"
+    },
+    {
+      "text": "The screen on stage left went black while the speaker was presenting.",
+      "zone_id": "stage",
+      "sublocation": "control booth",
+      "reported_at": "2026-10-25T08:18:30Z",
+      "idempotency_key": "busy-043",
+      "source": "replay"
+    },
+    {
+      "text": "A group cannot roll a wheelchair past the chair stack on the outside ramp.",
+      "zone_id": "exit-b",
+      "sublocation": "outer ramp",
+      "reported_at": "2026-10-25T08:21:30Z",
+      "idempotency_key": "busy-044",
+      "source": "replay"
+    },
+    {
+      "text": "I noticed a blue bag under the food court benches and cannot find its owner.",
+      "zone_id": "food",
+      "sublocation": "south seating",
+      "reported_at": "2026-10-25T08:24:30Z",
+      "idempotency_key": "busy-045",
+      "source": "replay"
+    },
+    {
+      "text": "The sound operator says the handheld mic is not reaching the speakers.",
+      "zone_id": "stage",
+      "sublocation": "front sound desk",
+      "reported_at": "2026-10-25T08:27:30Z",
+      "idempotency_key": "busy-046",
+      "source": "replay"
+    },
+    {
+      "text": "The east side of the registration queue is obstructing through traffic.",
+      "zone_id": "registration",
+      "sublocation": "east queue",
+      "reported_at": "2026-10-25T08:30:30Z",
+      "idempotency_key": "busy-047",
+      "source": "replay"
+    },
+    {
+      "text": "The north exit smells like warm bread and reporters see no haze.",
+      "zone_id": "hall",
+      "sublocation": "north side exit",
+      "reported_at": "2026-10-25T08:33:30Z",
+      "idempotency_key": "busy-048",
+      "source": "replay"
+    },
+    {
+      "text": "Someone cannot find the allergen notices at the food information point.",
+      "zone_id": "food",
+      "sublocation": "allergen desk",
+      "reported_at": "2026-10-25T08:36:30Z",
+      "idempotency_key": "busy-049",
+      "source": "replay"
+    },
+    {
+      "text": "The west-side label machine is printing empty name tags.",
+      "zone_id": "registration",
+      "sublocation": "west badge printer",
+      "reported_at": "2026-10-25T08:39:30Z",
+      "idempotency_key": "busy-050",
+      "source": "replay"
+    },
+    {
+      "text": "There is a wobbly handrail at the steps just outside Exit A.",
+      "zone_id": "exit-a",
+      "sublocation": "outer steps",
+      "reported_at": "2026-10-25T08:42:30Z",
+      "idempotency_key": "busy-051",
+      "source": "replay"
+    },
+    {
+      "text": "A guest is separated from friends near the hall's south display row.",
+      "zone_id": "hall",
+      "sublocation": "south aisle",
+      "reported_at": "2026-10-25T08:45:30Z",
+      "idempotency_key": "busy-052",
+      "source": "replay"
+    },
+    {
+      "text": "A faulty faucet is leaking at the drinks refill point on the east side.",
+      "zone_id": "food",
+      "sublocation": "east drinks station",
+      "reported_at": "2026-10-25T08:48:30Z",
+      "idempotency_key": "busy-053",
+      "source": "replay"
+    },
+    {
+      "text": "Someone cannot find their mobile after sitting in the rear aisle.",
+      "zone_id": "stage",
+      "sublocation": "rear aisle",
+      "reported_at": "2026-10-25T08:51:30Z",
+      "idempotency_key": "busy-054",
+      "source": "replay"
+    },
+    {
+      "text": "The corner of the welcome mat is folded back near registration.",
+      "zone_id": "registration",
+      "sublocation": "main entrance mat",
+      "reported_at": "2026-10-25T08:54:30Z",
+      "idempotency_key": "busy-055",
+      "source": "replay"
+    },
+    {
+      "text": "People waiting for the next tour are standing across the inner Exit B landing.",
+      "zone_id": "exit-b",
+      "sublocation": "inside landing",
+      "reported_at": "2026-10-25T08:57:30Z",
+      "idempotency_key": "busy-056",
+      "source": "replay"
+    },
+    {
+      "text": "The Exit A inner doorway is open again; people are walking through now.",
+      "zone_id": "exit-a",
+      "sublocation": "inner door",
+      "reported_at": "2026-10-25T08:10:15Z",
+      "idempotency_key": "busy-057",
+      "source": "replay"
+    },
+    {
+      "text": "Staff are still trying to reunite a family with their missing child at the welcome desk.",
+      "zone_id": "hall",
+      "sublocation": "east welcome desk",
+      "reported_at": "2026-10-25T08:13:15Z",
+      "idempotency_key": "busy-058",
+      "source": "replay"
+    },
+    {
+      "text": "The wet patch in front of the coffee counter is still there.",
+      "zone_id": "food",
+      "sublocation": "coffee counter",
+      "reported_at": "2026-10-25T08:16:15Z",
+      "idempotency_key": "busy-059",
+      "source": "replay"
+    },
+    {
+      "text": "The control room says the left-hand stage display is still without a signal.",
+      "zone_id": "stage",
+      "sublocation": "control booth",
+      "reported_at": "2026-10-25T08:19:15Z",
+      "idempotency_key": "busy-060",
+      "source": "replay"
+    }
+  ]
+}

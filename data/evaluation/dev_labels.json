@@ -1,0 +1,240 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "split": "dev",
+  "report_groups": {
+    "dev-001": "dev-G01",
+    "dev-002": "dev-G02",
+    "dev-003": "dev-G03",
+    "dev-004": "dev-G04",
+    "dev-005": "dev-G05",
+    "dev-006": "dev-G06",
+    "dev-007": "dev-G07",
+    "dev-008": "dev-G08",
+    "dev-009": "dev-G09",
+    "dev-010": "dev-G10",
+    "dev-011": "dev-G11",
+    "dev-012": "dev-G12",
+    "dev-013": "dev-G13",
+    "dev-014": "dev-G14",
+    "dev-015": "dev-G15",
+    "dev-016": "dev-G16",
+    "dev-017": "dev-G17",
+    "dev-018": "dev-G18",
+    "dev-019": "dev-G19",
+    "dev-020": "dev-G20",
+    "dev-021": "dev-G03",
+    "dev-022": "dev-G04",
+    "dev-023": "dev-G05",
+    "dev-024": "dev-G06",
+    "dev-025": "dev-G07",
+    "dev-026": "dev-G08",
+    "dev-027": "dev-G09",
+    "dev-028": "dev-G10",
+    "dev-029": "dev-G11",
+    "dev-030": "dev-G12",
+    "dev-031": "dev-G13",
+    "dev-032": "dev-G14",
+    "dev-033": "dev-G15",
+    "dev-034": "dev-G16",
+    "dev-035": "dev-G17",
+    "dev-036": "dev-G18",
+    "dev-037": "dev-G19",
+    "dev-038": "dev-G20",
+    "dev-039": "dev-G03",
+    "dev-040": "dev-G04",
+    "dev-041": "dev-G05",
+    "dev-042": "dev-G06",
+    "dev-043": "dev-G07",
+    "dev-044": "dev-G08",
+    "dev-045": "dev-G09",
+    "dev-046": "dev-G10",
+    "dev-047": "dev-G11",
+    "dev-048": "dev-G12",
+    "dev-049": "dev-G13",
+    "dev-050": "dev-G14",
+    "dev-051": "dev-G15",
+    "dev-052": "dev-G16",
+    "dev-053": "dev-G17",
+    "dev-054": "dev-G18",
+    "dev-055": "dev-G19",
+    "dev-056": "dev-G20",
+    "dev-057": "dev-G04",
+    "dev-058": "dev-G05",
+    "dev-059": "dev-G06",
+    "dev-060": "dev-G07"
+  },
+  "groups": [
+    {
+      "id": "dev-G01",
+      "report_ids": [
+        "dev-001"
+      ]
+    },
+    {
+      "id": "dev-G02",
+      "report_ids": [
+        "dev-002"
+      ]
+    },
+    {
+      "id": "dev-G03",
+      "report_ids": [
+        "dev-003",
+        "dev-021",
+        "dev-039"
+      ]
+    },
+    {
+      "id": "dev-G04",
+      "report_ids": [
+        "dev-004",
+        "dev-022",
+        "dev-040",
+        "dev-057"
+      ]
+    },
+    {
+      "id": "dev-G05",
+      "report_ids": [
+        "dev-005",
+        "dev-023",
+        "dev-041",
+        "dev-058"
+      ]
+    },
+    {
+      "id": "dev-G06",
+      "report_ids": [
+        "dev-006",
+        "dev-024",
+        "dev-042",
+        "dev-059"
+      ]
+    },
+    {
+      "id": "dev-G07",
+      "report_ids": [
+        "dev-007",
+        "dev-025",
+        "dev-043",
+        "dev-060"
+      ]
+    },
+    {
+      "id": "dev-G08",
+      "report_ids": [
+        "dev-008",
+        "dev-026",
+        "dev-044"
+      ]
+    },
+    {
+      "id": "dev-G09",
+      "report_ids": [
+        "dev-009",
+        "dev-027",
+        "dev-045"
+      ]
+    },
+    {
+      "id": "dev-G10",
+      "report_ids": [
+        "dev-010",
+        "dev-028",
+        "dev-046"
+      ]
+    },
+    {
+      "id": "dev-G11",
+      "report_ids": [
+        "dev-011",
+        "dev-029",
+        "dev-047"
+      ]
+    },
+    {
+      "id": "dev-G12",
+      "report_ids": [
+        "dev-012",
+        "dev-030",
+        "dev-048"
+      ]
+    },
+    {
+      "id": "dev-G13",
+      "report_ids": [
+        "dev-013",
+        "dev-031",
+        "dev-049"
+      ]
+    },
+    {
+      "id": "dev-G14",
+      "report_ids": [
+        "dev-014",
+        "dev-032",
+        "dev-050"
+      ]
+    },
+    {
+      "id": "dev-G15",
+      "report_ids": [
+        "dev-015",
+        "dev-033",
+        "dev-051"
+      ]
+    },
+    {
+      "id": "dev-G16",
+      "report_ids": [
+        "dev-016",
+        "dev-034",
+        "dev-052"
+      ]
+    },
+    {
+      "id": "dev-G17",
+      "report_ids": [
+        "dev-017",
+        "dev-035",
+        "dev-053"
+      ]
+    },
+    {
+      "id": "dev-G18",
+      "report_ids": [
+        "dev-018",
+        "dev-036",
+        "dev-054"
+      ]
+    },
+    {
+      "id": "dev-G19",
+      "report_ids": [
+        "dev-019",
+        "dev-037",
+        "dev-055"
+      ]
+    },
+    {
+      "id": "dev-G20",
+      "report_ids": [
+        "dev-020",
+        "dev-038",
+        "dev-056"
+      ]
+    }
+  ],
+  "policy_cases": {
+    "dev-G01": "P0",
+    "dev-G02": "UNASSESSED",
+    "dev-G12": "NOT_P0",
+    "dev-G13": "NOT_P0"
+  },
+  "conflict_groups": [
+    "dev-G04"
+  ],
+  "review_groups": [
+    "dev-G02"
+  ]
+}

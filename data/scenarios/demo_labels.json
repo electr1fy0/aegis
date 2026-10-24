@@ -1,0 +1,96 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "scenario": "demo",
+  "report_groups": {
+    "demo-001": "demo-G01",
+    "demo-002": "demo-G02",
+    "demo-003": "demo-G03",
+    "demo-004": "demo-G04",
+    "demo-005": "demo-G05",
+    "demo-006": "demo-G06",
+    "demo-007": "demo-G07",
+    "demo-008": "demo-G08",
+    "demo-009": "demo-G03",
+    "demo-010": "demo-G04",
+    "demo-011": "demo-G05",
+    "demo-012": "demo-G06",
+    "demo-013": "demo-G07",
+    "demo-014": "demo-G08",
+    "demo-015": "demo-G03",
+    "demo-016": "demo-G04",
+    "demo-017": "demo-G05",
+    "demo-018": "demo-G06",
+    "demo-019": "demo-G07",
+    "demo-020": "demo-G08",
+    "demo-021": "demo-G03",
+    "demo-022": "demo-G04",
+    "demo-023": "demo-G05",
+    "demo-024": "demo-G06"
+  },
+  "groups": [
+    {
+      "id": "demo-G01",
+      "report_ids": [
+        "demo-001"
+      ]
+    },
+    {
+      "id": "demo-G02",
+      "report_ids": [
+        "demo-002"
+      ]
+    },
+    {
+      "id": "demo-G03",
+      "report_ids": [
+        "demo-003",
+        "demo-009",
+        "demo-015",
+        "demo-021"
+      ]
+    },
+    {
+      "id": "demo-G04",
+      "report_ids": [
+        "demo-004",
+        "demo-010",
+        "demo-016",
+        "demo-022"
+      ]
+    },
+    {
+      "id": "demo-G05",
+      "report_ids": [
+        "demo-005",
+        "demo-011",
+        "demo-017",
+        "demo-023"
+      ]
+    },
+    {
+      "id": "demo-G06",
+      "report_ids": [
+        "demo-006",
+        "demo-012",
+        "demo-018",
+        "demo-024"
+      ]
+    },
+    {
+      "id": "demo-G07",
+      "report_ids": [
+        "demo-007",
+        "demo-013",
+        "demo-019"
+      ]
+    },
+    {
+      "id": "demo-G08",
+      "report_ids": [
+        "demo-008",
+        "demo-014",
+        "demo-020"
+      ]
+    }
+  ]
+}

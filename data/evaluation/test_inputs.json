@@ -1,0 +1,426 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "split": "test",
+  "reports": [
+    {
+      "id": "test-001",
+      "text": "A performer dropped at the green room threshold and is unresponsive to their name; breathing is uncertain.",
+      "zone_id": "stage",
+      "sublocation": "green room threshold",
+      "reported_at": "2026-10-26T09:00:00Z"
+    },
+    {
+      "id": "test-002",
+      "text": "A person could be in trouble somewhere in the venue; no further details were provided.",
+      "zone_id": null,
+      "sublocation": null,
+      "reported_at": null
+    },
+    {
+      "id": "test-003",
+      "text": "A guest caught a toe by the west model table and now has a sore knee.",
+      "zone_id": "hall",
+      "sublocation": "west model table",
+      "reported_at": "2026-10-26T09:04:00Z"
+    },
+    {
+      "id": "test-004",
+      "text": "The lower gate at Exit A will not swing open, and people are waiting.",
+      "zone_id": "exit-a",
+      "sublocation": "lower gate",
+      "reported_at": "2026-10-26T09:08:00Z"
+    },
+    {
+      "id": "test-005",
+      "text": "A senior visitor using a cane is separated from their companion at the south host stand.",
+      "zone_id": "hall",
+      "sublocation": "south host stand",
+      "reported_at": "2026-10-26T09:11:00Z"
+    },
+    {
+      "id": "test-006",
+      "text": "A tray of water has spilled onto the aisle at the bakery island.",
+      "zone_id": "food",
+      "sublocation": "bakery island",
+      "reported_at": "2026-10-26T09:14:00Z"
+    },
+    {
+      "id": "test-007",
+      "text": "The stage wash lights stopped responding at the lighting console.",
+      "zone_id": "stage",
+      "sublocation": "lighting console",
+      "reported_at": "2026-10-26T09:17:00Z"
+    },
+    {
+      "id": "test-008",
+      "text": "A stack of exhibition panels sits across the north approach to Exit B.",
+      "zone_id": "exit-b",
+      "sublocation": "north approach",
+      "reported_at": "2026-10-26T09:20:00Z"
+    },
+    {
+      "id": "test-009",
+      "text": "A red tote is still sitting under the window seats with no one claiming it.",
+      "zone_id": "food",
+      "sublocation": "window seats",
+      "reported_at": "2026-10-26T09:23:00Z"
+    },
+    {
+      "id": "test-010",
+      "text": "Stage right's confidence monitor has stopped showing the speaker notes.",
+      "zone_id": "stage",
+      "sublocation": "stage right monitor",
+      "reported_at": "2026-10-26T09:26:00Z"
+    },
+    {
+      "id": "test-011",
+      "text": "The ticket scanning line has expanded across the west-side walkway.",
+      "zone_id": "registration",
+      "sublocation": "ticket scan lane",
+      "reported_at": "2026-10-26T09:29:00Z"
+    },
+    {
+      "id": "test-012",
+      "text": "No flames or smoke are present by the east fire door; the smell came from a hot display lamp.",
+      "zone_id": "hall",
+      "sublocation": "east fire door",
+      "reported_at": "2026-10-26T09:32:00Z"
+    },
+    {
+      "id": "test-013",
+      "text": "The menu board at the serving area does not list which dishes contain nuts.",
+      "zone_id": "food",
+      "sublocation": "menu stand",
+      "reported_at": "2026-10-26T09:35:00Z"
+    },
+    {
+      "id": "test-014",
+      "text": "The name tag machine at the north label desk is jammed.",
+      "zone_id": "registration",
+      "sublocation": "north label desk",
+      "reported_at": "2026-10-26T09:38:00Z"
+    },
+    {
+      "id": "test-015",
+      "text": "A paving tile is rocking on the west approach just outside Exit A.",
+      "zone_id": "exit-a",
+      "sublocation": "west approach",
+      "reported_at": "2026-10-26T09:41:00Z"
+    },
+    {
+      "id": "test-016",
+      "text": "A teenager in a purple jacket is waiting alone by the central hall bench.",
+      "zone_id": "hall",
+      "sublocation": "central bench",
+      "reported_at": "2026-10-26T09:44:00Z"
+    },
+    {
+      "id": "test-017",
+      "text": "The west bottle-filling nozzle continues to drip after use.",
+      "zone_id": "food",
+      "sublocation": "west bottle filler",
+      "reported_at": "2026-10-26T09:47:00Z"
+    },
+    {
+      "id": "test-018",
+      "text": "A guest is searching for an earbud case they may have dropped under the rear seats.",
+      "zone_id": "stage",
+      "sublocation": "under rear seats",
+      "reported_at": "2026-10-26T09:50:00Z"
+    },
+    {
+      "id": "test-019",
+      "text": "The rubber threshold strip at the south entrance has lifted at one end.",
+      "zone_id": "registration",
+      "sublocation": "south threshold",
+      "reported_at": "2026-10-26T09:53:00Z"
+    },
+    {
+      "id": "test-020",
+      "text": "A tour group has stopped on the upper landing inside Exit B.",
+      "zone_id": "exit-b",
+      "sublocation": "upper landing",
+      "reported_at": "2026-10-26T09:56:00Z"
+    },
+    {
+      "id": "test-021",
+      "text": "Someone is resting near the western displays after hurting a knee.",
+      "zone_id": "hall",
+      "sublocation": "west model table",
+      "reported_at": "2026-10-26T09:04:45Z"
+    },
+    {
+      "id": "test-022",
+      "text": "Visitors are held up at a jammed bottom Exit A gate.",
+      "zone_id": "exit-a",
+      "sublocation": "lower gate",
+      "reported_at": "2026-10-26T09:08:45Z"
+    },
+    {
+      "id": "test-023",
+      "text": "Staff at the southern welcome point are looking for an older guest's companion.",
+      "zone_id": "hall",
+      "sublocation": "south host stand",
+      "reported_at": "2026-10-26T09:11:45Z"
+    },
+    {
+      "id": "test-024",
+      "text": "The floor beside the pastry counter is wet from a fallen drink tray.",
+      "zone_id": "food",
+      "sublocation": "bakery island",
+      "reported_at": "2026-10-26T09:14:45Z"
+    },
+    {
+      "id": "test-025",
+      "text": "No front lights are coming on from the stage lighting controls.",
+      "zone_id": "stage",
+      "sublocation": "lighting console",
+      "reported_at": "2026-10-26T09:17:45Z"
+    },
+    {
+      "id": "test-026",
+      "text": "Guests at the northern path cannot pass the panel stack near Exit B.",
+      "zone_id": "exit-b",
+      "sublocation": "north approach",
+      "reported_at": "2026-10-26T09:20:45Z"
+    },
+    {
+      "id": "test-027",
+      "text": "There is an unattended red carry bag beneath the café's window row.",
+      "zone_id": "food",
+      "sublocation": "window seats",
+      "reported_at": "2026-10-26T09:23:45Z"
+    },
+    {
+      "id": "test-028",
+      "text": "The small display beside the stage-right microphone is blank.",
+      "zone_id": "stage",
+      "sublocation": "stage right monitor",
+      "reported_at": "2026-10-26T09:26:45Z"
+    },
+    {
+      "id": "test-029",
+      "text": "Check-in visitors are queueing into the western corridor.",
+      "zone_id": "registration",
+      "sublocation": "ticket scan lane",
+      "reported_at": "2026-10-26T09:29:45Z"
+    },
+    {
+      "id": "test-030",
+      "text": "A report about burning odor was checked at the east door and nobody found smoke.",
+      "zone_id": "hall",
+      "sublocation": "east fire door",
+      "reported_at": "2026-10-26T09:32:45Z"
+    },
+    {
+      "id": "test-031",
+      "text": "A diner cannot see the nut information on the food counter menu.",
+      "zone_id": "food",
+      "sublocation": "menu stand",
+      "reported_at": "2026-10-26T09:35:45Z"
+    },
+    {
+      "id": "test-032",
+      "text": "Badges are stuck inside the northern check-in label printer.",
+      "zone_id": "registration",
+      "sublocation": "north label desk",
+      "reported_at": "2026-10-26T09:38:45Z"
+    },
+    {
+      "id": "test-033",
+      "text": "One loose paver shifts underfoot on the outer path by Exit A.",
+      "zone_id": "exit-a",
+      "sublocation": "west approach",
+      "reported_at": "2026-10-26T09:41:45Z"
+    },
+    {
+      "id": "test-034",
+      "text": "Someone wearing a purple coat says their group left without them near the middle bench.",
+      "zone_id": "hall",
+      "sublocation": "central bench",
+      "reported_at": "2026-10-26T09:44:45Z"
+    },
+    {
+      "id": "test-035",
+      "text": "A slow leak is coming from the refill fountain on the west side.",
+      "zone_id": "food",
+      "sublocation": "west bottle filler",
+      "reported_at": "2026-10-26T09:47:45Z"
+    },
+    {
+      "id": "test-036",
+      "text": "A small headphone case is missing from the back seating row.",
+      "zone_id": "stage",
+      "sublocation": "under rear seats",
+      "reported_at": "2026-10-26T09:50:45Z"
+    },
+    {
+      "id": "test-037",
+      "text": "A loose floor strip is sticking up by the southern check-in entrance.",
+      "zone_id": "registration",
+      "sublocation": "south threshold",
+      "reported_at": "2026-10-26T09:53:45Z"
+    },
+    {
+      "id": "test-038",
+      "text": "The interior top landing at Exit B is crowded by a waiting tour.",
+      "zone_id": "exit-b",
+      "sublocation": "upper landing",
+      "reported_at": "2026-10-26T09:56:45Z"
+    },
+    {
+      "id": "test-039",
+      "text": "A visitor says their knee hurts after a trip beside the model exhibit.",
+      "zone_id": "hall",
+      "sublocation": "west model table",
+      "reported_at": "2026-10-26T09:05:30Z"
+    },
+    {
+      "id": "test-040",
+      "text": "A barrier panel has fallen across the lower Exit A opening.",
+      "zone_id": "exit-a",
+      "sublocation": "lower gate",
+      "reported_at": "2026-10-26T09:09:30Z"
+    },
+    {
+      "id": "test-041",
+      "text": "A person with a walking stick cannot find the friend who was with them by the host desk.",
+      "zone_id": "hall",
+      "sublocation": "south host stand",
+      "reported_at": "2026-10-26T09:12:30Z"
+    },
+    {
+      "id": "test-042",
+      "text": "There is liquid across the walkway next to the bakery display.",
+      "zone_id": "food",
+      "sublocation": "bakery island",
+      "reported_at": "2026-10-26T09:15:30Z"
+    },
+    {
+      "id": "test-043",
+      "text": "The operator cannot bring up the stage lights from the console.",
+      "zone_id": "stage",
+      "sublocation": "lighting console",
+      "reported_at": "2026-10-26T09:18:30Z"
+    },
+    {
+      "id": "test-044",
+      "text": "The way to Exit B from the north is narrowed by display boards.",
+      "zone_id": "exit-b",
+      "sublocation": "north approach",
+      "reported_at": "2026-10-26T09:21:30Z"
+    },
+    {
+      "id": "test-045",
+      "text": "A red shopping bag has been left under the food court windows.",
+      "zone_id": "food",
+      "sublocation": "window seats",
+      "reported_at": "2026-10-26T09:24:30Z"
+    },
+    {
+      "id": "test-046",
+      "text": "A monitor at the right side of the platform has lost its feed.",
+      "zone_id": "stage",
+      "sublocation": "stage right monitor",
+      "reported_at": "2026-10-26T09:27:30Z"
+    },
+    {
+      "id": "test-047",
+      "text": "The west passage is partially blocked by the entry scan queue.",
+      "zone_id": "registration",
+      "sublocation": "ticket scan lane",
+      "reported_at": "2026-10-26T09:30:30Z"
+    },
+    {
+      "id": "test-048",
+      "text": "The east hall exit is clear; the warm smell is from equipment, not a fire.",
+      "zone_id": "hall",
+      "sublocation": "east fire door",
+      "reported_at": "2026-10-26T09:33:30Z"
+    },
+    {
+      "id": "test-049",
+      "text": "The allergen details for the lunch menu are absent from the display.",
+      "zone_id": "food",
+      "sublocation": "menu stand",
+      "reported_at": "2026-10-26T09:36:30Z"
+    },
+    {
+      "id": "test-050",
+      "text": "The north registration printer will not feed a name badge.",
+      "zone_id": "registration",
+      "sublocation": "north label desk",
+      "reported_at": "2026-10-26T09:39:30Z"
+    },
+    {
+      "id": "test-051",
+      "text": "The walkway west of Exit A has a raised, moving stone tile.",
+      "zone_id": "exit-a",
+      "sublocation": "west approach",
+      "reported_at": "2026-10-26T09:42:30Z"
+    },
+    {
+      "id": "test-052",
+      "text": "A young visitor is separated from their group at the central seating.",
+      "zone_id": "hall",
+      "sublocation": "central bench",
+      "reported_at": "2026-10-26T09:45:30Z"
+    },
+    {
+      "id": "test-053",
+      "text": "Water keeps seeping from the west-side bottle station tap.",
+      "zone_id": "food",
+      "sublocation": "west bottle filler",
+      "reported_at": "2026-10-26T09:48:30Z"
+    },
+    {
+      "id": "test-054",
+      "text": "Someone lost their earbuds near the last row behind the stage.",
+      "zone_id": "stage",
+      "sublocation": "under rear seats",
+      "reported_at": "2026-10-26T09:51:30Z"
+    },
+    {
+      "id": "test-055",
+      "text": "The entry edging at registration's south doorway has peeled back.",
+      "zone_id": "registration",
+      "sublocation": "south threshold",
+      "reported_at": "2026-10-26T09:54:30Z"
+    },
+    {
+      "id": "test-056",
+      "text": "People waiting for the gallery tour are gathered across Exit B's upper landing.",
+      "zone_id": "exit-b",
+      "sublocation": "upper landing",
+      "reported_at": "2026-10-26T09:57:30Z"
+    },
+    {
+      "id": "test-057",
+      "text": "The bottom gate at Exit A is moving freely again and passage is open.",
+      "zone_id": "exit-a",
+      "sublocation": "lower gate",
+      "reported_at": "2026-10-26T09:10:15Z"
+    },
+    {
+      "id": "test-058",
+      "text": "The companion has not been located yet near the south-side host station.",
+      "zone_id": "hall",
+      "sublocation": "south host stand",
+      "reported_at": "2026-10-26T09:13:15Z"
+    },
+    {
+      "id": "test-059",
+      "text": "The puddle by the bakery island remains on the aisle floor.",
+      "zone_id": "food",
+      "sublocation": "bakery island",
+      "reported_at": "2026-10-26T09:16:15Z"
+    },
+    {
+      "id": "test-060",
+      "text": "The lighting desk is not controlling the wash lamps over the platform.",
+      "zone_id": "stage",
+      "sublocation": "lighting console",
+      "reported_at": "2026-10-26T09:19:15Z"
+    }
+  ]
+}
