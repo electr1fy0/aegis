@@ -1,4 +1,4 @@
-.PHONY: setup backend frontend test coverage build lint verify
+.PHONY: setup backend backend-semantic frontend dev preflight semantic-setup evaluate evaluate-semantic test coverage build lint verify
 
 setup:
 	uv venv --python python3 .venv
@@ -10,6 +10,26 @@ backend:
 
 frontend:
 	cd frontend && bun run dev
+
+dev:
+	.venv/bin/python scripts/dev.py
+
+preflight:
+	.venv/bin/python -m backend.aegis.maintenance preflight
+
+semantic-setup:
+	uv venv --allow-existing --python .venv/bin/python .venv-semantic
+	uv pip sync --python .venv-semantic/bin/python requirements-semantic.lock
+	.venv-semantic/bin/python -m backend.aegis.maintenance prepare-model
+
+backend-semantic:
+	.venv-semantic/bin/python -m backend.aegis
+
+evaluate:
+	.venv/bin/python -m backend.aegis.maintenance evaluate
+
+evaluate-semantic:
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv-semantic/bin/python -m backend.aegis.maintenance evaluate
 
 test:
 	.venv/bin/python -m pytest
