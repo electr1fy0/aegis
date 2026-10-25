@@ -1,8 +1,8 @@
 {
   "dataset_version": "aegis-synthetic-2026-10-v1",
   "model": "sentence-transformers/all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
-  "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
-  "generated_at": "2026-10-25T02:51:28.140837Z",
+  "config_version": "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1",
+  "generated_at": "2026-10-25T05:40:53.399034Z",
   "results": [
     {
       "method": "Lexical Jaccard baseline",
@@ -20,15 +20,24 @@
       "f1": 0.058824,
       "false_merges": 0,
       "missed_pairs": 64,
-      "review_rate": 0.0
+      "review_rate": 0.066667
     },
     {
       "method": "Aegis semantic + context",
       "precision": 1.0,
-      "recall": 0.030303,
-      "f1": 0.058824,
+      "recall": 0.19697,
+      "f1": 0.329114,
       "false_merges": 0,
-      "missed_pairs": 64,
+      "missed_pairs": 53,
+      "review_rate": 0.966667
+    },
+    {
+      "method": "Aegis contextual lexical (forced fallback)",
+      "precision": 1.0,
+      "recall": 0.651515,
+      "f1": 0.788991,
+      "false_merges": 0,
+      "missed_pairs": 23,
       "review_rate": 1.0
     }
   ],
@@ -56,7 +65,7 @@
     {
       "name": "contradictory or changing reports stay visible",
       "passed": true,
-      "detail": "A conflict was returned for 1 of 1 labeled changing-report groups."
+      "detail": "The source-claim detector returned a conflict for 1 of 1 ground-truth changing-report groups. This detector check supplies the labeled memberships; it does not establish that automatic grouping joined those reports."
     },
     {
       "name": "incomplete reports remain reviewable",
@@ -65,13 +74,17 @@
     }
   ],
   "latency": {
-    "p50_ms": 26.542,
-    "p95_ms": 88.282
+    "p50_ms": 103.28,
+    "p95_ms": 641.17
   },
   "limitations": [
     "All reports and incident labels are synthetic; this small fixed test split does not establish operational accuracy.",
     "Grouping metrics count report pairs; latency is per-report analysis plus incremental grouping on this process and hardware.",
-    "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF."
+    "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF.",
+    "The Jaccard and fixed-threshold cosine rows are diagnostic comparators, not production engine paths or calibrated probabilities. They use simple anchor-based zone/time eligibility and do not reproduce all production context, ambiguity, and review rules.",
+    "The diagnostic cosine threshold is fixed at 0.78 and was not calibrated or selected using this test split. Its context eligibility matches the Jaccard diagnostic.",
+    "Policy and conflict-detector checks use ground-truth group membership independently of predicted groups. Passing them does not imply successful automatic grouping; pairwise grouping errors and the real API workflow must be assessed separately.",
+    "The forced-lexical row reruns the production grouping, context, ambiguity, and review rules with MiniLM disabled over the same ordered raw reports; its latency is not included in the active-engine latency summary."
   ],
   "failures": [],
   "error_examples": [
@@ -92,8 +105,13 @@
         "Same reported sublocation: west model table.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.550; the independent lexical-hash cosine is 0.036.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.688 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -112,26 +130,12 @@
       "reasons": [
         "Same reported sublocation: west model table.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-004",
-        "test-022"
-      ],
-      "texts": [
-        "The lower gate at Exit A will not swing open, and people are waiting.",
-        "Visitors are held up at a jammed bottom Exit A gate."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: lower gate.",
-        "Reported event times are 0.8 minutes apart.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Text similarity uses pinned MiniLM cosine 0.537; the independent lexical-hash cosine is 0.117.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.691 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.418); total_score reports the selected semantic route."
       ]
     },
     {
@@ -150,7 +154,12 @@
       "reasons": [
         "Same reported sublocation: lower gate.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Text similarity uses pinned MiniLM cosine 0.426; the independent lexical-hash cosine is 0.077.",
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.426, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.384 is the mean of all 2 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -169,7 +178,13 @@
       "reasons": [
         "Same reported sublocation: lower gate.",
         "Reported event times are 2.2 minutes apart.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Text similarity uses pinned MiniLM cosine 0.679; the independent lexical-hash cosine is 0.287.",
+        "Potential conflicting or changing accounts; compare report IDs test-057 and test-004: exit_access is clear (\u201cExit A is moving freely\u201d) versus blocked (\u201cgate at Exit A will not swing open\u201d).",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.746 is the mean of all 2 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.525); total_score reports the selected semantic route."
       ]
     },
     {
@@ -189,8 +204,13 @@
         "Same reported sublocation: south host stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.536; the independent lexical-hash cosine is 0.036.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.682 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -209,7 +229,12 @@
       "reasons": [
         "Same reported sublocation: south host stand.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Text similarity uses pinned MiniLM cosine 0.410; the independent lexical-hash cosine is 0.207.",
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.410, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.484 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -229,27 +254,9 @@
         "Same reported sublocation: south host stand.",
         "Reported event times are 2.2 minutes apart.",
         "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-006",
-        "test-024"
-      ],
-      "texts": [
-        "A tray of water has spilled onto the aisle at the bakery island.",
-        "The floor beside the pastry counter is wet from a fallen drink tray."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: bakery island.",
-        "Reported event times are 0.8 minutes apart.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Text similarity uses pinned MiniLM cosine 0.389; the independent lexical-hash cosine is 0.068.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -268,7 +275,14 @@
       "reasons": [
         "Same reported sublocation: bakery island.",
         "Reported event times are 1.5 minutes apart.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.665; the independent lexical-hash cosine is 0.046.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.717 is the mean of all 2 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -287,7 +301,15 @@
       "reasons": [
         "Same reported sublocation: lighting console.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.549; the independent lexical-hash cosine is 0.148.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.549, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.688 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.413); total_score reports the selected semantic route."
       ]
     },
     {
@@ -307,8 +329,13 @@
         "Same reported sublocation: lighting console.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.563; the independent lexical-hash cosine is 0.159.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.693 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.417); total_score reports the selected semantic route."
       ]
     },
     {
@@ -327,7 +354,13 @@
       "reasons": [
         "Same reported sublocation: lighting console.",
         "Reported event times are 2.2 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.564; the independent lexical-hash cosine is 0.092.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.690 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -347,29 +380,14 @@
         "Same reported sublocation: north approach.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.584; the independent lexical-hash cosine is 0.257.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-008",
-        "test-044"
-      ],
-      "texts": [
-        "A stack of exhibition panels sits across the north approach to Exit B.",
-        "The way to Exit B from the north is narrowed by display boards."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: north approach.",
-        "Reported event times are 1.5 minutes apart.",
-        "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.584, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.712 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.487); total_score reports the selected semantic route."
       ]
     },
     {
@@ -389,8 +407,13 @@
         "Same reported sublocation: window seats.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.413; the independent lexical-hash cosine is 0.093.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.413, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.376 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -410,8 +433,9 @@
         "Same reported sublocation: window seats.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Text similarity uses pinned MiniLM cosine 0.437; the independent lexical-hash cosine is 0.098.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -430,7 +454,14 @@
       "reasons": [
         "Same reported sublocation: stage right monitor.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.609; the independent lexical-hash cosine is 0.000.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.728 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -449,7 +480,14 @@
       "reasons": [
         "Same reported sublocation: stage right monitor.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.400; the independent lexical-hash cosine is 0.214.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.400, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.454 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -469,8 +507,10 @@
         "Same reported sublocation: ticket scan lane.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.491; the independent lexical-hash cosine is 0.000.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -489,48 +529,15 @@
       "reasons": [
         "Same reported sublocation: ticket scan lane.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-012",
-        "test-030"
-      ],
-      "texts": [
-        "No flames or smoke are present by the east fire door; the smell came from a hot display lamp.",
-        "A report about burning odor was checked at the east door and nobody found smoke."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: east fire door.",
-        "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.513; the independent lexical-hash cosine is 0.119.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-012",
-        "test-048"
-      ],
-      "texts": [
-        "No flames or smoke are present by the east fire door; the smell came from a hot display lamp.",
-        "The east hall exit is clear; the warm smell is from equipment, not a fire."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: east fire door.",
-        "Reported event times are 1.5 minutes apart.",
-        "The exit and facility categories are related but do not establish identity.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.513, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.659 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.389); total_score reports the selected semantic route."
       ]
     },
     {
@@ -550,8 +557,13 @@
         "Same reported sublocation: menu stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.642; the independent lexical-hash cosine is 0.037.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.751 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -571,8 +583,14 @@
         "Same reported sublocation: menu stand.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.517; the independent lexical-hash cosine is 0.309.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.517, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.661 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.519); total_score reports the selected semantic route."
       ]
     },
     {
@@ -591,7 +609,14 @@
       "reasons": [
         "Same reported sublocation: north label desk.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.526; the independent lexical-hash cosine is 0.044.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.672 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -610,7 +635,10 @@
       "reasons": [
         "Same reported sublocation: north label desk.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.414; the independent lexical-hash cosine is 0.092.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -630,8 +658,13 @@
         "Same reported sublocation: west approach.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.442; the independent lexical-hash cosine is 0.103.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.442, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.383 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -651,8 +684,13 @@
         "Same reported sublocation: central bench.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.444; the independent lexical-hash cosine is 0.085.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.444, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.370 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -672,8 +710,9 @@
         "Same reported sublocation: central bench.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Text similarity uses pinned MiniLM cosine 0.378; the independent lexical-hash cosine is 0.069.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -693,8 +732,13 @@
         "Same reported sublocation: west bottle filler.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.624; the independent lexical-hash cosine is 0.049.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.739 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -714,8 +758,13 @@
         "Same reported sublocation: west bottle filler.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.541; the independent lexical-hash cosine is 0.000.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.678 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -735,8 +784,14 @@
         "Same reported sublocation: under rear seats.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.576; the independent lexical-hash cosine is 0.119.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.576, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.706 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.393); total_score reports the selected semantic route."
       ]
     },
     {
@@ -756,8 +811,13 @@
         "Same reported sublocation: under rear seats.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.550; the independent lexical-hash cosine is 0.000.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.691 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -777,8 +837,14 @@
         "Same reported sublocation: south threshold.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.551; the independent lexical-hash cosine is 0.076.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Lexical candidate has pinned MiniLM anchor corroboration 0.551, below the 0.62 minimum; keep it for review.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.689 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.364); total_score reports the selected semantic route."
       ]
     },
     {
@@ -798,49 +864,13 @@
         "Same reported sublocation: south threshold.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.543; the independent lexical-hash cosine is 0.146.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-020",
-        "test-038"
-      ],
-      "texts": [
-        "A tour group has stopped on the upper landing inside Exit B.",
-        "The interior top landing at Exit B is crowded by a waiting tour."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: upper landing.",
-        "Reported event times are 0.8 minutes apart.",
-        "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized.",
-        "Candidate score is below the prototype attachment threshold of 0.82."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis semantic + context",
-      "report_ids": [
-        "test-020",
-        "test-056"
-      ],
-      "texts": [
-        "A tour group has stopped on the upper landing inside Exit B.",
-        "People waiting for the gallery tour are gathered across Exit B's upper landing."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Same reported sublocation: upper landing.",
-        "Reported event times are 1.5 minutes apart.",
-        "A supported category is missing on at least one report.",
-        "Missing score components were omitted and available weights were renormalized."
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.679 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.408); total_score reports the selected semantic route."
       ]
     },
     {
@@ -860,8 +890,12 @@
         "Same reported sublocation: west model table.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.613; the independent lexical-hash cosine is 0.076.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.731 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -880,17 +914,179 @@
       "reasons": [
         "Same reported sublocation: lower gate.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+        "Text similarity uses pinned MiniLM cosine 0.486; the independent lexical-hash cosine is 0.046.",
+        "Composite total_score uses pinned MiniLM plus the context components."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-022",
+        "test-057"
+      ],
+      "texts": [
+        "Visitors are held up at a jammed bottom Exit A gate.",
+        "The bottom gate at Exit A is moving freely again and passage is open."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lower gate.",
+        "Reported event times are 1.5 minutes apart.",
+        "Text similarity uses pinned MiniLM cosine 0.569; the independent lexical-hash cosine is 0.116.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Potential conflicting or changing accounts; compare report IDs test-057 and test-022: exit_access is clear (\u201cExit A is moving freely\u201d) versus blocked (\u201cjammed bottom Exit A gate\u201d)."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-023",
+        "test-041"
+      ],
+      "texts": [
+        "Staff at the southern welcome point are looking for an older guest's companion.",
+        "A person with a walking stick cannot find the friend who was with them by the host desk."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.356; the independent lexical-hash cosine is 0.051.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-023",
+        "test-058"
+      ],
+      "texts": [
+        "Staff at the southern welcome point are looking for an older guest's companion.",
+        "The companion has not been located yet near the south-side host station."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.455; the independent lexical-hash cosine is 0.038.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-024",
+        "test-042"
+      ],
+      "texts": [
+        "The floor beside the pastry counter is wet from a fallen drink tray.",
+        "There is liquid across the walkway next to the bakery display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.525; the independent lexical-hash cosine is 0.043.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-025",
+        "test-043"
+      ],
+      "texts": [
+        "No front lights are coming on from the stage lighting controls.",
+        "The operator cannot bring up the stage lights from the console."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lighting console.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.581; the independent lexical-hash cosine is 0.099.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.710 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-025",
+        "test-060"
+      ],
+      "texts": [
+        "No front lights are coming on from the stage lighting controls.",
+        "The lighting desk is not controlling the wash lamps over the platform."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lighting console.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.455; the independent lexical-hash cosine is 0.103.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "This candidate uses the pinned MiniLM route; lexical-hash results were scored independently and were not mixed into its score.",
+        "Composite total_score uses pinned MiniLM similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.619 is the mean of all 1 semantic pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite.",
+        "The independent lexical route also proposed this incident (anchor composite 0.379); total_score reports the selected semantic route."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-026",
+        "test-044"
+      ],
+      "texts": [
+        "Guests at the northern path cannot pass the panel stack near Exit B.",
+        "The way to Exit B from the north is narrowed by display boards."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: north approach.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses pinned MiniLM cosine 0.497; the independent lexical-hash cosine is 0.195.",
+        "Composite total_score uses pinned MiniLM plus the context components.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     }
   ],
   "workload": {
     "reports": 60,
-    "review_reports": 60,
-    "proposed_groups": 58,
-    "confirmation_groups": 58,
+    "review_reports": 58,
+    "proposed_groups": 50,
+    "confirmation_groups": 50,
     "split_operations": 0,
-    "merge_operations": 38,
+    "merge_operations": 30,
     "basis": "Synthetic ground-truth partition corrections: first separate each mixed group, then join fragments of each true incident. One confirmation per proposed group. These are idealized grouping operations, not measured clicks or operator time."
   }
 }

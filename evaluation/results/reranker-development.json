@@ -1,0 +1,609 @@
+{
+  "evaluation_id": "reranker-development-2026-10-v1",
+  "purpose": "Development-only feasibility check of a small cross-encoder. This is not held-out evaluation and does not support automatic event attachment.",
+  "scope": {
+    "split": "challenge_dev",
+    "fixture": "data/evaluation/challenge_dev.json",
+    "fixture_sha256": "0612fcc14b68f681ab55a737687f9e1a5d1de71034d4e711bf2750f70eee8079",
+    "pairs_scored": 48,
+    "input": "Report text pairs only; no context metadata supplied to the cross-encoder.",
+    "runtime": "SentenceTransformers CrossEncoder on CPU, batch size 16, local offline checkpoint.",
+    "selection": "The model was selected for a bounded feasibility check after its official model card showed Apache-2.0 and a 57.4 MB safetensors checkpoint. No held-out files or labels were read."
+  },
+  "model": {
+    "repository": "cross-encoder/stsb-TinyBERT-L4",
+    "revision": "1f478482145797a0cac02d6b9ab3c65c9d25fb1e",
+    "license": "Apache-2.0 (official model card)",
+    "parameters": 14400000,
+    "scored_checkpoint": "model.safetensors",
+    "checkpoint_bytes": 57414738,
+    "official_sources": {
+      "model_card": "https://huggingface.co/cross-encoder/stsb-TinyBERT-L4",
+      "repository_files": "https://huggingface.co/cross-encoder/stsb-TinyBERT-L4/tree/main",
+      "pinned_revision": "https://huggingface.co/cross-encoder/stsb-TinyBERT-L4/commit/1f478482145797a0cac02d6b9ab3c65c9d25fb1e"
+    },
+    "training_objective": "The model card describes an STS-B sentence-similarity cross-encoder; its score is not an event-identity probability."
+  },
+  "score_distributions": {
+    "same": {
+      "n": 18,
+      "min": 0.39247390627861023,
+      "p10": 0.4328310459852219,
+      "median": 0.5934074819087982,
+      "mean": 0.5840156028668085,
+      "p90": 0.6909002721309662,
+      "max": 0.8946629762649536
+    },
+    "different": {
+      "n": 18,
+      "min": 0.17949330806732178,
+      "p10": 0.2209780678153038,
+      "median": 0.392007976770401,
+      "mean": 0.40093062238560784,
+      "p90": 0.5715206086635589,
+      "max": 0.6086428761482239
+    },
+    "underdetermined": {
+      "n": 12,
+      "min": 0.3050622045993805,
+      "p10": 0.37596794664859773,
+      "median": 0.5035130977630615,
+      "mean": 0.4844340458512306,
+      "p90": 0.5499854207038879,
+      "max": 0.6639912724494934
+    }
+  },
+  "cue_free_different_score_distribution": {
+    "n": 6,
+    "min": 0.22203165292739868,
+    "p10": 0.3338553309440613,
+    "median": 0.5648624002933502,
+    "mean": 0.4965620239575704,
+    "p90": 0.5909683406352997,
+    "max": 0.6086428761482239
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.1,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 18,
+      "underdetermined_review_candidates": 12,
+      "cue_free_negative_suggestions": 6
+    },
+    {
+      "threshold": 0.15,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 18,
+      "underdetermined_review_candidates": 12,
+      "cue_free_negative_suggestions": 6
+    },
+    {
+      "threshold": 0.2,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 17,
+      "underdetermined_review_candidates": 12,
+      "cue_free_negative_suggestions": 6
+    },
+    {
+      "threshold": 0.25,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 15,
+      "underdetermined_review_candidates": 12,
+      "cue_free_negative_suggestions": 5
+    },
+    {
+      "threshold": 0.3,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 13,
+      "underdetermined_review_candidates": 12,
+      "cue_free_negative_suggestions": 5
+    },
+    {
+      "threshold": 0.35,
+      "same_candidate_recall": 18,
+      "different_false_suggestions": 10,
+      "underdetermined_review_candidates": 11,
+      "cue_free_negative_suggestions": 5
+    },
+    {
+      "threshold": 0.4,
+      "same_candidate_recall": 17,
+      "different_false_suggestions": 9,
+      "underdetermined_review_candidates": 9,
+      "cue_free_negative_suggestions": 5
+    },
+    {
+      "threshold": 0.45,
+      "same_candidate_recall": 15,
+      "different_false_suggestions": 7,
+      "underdetermined_review_candidates": 7,
+      "cue_free_negative_suggestions": 4
+    },
+    {
+      "threshold": 0.5,
+      "same_candidate_recall": 13,
+      "different_false_suggestions": 6,
+      "underdetermined_review_candidates": 6,
+      "cue_free_negative_suggestions": 4
+    },
+    {
+      "threshold": 0.55,
+      "same_candidate_recall": 11,
+      "different_false_suggestions": 5,
+      "underdetermined_review_candidates": 1,
+      "cue_free_negative_suggestions": 4
+    },
+    {
+      "threshold": 0.6,
+      "same_candidate_recall": 9,
+      "different_false_suggestions": 1,
+      "underdetermined_review_candidates": 1,
+      "cue_free_negative_suggestions": 1
+    },
+    {
+      "threshold": 0.65,
+      "same_candidate_recall": 5,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 1,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.7,
+      "same_candidate_recall": 2,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.75,
+      "same_candidate_recall": 1,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.8,
+      "same_candidate_recall": 1,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.85,
+      "same_candidate_recall": 1,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.9,
+      "same_candidate_recall": 0,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    },
+    {
+      "threshold": 0.95,
+      "same_candidate_recall": 0,
+      "different_false_suggestions": 0,
+      "underdetermined_review_candidates": 0,
+      "cue_free_negative_suggestions": 0
+    }
+  ],
+  "threshold_examples": {
+    "0.60": {
+      "same_candidate_recall": 9,
+      "same_pairs": 18,
+      "different_suggestions": 1,
+      "different_pairs": 18,
+      "cue_free_different_suggestions": 1,
+      "cue_free_different_pairs": 6,
+      "underdetermined_review_candidates": 1,
+      "underdetermined_pairs": 12
+    },
+    "0.65": {
+      "same_candidate_recall": 5,
+      "same_pairs": 18,
+      "different_suggestions": 0,
+      "different_pairs": 18,
+      "cue_free_different_suggestions": 0,
+      "cue_free_different_pairs": 6,
+      "underdetermined_review_candidates": 1,
+      "underdetermined_pairs": 12
+    }
+  },
+  "conclusion": "No runtime integration recommended. The high-threshold point that had zero different suggestions in this small synthetic challenge retained only 5/18 same-event pairs; at 0.60, 9/18 same-event pairs were retained but explicit and cue-free different cases still crossed the threshold. Scores overlap substantially, especially for cue-free negatives and underdetermined pairs.",
+  "limitations": [
+    "The 48 labels are hand-authored synthetic scenario assumptions. Text alone cannot establish identity in all cases.",
+    "Pair-level similarity does not provide context gating, event chronology, candidate ranking, anchor compatibility, or coordinator rejection safeguards.",
+    "Zero observed errors on a small challenge would not establish zero false-merge risk.",
+    "Thresholds are exploratory examples, not calibrated operating points. No tuning or automatic attachment claim is supported.",
+    "The downloaded checkpoint and temporary scoring script are in /tmp and are not bundled as a runtime dependency."
+  ],
+  "pairs": [
+    {
+      "case_id": "same-med-collapse-01",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_condition",
+      "annotation_cue_free_negative": false,
+      "score": 0.6620784997940063
+    },
+    {
+      "case_id": "same-med-ankle-02",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_person",
+      "annotation_cue_free_negative": false,
+      "score": 0.8946629762649536
+    },
+    {
+      "case_id": "same-missing-child-03",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "shared_name_and_description",
+      "annotation_cue_free_negative": false,
+      "score": 0.49737054109573364
+    },
+    {
+      "case_id": "same-spill-04",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_hazard",
+      "annotation_cue_free_negative": false,
+      "score": 0.6560985445976257
+    },
+    {
+      "case_id": "same-exit-05",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_obstruction",
+      "annotation_cue_free_negative": false,
+      "score": 0.4441874921321869
+    },
+    {
+      "case_id": "same-av-06",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_device_issue",
+      "annotation_cue_free_negative": false,
+      "score": 0.6795763969421387
+    },
+    {
+      "case_id": "same-ramp-07",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_obstruction",
+      "annotation_cue_free_negative": false,
+      "score": 0.6294537782669067
+    },
+    {
+      "case_id": "same-med-dizzy-08",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_person",
+      "annotation_cue_free_negative": false,
+      "score": 0.5362328290939331
+    },
+    {
+      "case_id": "same-water-leak-09",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_hazard",
+      "annotation_cue_free_negative": false,
+      "score": 0.7173226475715637
+    },
+    {
+      "case_id": "same-missing-adult-10",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "shared_name_and_description",
+      "annotation_cue_free_negative": false,
+      "score": 0.6002209782600403
+    },
+    {
+      "case_id": "same-lighting-11",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_device_issue",
+      "annotation_cue_free_negative": false,
+      "score": 0.5553879141807556
+    },
+    {
+      "case_id": "same-facility-12",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_condition",
+      "annotation_cue_free_negative": false,
+      "score": 0.6003577709197998
+    },
+    {
+      "case_id": "different-patients-01",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.5036662220954895
+    },
+    {
+      "case_id": "different-missing-people-02",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_named_people",
+      "annotation_cue_free_negative": false,
+      "score": 0.17949330806732178
+    },
+    {
+      "case_id": "different-devices-03",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.37517786026000977
+    },
+    {
+      "case_id": "different-spills-04",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_spills_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.3201040029525757
+    },
+    {
+      "case_id": "different-exits-05",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_routes_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.3013910949230194
+    },
+    {
+      "case_id": "different-falls-06",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_named_people",
+      "annotation_cue_free_negative": false,
+      "score": 0.34228676557540894
+    },
+    {
+      "case_id": "different-leaks-07",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_sources_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.40883809328079224
+    },
+    {
+      "case_id": "different-av-08",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.2685127556324005
+    },
+    {
+      "case_id": "different-fixtures-09",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.5543992519378662
+    },
+    {
+      "case_id": "different-missing-adults-10",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.21851970255374908
+    },
+    {
+      "case_id": "different-medical-11",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.272270143032074
+    },
+    {
+      "case_id": "different-handrails-12",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "annotation_cue_free_negative": false,
+      "score": 0.4927198588848114
+    },
+    {
+      "case_id": "uncertain-medical-01",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.37400022149086
+    },
+    {
+      "case_id": "uncertain-collapse-02",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.5388227105140686
+    },
+    {
+      "case_id": "uncertain-exit-03",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.5439616441726685
+    },
+    {
+      "case_id": "uncertain-spill-04",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_event_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.5499881505966187
+    },
+    {
+      "case_id": "uncertain-missing-child-05",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.4476775527000427
+    },
+    {
+      "case_id": "uncertain-missing-adult-06",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.43904027342796326
+    },
+    {
+      "case_id": "uncertain-dizzy-07",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.3050622045993805
+    },
+    {
+      "case_id": "uncertain-av-08",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.5499608516693115
+    },
+    {
+      "case_id": "uncertain-queue-09",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "changing_condition",
+      "annotation_cue_free_negative": false,
+      "score": 0.5297161340713501
+    },
+    {
+      "case_id": "uncertain-separated-10",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.3936774730682373
+    },
+    {
+      "case_id": "uncertain-changing-exit-11",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "contradictory_account",
+      "annotation_cue_free_negative": false,
+      "score": 0.47731006145477295
+    },
+    {
+      "case_id": "uncertain-rail-12",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "annotation_cue_free_negative": false,
+      "score": 0.6639912724494934
+    },
+    {
+      "case_id": "same-av-cable-13",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_tool",
+      "annotation_cue_free_negative": false,
+      "score": 0.5865939855575562
+    },
+    {
+      "case_id": "same-exit-crew-14",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "annotation_cue_free_negative": false,
+      "score": 0.621541440486908
+    },
+    {
+      "case_id": "same-leak-buckets-15",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_containers",
+      "annotation_cue_free_negative": false,
+      "score": 0.546607494354248
+    },
+    {
+      "case_id": "same-med-nurses-16",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "annotation_cue_free_negative": false,
+      "score": 0.4857809841632843
+    },
+    {
+      "case_id": "same-missing-volunteers-17",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "annotation_cue_free_negative": false,
+      "score": 0.40633267164230347
+    },
+    {
+      "case_id": "same-spill-staff-18",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "annotation_cue_free_negative": false,
+      "score": 0.39247390627861023
+    },
+    {
+      "case_id": "different-av-devices-13",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.5589641332626343
+    },
+    {
+      "case_id": "different-rails-sides-14",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.6086428761482239
+    },
+    {
+      "case_id": "different-patients-names-15",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.22203165292739868
+    },
+    {
+      "case_id": "different-water-sources-16",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_sources_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.5707606673240662
+    },
+    {
+      "case_id": "different-exits-no-cue-17",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_routes_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.4456790089607239
+    },
+    {
+      "case_id": "different-fan-lights-18",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_devices_no_annotation_cue",
+      "annotation_cue_free_negative": true,
+      "score": 0.5732938051223755
+    }
+  ]
+}

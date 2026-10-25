@@ -608,7 +608,10 @@ class EvaluationEntryPointTests(unittest.TestCase):
         self.assertFalse(any("Semantic" in method for method in methods))
         self.assertNotIn("Aegis contextual lexical (forced fallback)", methods)
         self.assertIn("lexical/degraded mode", " ".join(result["limitations"]))
-        self.assertIn("not production engine paths or calibrated probabilities", " ".join(result["limitations"]))
+        self.assertIn(
+            "not production engine paths or calibrated probabilities",
+            " ".join(result["limitations"]),
+        )
         self.assertEqual(
             self._all_check_names(result),
             {
@@ -637,9 +640,7 @@ class EvaluationEntryPointTests(unittest.TestCase):
             "Aegis contextual lexical (forced fallback)",
             [row["method"] for row in semantic["results"]],
         )
-        self.assertTrue(
-            any("same ordered raw reports" in item for item in semantic["limitations"])
-        )
+        self.assertTrue(any("same ordered raw reports" in item for item in semantic["limitations"]))
         self.assertEqual(semantic["failures"], [])
         missing_vectors = evaluation.run_evaluation(
             StubEngine(mode="semantic", model_ready=True, semantic_vectors=False)
@@ -652,7 +653,10 @@ class EvaluationEntryPointTests(unittest.TestCase):
             [row["method"] for row in missing_vectors["results"]],
         )
         self.assertTrue(
-            any("valid embedding from the reported semantic revision" in item for item in missing_vectors["limitations"])
+            any(
+                "valid embedding from the reported semantic revision" in item
+                for item in missing_vectors["limitations"]
+            )
         )
 
     def test_diagnostic_semantic_comparator_uses_lexical_context_eligibility(self) -> None:
@@ -696,9 +700,14 @@ class EvaluationEntryPointTests(unittest.TestCase):
         methods = [row["method"] for row in result["results"]]
         self.assertIn("Aegis semantic + context", methods)
         self.assertNotIn("Aegis contextual lexical (forced fallback)", methods)
-        self.assertTrue(any("Unable to initialize forced lexical" in item for item in result["failures"]))
         self.assertTrue(
-            any("forced-lexical production comparison could not be initialized" in item for item in result["limitations"])
+            any("Unable to initialize forced lexical" in item for item in result["failures"])
+        )
+        self.assertTrue(
+            any(
+                "forced-lexical production comparison could not be initialized" in item
+                for item in result["limitations"]
+            )
         )
 
     def test_lexical_or_unknown_engine_mode_is_named_without_semantic_claim(self) -> None:

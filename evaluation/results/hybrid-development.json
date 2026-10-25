@@ -1,0 +1,2067 @@
+{
+  "experiment_id": "hybrid-development-2026-10-v1",
+  "scope": {
+    "purpose": "Development-only calibration of hybrid matching attachment and review thresholds.",
+    "data_used": [
+      "data/evaluation/challenge_dev.json",
+      "data/evaluation/dev_inputs.json",
+      "data/evaluation/dev_labels.json"
+    ],
+    "held_out_accessed": false,
+    "raw_report_text_included": false,
+    "label_caveat": "Challenge relationships are synthetic scenario assumptions. Underdetermined means available report wording does not establish identity; an attachment is an unsafe or unjustified action for review, not proof that the underlying incidents differ.",
+    "limitations": [
+      "The 48-pair challenge is small and synthetic; zero explicit-different auto-attachments is not a safety guarantee.",
+      "Review suggestions are intentionally measured separately from attachments and are noisy: some explicit-different and all cue-free negative cases receive candidates.",
+      "Thresholds are development choices, not evidence of unseen-data generalization.",
+      "The selected profile leaves the four changing-exit DEV reports in separate predicted groups, with no within-incident Conflict objects. Final-source review warnings cite the opposing claims across groups, and the real API check verified conflict preservation through coordinator merging."
+    ]
+  },
+  "source": {
+    "git_head": "cc3c5ca17a1ae2e9df8d898e36bcb44945549067",
+    "engine_path": "backend/aegis/engine.py",
+    "engine_sha256": "167a69044d469779eaa16f7b37eee76dc78faa003f4726c66799e2d57559e975",
+    "config_version": "hybrid-context-dev-v1+lexical-context-dev-v2+location-aliases-v1"
+  },
+  "model": {
+    "name": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "runtime_reported_revision": "sentence-transformers/all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "device": "mps:0",
+    "device_selection": "SentenceTransformer default device; verified with the same local pinned loader after the sweep."
+  },
+  "fixtures": {
+    "challenge_dev": {
+      "path": "data/evaluation/challenge_dev.json",
+      "sha256": "0612fcc14b68f681ab55a737687f9e1a5d1de71034d4e711bf2750f70eee8079",
+      "reports": 96,
+      "pairs": 48
+    },
+    "dev_inputs": {
+      "path": "data/evaluation/dev_inputs.json",
+      "sha256": "ba5bee228274b4a112fbbee6f8eb4fcc7b96edd7bfafb66e1e415e20d34a84ce",
+      "reports": 60,
+      "dataset_version": "aegis-synthetic-2026-10-v1"
+    },
+    "dev_labels": {
+      "path": "data/evaluation/dev_labels.json",
+      "sha256": "fceff5bbba880fa5d05947934cd2f8f55a8b2f4694159dc2769a4b0b28f61ce3",
+      "labeled_reports": 60,
+      "gold_groups": 20
+    }
+  },
+  "inference": {
+    "encode_invocations": 1,
+    "batch_size": 32,
+    "report_ids_analyzed": 156,
+    "unique_texts_encoded": 155,
+    "embedding_count": 155,
+    "all_reports_used_pinned_revision": true,
+    "analysis_failure_count": 0,
+    "grouping_failure_count": 0
+  },
+  "predeclared_selection_objective": {
+    "primary": "Among profiles with zero explicit-different automatic attachment cases on the 48-pair challenge, maximize original DEV ordered-runtime pairwise recall.",
+    "underdetermined_policy": "Report underdetermined automatic attachments separately; do not optimize against their assumed labels.",
+    "tie_breakers": [
+      "fewer DEV false-merge pairs",
+      "higher semantic attach threshold",
+      "higher semantic review threshold"
+    ],
+    "selection_result": "The selected profile is the highest-threshold member of the .70\u2013.76 attach plateau with 22/66 DEV positive-pair recall, zero explicit-different challenge auto-attachments, and zero DEV false merges."
+  },
+  "selected_profile": {
+    "thresholds_and_fixed_guards": {
+      "semantic_attach": 0.76,
+      "semantic_review": 0.65,
+      "semantic_anchor": 0.62,
+      "semantic_review_anchor": 0.2,
+      "lexical_attach": 0.33,
+      "lexical_suggest": 0.33,
+      "lexical_anchor": 0.05,
+      "runner_up_margin": 0.08
+    },
+    "challenge": {
+      "case_count": 48,
+      "directional_evaluations": 96,
+      "same_event": {
+        "both_direction_auto_attach": 12,
+        "both_direction_attach_recall": 0.6666666666666666,
+        "either_direction_auto_attach": 12,
+        "either_direction_attach_recall": 0.6666666666666666,
+        "suggest_evidence_cases": 6,
+        "suggest_evidence_recall": 0.3333333333333333,
+        "candidate_recall_including_attach": 1.0
+      },
+      "explicit_different": {
+        "false_attachment_cases": 0,
+        "false_attachment_directions": 0,
+        "false_suggestion_cases": 17,
+        "different_event_candidate_cases_including_attach": 17
+      },
+      "underdetermined": {
+        "unjustified_auto_attach_cases": 4,
+        "unjustified_auto_attach_directions": 8,
+        "human_review_candidate_cases": 7,
+        "underdetermined_candidate_cases_including_attach": 11
+      },
+      "route_counts_by_relationship": {
+        "same": {
+          "suggest_cases": 6,
+          "semantic_only_suggestion_cases": 5,
+          "any_direction_attached_cases": 12,
+          "lexical_route_attached_cases": 12,
+          "lexical_only_suggestion_cases": 1
+        },
+        "different": {
+          "suggest_cases": 17,
+          "lexical_only_suggestion_cases": 9,
+          "semantic_only_suggestion_cases": 8
+        },
+        "underdetermined": {
+          "suggest_cases": 7,
+          "semantic_only_suggestion_cases": 5,
+          "any_direction_attached_cases": 4,
+          "lexical_route_attached_cases": 4,
+          "lexical_only_suggestion_cases": 2
+        }
+      },
+      "route_disagreement_cases": 0,
+      "cue_free_negative_suggestion_case_ids": [
+        "different-av-devices-13",
+        "different-rails-sides-14",
+        "different-patients-names-15",
+        "different-water-sources-16",
+        "different-exits-no-cue-17",
+        "different-fan-lights-18"
+      ],
+      "underdetermined_auto_attach_case_ids": [
+        "uncertain-exit-03",
+        "uncertain-queue-09",
+        "uncertain-changing-exit-11",
+        "uncertain-rail-12"
+      ],
+      "selected_per_case_actions": [
+        {
+          "id": "same-med-collapse-01",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-med-ankle-02",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-missing-child-03",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-spill-04",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-exit-05",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-av-06",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-ramp-07",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-med-dizzy-08",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-water-leak-09",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-missing-adult-10",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-lighting-11",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-facility-12",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-patients-01",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "separate",
+          "auto_attached": false,
+          "suggest_evidence": false,
+          "candidate_evidence": false,
+          "selected_route_evidence": [],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-missing-people-02",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-devices-03",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-spills-04",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-exits-05",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-falls-06",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-leaks-07",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-av-08",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-fixtures-09",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-missing-adults-10",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-medical-11",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-handrails-12",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-medical-01",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-collapse-02",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "separate",
+          "auto_attached": false,
+          "suggest_evidence": false,
+          "candidate_evidence": false,
+          "selected_route_evidence": [],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-exit-03",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-spill-04",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-missing-child-05",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-missing-adult-06",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-dizzy-07",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-av-08",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-queue-09",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-separated-10",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-changing-exit-11",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "uncertain-rail-12",
+          "relationship": "underdetermined",
+          "expected_action": "review",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-av-cable-13",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-exit-crew-14",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-leak-buckets-15",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-med-nurses-16",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "attach",
+          "auto_attached": true,
+          "suggest_evidence": false,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-missing-volunteers-17",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "same-spill-staff-18",
+          "relationship": "same",
+          "expected_action": "attach",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-av-devices-13",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-rails-sides-14",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-patients-names-15",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-water-sources-16",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "semantic"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-exits-no-cue-17",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        },
+        {
+          "id": "different-fan-lights-18",
+          "relationship": "different",
+          "expected_action": "separate",
+          "actual_action": "suggest",
+          "auto_attached": false,
+          "suggest_evidence": true,
+          "candidate_evidence": true,
+          "selected_route_evidence": [
+            "lexical"
+          ],
+          "route_disagreement": false
+        }
+      ]
+    },
+    "original_dev": {
+      "partition": {
+        "reports": 60,
+        "positive_pairs": 66,
+        "true_positive_pairs": 22,
+        "false_merge_pairs": 0,
+        "missed_pairs": 44,
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      },
+      "ordered_runtime": {
+        "reports": 60,
+        "auto_attached_reports": 16,
+        "correct_same_event_attach_reports": 16,
+        "wrong_or_mixed_event_attach_reports": 0,
+        "review_reports": 60,
+        "same_event_repeated_incoming_reports": 40,
+        "same_event_candidate_evidence_reports": 38,
+        "same_event_candidate_evidence_recall": 0.95,
+        "route_disagreement_reports": 1,
+        "same_event_candidate_evidence_recall_definition": "38 of 40 repeated same-event incoming reports had at least one candidate from their gold group; this is report-level candidate coverage, not pairwise recall over all 66 positive pairs."
+      },
+      "wrong_or_mixed_event_attach_report_ids": [],
+      "correct_same_event_attach_report_ids": [
+        "dev-021",
+        "dev-025",
+        "dev-026",
+        "dev-030",
+        "dev-032",
+        "dev-036",
+        "dev-038",
+        "dev-039",
+        "dev-048",
+        "dev-049",
+        "dev-050",
+        "dev-051",
+        "dev-054",
+        "dev-055",
+        "dev-056",
+        "dev-060"
+      ],
+      "same_event_candidate_evidence_report_ids": [
+        "dev-021",
+        "dev-022",
+        "dev-023",
+        "dev-024",
+        "dev-025",
+        "dev-026",
+        "dev-027",
+        "dev-028",
+        "dev-030",
+        "dev-032",
+        "dev-033",
+        "dev-034",
+        "dev-035",
+        "dev-036",
+        "dev-037",
+        "dev-038",
+        "dev-039",
+        "dev-040",
+        "dev-041",
+        "dev-042",
+        "dev-043",
+        "dev-044",
+        "dev-045",
+        "dev-046",
+        "dev-047",
+        "dev-048",
+        "dev-049",
+        "dev-050",
+        "dev-051",
+        "dev-052",
+        "dev-053",
+        "dev-054",
+        "dev-055",
+        "dev-056",
+        "dev-057",
+        "dev-058",
+        "dev-059",
+        "dev-060"
+      ],
+      "changing_exit_workflow": {
+        "gold_group_id": "dev-G04",
+        "reports": [
+          "dev-004",
+          "dev-022",
+          "dev-040",
+          "dev-057"
+        ],
+        "blocked_to_clear_reports_same_predicted_group": false,
+        "gold_group_detected_conflicts": 1,
+        "predicted_subgroup_conflicts_total": 0,
+        "preserved_conflict_signal": false,
+        "predicted_group_by_report": {
+          "dev-004": "profile-004",
+          "dev-022": "profile-021",
+          "dev-040": "profile-032",
+          "dev-057": "profile-042"
+        },
+        "decision_reasons_by_report": {
+          "dev-004": [
+            "Known event time and a specific shared sublocation or described entity are required for attachment.",
+            "A known location, time, category, or entity incompatibility keeps this report separate."
+          ],
+          "dev-022": [
+            "A review candidate is available, but no route passed the automatic attachment gates."
+          ],
+          "dev-040": [
+            "Anchor similarity is insufficient; a strong member match cannot create a transitive bridge."
+          ],
+          "dev-057": [
+            "MiniLM candidate margin is below 0.08; the close runner-up is shown for coordinator review."
+          ]
+        }
+      }
+    },
+    "current_lexical_only_counterfactual": {
+      "source_sha256": "167a69044d469779eaa16f7b37eee76dc78faa003f4726c66799e2d57559e975",
+      "challenge_sha256": "0612fcc14b68f681ab55a737687f9e1a5d1de71034d4e711bf2750f70eee8079",
+      "method": "forced lexical fallback on current hybrid source; no MiniLM vectors available to route",
+      "thresholds": {
+        "semantic_attach": 0.76,
+        "semantic_review": 0.65,
+        "semantic_anchor": 0.62,
+        "lexical_attach": 0.33,
+        "lexical_suggest": 0.33,
+        "lexical_anchor": 0.05,
+        "runner_up_margin": 0.08
+      },
+      "metrics": {
+        "case_count": 48,
+        "by_expected_action": {
+          "attach": 18,
+          "separate": 18,
+          "review": 12
+        },
+        "same_event": {
+          "both_direction_auto_attach": 17,
+          "both_direction_attach_recall": 0.9444444444444444,
+          "either_direction_auto_attach": 17,
+          "either_direction_attach_recall": 0.9444444444444444,
+          "suggest_evidence_cases": 1,
+          "suggest_evidence_recall": 0.05555555555555555,
+          "candidate_recall_including_attach": 1.0
+        },
+        "different_event_safety": {
+          "false_attachment_cases": 15,
+          "false_attachment_directions": 30,
+          "false_suggestion_cases": 2,
+          "different_event_candidate_cases_including_attach": 17
+        },
+        "underdetermined_safety": {
+          "unjustified_auto_attach_cases": 9,
+          "unjustified_auto_attach_directions": 18,
+          "human_review_candidate_cases": 2,
+          "underdetermined_candidate_cases_including_attach": 11
+        },
+        "non_same_safety": {
+          "identifiable_false_attachment_cases": 15,
+          "underdetermined_unjustified_attachment_cases": 9,
+          "total_non_same_auto_attach_cases": 24,
+          "false_identifiable_different_suggestion_cases": 2,
+          "underdetermined_human_review_candidate_cases": 2
+        },
+        "total_directional_evaluations": 96
+      },
+      "false_different_auto_attach_case_ids": [
+        "different-missing-people-02",
+        "different-devices-03",
+        "different-spills-04",
+        "different-falls-06",
+        "different-leaks-07",
+        "different-av-08",
+        "different-fixtures-09",
+        "different-missing-adults-10",
+        "different-medical-11",
+        "different-handrails-12",
+        "different-av-devices-13",
+        "different-rails-sides-14",
+        "different-patients-names-15",
+        "different-water-sources-16",
+        "different-fan-lights-18"
+      ],
+      "underdetermined_auto_attach_case_ids": [
+        "uncertain-exit-03",
+        "uncertain-spill-04",
+        "uncertain-missing-child-05",
+        "uncertain-missing-adult-06",
+        "uncertain-av-08",
+        "uncertain-queue-09",
+        "uncertain-separated-10",
+        "uncertain-changing-exit-11",
+        "uncertain-rail-12"
+      ],
+      "cue_free_negative_suggestion_case_ids": [
+        "different-exits-no-cue-17"
+      ],
+      "interpretation": "Against this same current engine, removing dense vectors raises identifiable different-event false attachments from 0/18 to 15/18, while increasing same-event automatic attachments from 12/18 to 17/18. This is a forced-fallback counterfactual, not a separately calibrated lexical production profile."
+    },
+    "underdetermined_auto_attach_score_witnesses": [
+      {
+        "case_id": "uncertain-exit-03",
+        "dense_anchor_cosine": 0.65482,
+        "dense_group_composite": 0.763824,
+        "semantic_attach_threshold": 0.76,
+        "lexical_anchor_cosine": 0.189297,
+        "lexical_group_composite": 0.445308,
+        "semantic_route_gate": "Passes dense anchor and composite threshold; one candidate means unbounded runner-up margin.",
+        "selected_attachment_route": "lexical; independent semantic route ranks the same candidate as eligible."
+      },
+      {
+        "case_id": "uncertain-queue-09",
+        "dense_anchor_cosine": 0.630864,
+        "dense_group_composite": 0.747434,
+        "semantic_attach_threshold": 0.76,
+        "lexical_anchor_cosine": 0.177304,
+        "lexical_group_composite": 0.437103,
+        "semantic_route_gate": "Fails dense composite threshold (.747434 < .76); anchor still clears .62, so lexical attachment passes dense-anchor corroboration.",
+        "selected_attachment_route": "lexical."
+      },
+      {
+        "case_id": "uncertain-changing-exit-11",
+        "dense_anchor_cosine": 0.697751,
+        "dense_group_composite": 0.803538,
+        "semantic_attach_threshold": 0.76,
+        "lexical_anchor_cosine": 0.325883,
+        "lexical_group_composite": 0.561824,
+        "semantic_route_gate": "Passes dense anchor and composite threshold; one candidate means unbounded runner-up margin.",
+        "selected_attachment_route": "lexical; independent semantic route ranks the same candidate as eligible."
+      },
+      {
+        "case_id": "uncertain-rail-12",
+        "dense_anchor_cosine": 0.68011,
+        "dense_group_composite": 0.781128,
+        "semantic_attach_threshold": 0.76,
+        "lexical_anchor_cosine": 0.177621,
+        "lexical_group_composite": 0.437319,
+        "semantic_route_gate": "Passes dense anchor and composite threshold; one candidate means unbounded runner-up margin.",
+        "selected_attachment_route": "lexical; independent semantic route ranks the same candidate as eligible."
+      }
+    ]
+  },
+  "profile_sweep": {
+    "semantic_attach_thresholds": [
+      0.7,
+      0.72,
+      0.74,
+      0.75,
+      0.76,
+      0.78,
+      0.8,
+      0.82
+    ],
+    "semantic_review_thresholds": [
+      0.5,
+      0.55,
+      0.6,
+      0.65
+    ],
+    "fixed_guards": {
+      "semantic_anchor": 0.62,
+      "semantic_review_anchor": 0.2,
+      "lexical_attach": 0.33,
+      "lexical_suggest": 0.33,
+      "lexical_anchor": 0.05,
+      "runner_up_margin": 0.08
+    },
+    "summary_rows": [
+      {
+        "semantic_attach_threshold": 0.7,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.7,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.7,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.7,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.72,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.72,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.72,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.72,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.74,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.74,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.74,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.74,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.75,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.75,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.75,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.75,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.76,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.76,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.76,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.76,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 22,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.3333333333333333,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.78,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.78,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.78,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.78,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.8,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.8,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.8,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.8,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.82,
+        "semantic_review_threshold": 0.5,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 1.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.82,
+        "semantic_review_threshold": 0.55,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.82,
+        "semantic_review_threshold": 0.6,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 8,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 3,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      },
+      {
+        "semantic_attach_threshold": 0.82,
+        "semantic_review_threshold": 0.65,
+        "challenge_same_pairs_attached": 12,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_cue_free_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 4,
+        "challenge_underdetermined_review_candidate_cases": 7,
+        "dev_true_positive_pairs": 18,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.2727272727272727,
+        "dev_candidate_evidence_recall": 0.95,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_route_disagreement_reports": 1,
+        "dev_changing_exit_shared_group": false,
+        "dev_changing_exit_conflict_signal_preserved": false
+      }
+    ]
+  },
+  "original_engine_baselines": {
+    "original_semantic": {
+      "engine_source_commit": "c5f31c28e326d5ff6f058e3085a7556a4535c7cf",
+      "engine_source_sha256": "bef5999615384b4678febbbd664f81b52b24aaac4a8acd7a563dba9c7c04a058",
+      "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
+      "thresholds": {
+        "semantic_attach": 0.82,
+        "semantic_suggest": 0.65,
+        "semantic_anchor_minimum": 0.62,
+        "lexical_attach": 0.33,
+        "lexical_suggest": 0.33,
+        "lexical_anchor_minimum": 0.05,
+        "runner_up_margin": 0.08
+      },
+      "challenge_metrics": {
+        "case_count": 48,
+        "by_expected_action": {
+          "attach": 18,
+          "separate": 18,
+          "review": 12
+        },
+        "same_event": {
+          "both_direction_auto_attach": 2,
+          "both_direction_attach_recall": 0.1111111111111111,
+          "either_direction_auto_attach": 2,
+          "either_direction_attach_recall": 0.1111111111111111,
+          "suggest_evidence_cases": 13,
+          "suggest_evidence_recall": 0.7222222222222222,
+          "candidate_recall_including_attach": 0.8333333333333334
+        },
+        "different_event_safety": {
+          "false_attachment_cases": 0,
+          "false_attachment_directions": 0,
+          "false_suggestion_cases": 17,
+          "different_event_candidate_cases_including_attach": 17
+        },
+        "underdetermined_safety": {
+          "unjustified_auto_attach_cases": 0,
+          "unjustified_auto_attach_directions": 0,
+          "human_review_candidate_cases": 11,
+          "underdetermined_candidate_cases_including_attach": 11
+        },
+        "non_same_safety": {
+          "identifiable_false_attachment_cases": 0,
+          "underdetermined_unjustified_attachment_cases": 0,
+          "total_non_same_auto_attach_cases": 0,
+          "false_identifiable_different_suggestion_cases": 17,
+          "underdetermined_human_review_candidate_cases": 11
+        },
+        "total_directional_evaluations": 96
+      },
+      "analysis_failure_count": 0,
+      "grouping_failure_count": 0
+    },
+    "original_lexical": {
+      "engine_source_commit": "c5f31c28e326d5ff6f058e3085a7556a4535c7cf",
+      "engine_source_sha256": "bef5999615384b4678febbbd664f81b52b24aaac4a8acd7a563dba9c7c04a058",
+      "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
+      "thresholds": {
+        "semantic_attach": 0.82,
+        "semantic_suggest": 0.65,
+        "semantic_anchor_minimum": 0.62,
+        "lexical_attach": 0.33,
+        "lexical_suggest": 0.33,
+        "lexical_anchor_minimum": 0.05,
+        "runner_up_margin": 0.08
+      },
+      "challenge_metrics": {
+        "case_count": 48,
+        "by_expected_action": {
+          "attach": 18,
+          "separate": 18,
+          "review": 12
+        },
+        "same_event": {
+          "both_direction_auto_attach": 14,
+          "both_direction_attach_recall": 0.7777777777777778,
+          "either_direction_auto_attach": 14,
+          "either_direction_attach_recall": 0.7777777777777778,
+          "suggest_evidence_cases": 1,
+          "suggest_evidence_recall": 0.05555555555555555,
+          "candidate_recall_including_attach": 0.8333333333333334
+        },
+        "different_event_safety": {
+          "false_attachment_cases": 17,
+          "false_attachment_directions": 34,
+          "false_suggestion_cases": 0,
+          "different_event_candidate_cases_including_attach": 17
+        },
+        "underdetermined_safety": {
+          "unjustified_auto_attach_cases": 9,
+          "unjustified_auto_attach_directions": 18,
+          "human_review_candidate_cases": 2,
+          "underdetermined_candidate_cases_including_attach": 11
+        },
+        "non_same_safety": {
+          "identifiable_false_attachment_cases": 17,
+          "underdetermined_unjustified_attachment_cases": 9,
+          "total_non_same_auto_attach_cases": 26,
+          "false_identifiable_different_suggestion_cases": 0,
+          "underdetermined_human_review_candidate_cases": 2
+        },
+        "total_directional_evaluations": 96
+      },
+      "analysis_failure_count": 0,
+      "grouping_failure_count": 0
+    }
+  },
+  "cross_encoder_followup": {
+    "artifact": "evaluation/results/reranker-development.json",
+    "decision": "Do not integrate; the small STS reranker did not separate same-incident paraphrases from hard negatives and underdetermined pairs reliably."
+  },
+  "post_sweep_source_validation": {
+    "status": "verified",
+    "sweep_source_sha256": "167a69044d469779eaa16f7b37eee76dc78faa003f4726c66799e2d57559e975",
+    "sweep_config_version": "hybrid-context-dev-v1+lexical-context-dev-v2+location-aliases-v1",
+    "final_source_sha256": "71b9f608aee586f48c754b751c8e7d3c1684c5b0c35fe48233567a221698ab6f",
+    "final_config_version": "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1",
+    "selected_profile_rechecked": {
+      "semantic_attach": 0.76,
+      "semantic_review": 0.65,
+      "semantic_anchor": 0.62,
+      "semantic_review_anchor": 0.2,
+      "lexical_attach": 0.33,
+      "lexical_suggest": 0.33,
+      "lexical_anchor": 0.05,
+      "runner_up_margin": 0.08
+    },
+    "runtime_device": "mps:0",
+    "analysis_failure_count": 0,
+    "grouping_failure_count": 0,
+    "challenge_before_and_after": {
+      "same_event_auto_attach_cases": {
+        "sweep": 12,
+        "final": 12
+      },
+      "explicit_different_false_attach_cases": {
+        "sweep": 0,
+        "final": 0
+      },
+      "underdetermined_auto_attach_cases": {
+        "sweep": 4,
+        "final": 4
+      },
+      "same_candidate_recall": {
+        "sweep": 1.0,
+        "final": 1.0
+      }
+    },
+    "dev_before_and_after": {
+      "true_positive_pairs": {
+        "sweep": 22,
+        "final": 22
+      },
+      "false_merge_pairs": {
+        "sweep": 0,
+        "final": 0
+      },
+      "auto_attached_reports": {
+        "sweep": 16,
+        "final": 16
+      },
+      "same_event_candidate_evidence_reports": {
+        "sweep": 38,
+        "final": 38
+      },
+      "same_event_repeated_incoming_reports": 40,
+      "review_reports": {
+        "sweep": 60,
+        "final": 59
+      },
+      "changing_exit_workflow": {
+        "gold_group_id": "dev-G04",
+        "reports": [
+          "dev-004",
+          "dev-022",
+          "dev-040",
+          "dev-057"
+        ],
+        "blocked_to_clear_reports_same_predicted_group": false,
+        "gold_group_detected_conflicts": 1,
+        "predicted_subgroup_conflicts_total": 0,
+        "preserved_conflict_signal": false,
+        "preserved_conflict_signal_definition": "Only within-predicted-group Conflict objects are counted here; cross-report review warnings are recorded separately."
+      }
+    },
+    "conclusion": "Challenge attachment counts and DEV grouping/membership metrics match the original selected-profile sweep. The final source has one fewer DEV report-level review flag (60 to 59); it does not change scores, selected groups, or attachment counts.",
+    "cross_report_conflict_review_visibility": {
+      "definition": "An explicit source-cited warning in choose_group.review_reasons, independently of within-incident Conflict objects.",
+      "reports": [
+        {
+          "report_id": "dev-057",
+          "warnings": [
+            "Potential conflicting or changing accounts; compare report IDs dev-057 and dev-004: exit_access is clear (\u201cdoorway is open\u201d) versus blocked (\u201cExit A door is stuck\u201d)."
+          ]
+        }
+      ],
+      "changing_exit_warning_visible": true,
+      "limitations": "The reports remain in separate predicted groups; this warning invites coordinator comparison and does not assert they are one incident."
+    }
+  },
+  "calibrated_lexical_control": {
+    "source": {
+      "git_head": "cc3c5ca17a1ae2e9df8d898e36bcb44945549067",
+      "engine_sha256": "71b9f608aee586f48c754b751c8e7d3c1684c5b0c35fe48233567a221698ab6f",
+      "config_version": "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1"
+    },
+    "fixtures": {
+      "challenge_dev_sha256": "0612fcc14b68f681ab55a737687f9e1a5d1de71034d4e711bf2750f70eee8079",
+      "dev_inputs_sha256": "ba5bee228274b4a112fbbee6f8eb4fcc7b96edd7bfafb66e1e415e20d34a84ce",
+      "dev_labels_sha256": "fceff5bbba880fa5d05947934cd2f8f55a8b2f4694159dc2769a4b0b28f61ce3"
+    },
+    "method": "Forced lexical fallback on the final hybrid source, with dense vectors unavailable; no model inference. All shared context, hard conflict, entity, rejection, anchor, and runner-up behavior remained as in the engine; only the lexical attach threshold varied.",
+    "scope": {
+      "held_out_accessed": false,
+      "runtime_thresholds_changed": false,
+      "analysis_failure_count": 0,
+      "grouping_failure_count": 0,
+      "analysis_report_count": 156,
+      "model_inference_count": 0
+    },
+    "common_gates": {
+      "lexical_suggest_threshold": 0.33,
+      "lexical_anchor_minimum": 0.05,
+      "semantic_anchor_minimum": 0.62,
+      "runner_up_margin": 0.08
+    },
+    "predeclared_objective": "Among forced lexical profiles with zero explicit-different automatic attachment cases on the 48-pair challenge, maximize original DEV ordered-runtime pairwise recall; ties prefer fewer DEV false merges, then higher lexical attach threshold. Underdetermined labels are reported separately and do not affect selection.",
+    "selected_lexical_attach_threshold": 0.82,
+    "selected_challenge_metrics": {
+      "case_count": 48,
+      "by_expected_action": {
+        "attach": 18,
+        "separate": 18,
+        "review": 12
+      },
+      "same_event": {
+        "both_direction_auto_attach": 0,
+        "both_direction_attach_recall": 0.0,
+        "either_direction_auto_attach": 0,
+        "either_direction_attach_recall": 0.0,
+        "suggest_evidence_cases": 18,
+        "suggest_evidence_recall": 1.0,
+        "candidate_recall_including_attach": 1.0
+      },
+      "different_event_safety": {
+        "false_attachment_cases": 0,
+        "false_attachment_directions": 0,
+        "false_suggestion_cases": 17,
+        "different_event_candidate_cases_including_attach": 17
+      },
+      "underdetermined_safety": {
+        "unjustified_auto_attach_cases": 0,
+        "unjustified_auto_attach_directions": 0,
+        "human_review_candidate_cases": 11,
+        "underdetermined_candidate_cases_including_attach": 11
+      },
+      "non_same_safety": {
+        "identifiable_false_attachment_cases": 0,
+        "underdetermined_unjustified_attachment_cases": 0,
+        "total_non_same_auto_attach_cases": 0,
+        "false_identifiable_different_suggestion_cases": 17,
+        "underdetermined_human_review_candidate_cases": 11
+      },
+      "total_directional_evaluations": 96
+    },
+    "selected_dev_partition": {
+      "reports": 60,
+      "positive_pairs": 66,
+      "true_positive_pairs": 0,
+      "false_merge_pairs": 0,
+      "missed_pairs": 66,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "selected_dev_ordered_runtime": {
+      "reports": 60,
+      "auto_attached_reports": 0,
+      "correct_same_event_attach_reports": 0,
+      "wrong_or_mixed_event_attach_reports": 0,
+      "wrong_or_mixed_event_attach_ids": [],
+      "same_event_repeated_incoming_reports": 40,
+      "same_event_candidate_evidence_reports": 40,
+      "same_event_candidate_evidence_recall": 1.0
+    },
+    "profile_rows": [
+      {
+        "lexical_attach_threshold": 0.33,
+        "challenge_same_pairs_attached": 17,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 15,
+        "challenge_explicit_different_false_suggestion_cases": 2,
+        "challenge_underdetermined_auto_attach_cases": 9,
+        "dev_true_positive_pairs": 55,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.8333333333333334,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.45,
+        "challenge_same_pairs_attached": 7,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 11,
+        "challenge_explicit_different_false_suggestion_cases": 6,
+        "challenge_underdetermined_auto_attach_cases": 2,
+        "dev_true_positive_pairs": 12,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.18181818181818182,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.55,
+        "challenge_same_pairs_attached": 1,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 2,
+        "challenge_explicit_different_false_suggestion_cases": 15,
+        "challenge_underdetermined_auto_attach_cases": 1,
+        "dev_true_positive_pairs": 1,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.015151515151515152,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.6,
+        "challenge_same_pairs_attached": 1,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_underdetermined_auto_attach_cases": 0,
+        "dev_true_positive_pairs": 0,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.65,
+        "challenge_same_pairs_attached": 1,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_underdetermined_auto_attach_cases": 0,
+        "dev_true_positive_pairs": 0,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.75,
+        "challenge_same_pairs_attached": 0,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_underdetermined_auto_attach_cases": 0,
+        "dev_true_positive_pairs": 0,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      },
+      {
+        "lexical_attach_threshold": 0.82,
+        "challenge_same_pairs_attached": 0,
+        "challenge_same_candidate_recall": 1.0,
+        "challenge_explicit_different_false_attach_cases": 0,
+        "challenge_explicit_different_false_suggestion_cases": 17,
+        "challenge_underdetermined_auto_attach_cases": 0,
+        "dev_true_positive_pairs": 0,
+        "dev_false_merge_pairs": 0,
+        "dev_positive_pair_recall": 0.0,
+        "dev_wrong_or_mixed_event_attach_reports": 0,
+        "dev_candidate_evidence_recall": 1.0
+      }
+    ],
+    "comparison_note": "The zero-explicit-different lexical profile selected by the same objective has 0/66 DEV pair recall. The hybrid profile at .76/.65 has 22/66, with zero explicit-different false attachments on the development challenge. This is a synthetic development comparison, not a generalization guarantee."
+  },
+  "verification": {
+    "backend": {
+      "tests_passed": 273,
+      "covered_statements": 3045,
+      "statements": 3045,
+      "covered_branches": 1046,
+      "branches": 1046,
+      "statement_coverage_percent": 100,
+      "branch_coverage_percent": 100,
+      "coverage_scope": [
+        "backend/aegis",
+        "data"
+      ],
+      "excluded_lines": 0
+    },
+    "real_model_api": {
+      "method": "FastAPI TestClient through actual ingestion, SQLite persistence, replay and coordinator review; real offline pinned MiniLM, no fake encoder.",
+      "model": "sentence-transformers/all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "config": "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1",
+      "replay": {
+        "reports": 24,
+        "groups": 19,
+        "conflicts": 0,
+        "audit_entries": 50,
+        "all_analyzed": true
+      },
+      "fresh_intake": {
+        "reports_retained": 6,
+        "paraphrases_grouped": true,
+        "other_device_separate": true,
+        "incomplete_unassessed_and_visible": true,
+        "opposing_claims_preserved": true,
+        "audit_entries": 14
+      }
+    },
+    "fixed_regression_measurements": [
+      "evaluation/results/latest.json",
+      "evaluation/results/semantic.json"
+    ]
+  }
+}

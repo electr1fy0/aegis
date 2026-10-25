@@ -1,4 +1,4 @@
-.PHONY: setup backend backend-semantic frontend dev dev-semantic preflight semantic-setup evaluate evaluate-semantic test coverage build lint verify
+.PHONY: setup backend backend-semantic frontend dev dev-semantic preflight semantic-setup evaluate evaluate-semantic evaluate-challenge test coverage build lint verify
 
 setup:
 	uv venv --python python3 .venv
@@ -34,6 +34,9 @@ evaluate:
 
 evaluate-semantic:
 	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv-semantic/bin/python -m backend.aegis.maintenance evaluate
+
+evaluate-challenge:
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv-semantic/bin/python scripts/evaluate_challenge.py
 
 test:
 	.venv/bin/python -m pytest

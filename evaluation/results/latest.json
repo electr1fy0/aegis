@@ -1,8 +1,8 @@
 {
   "dataset_version": "aegis-synthetic-2026-10-v1",
   "model": "lexical-hash-v1",
-  "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
-  "generated_at": "2026-10-25T02:51:25.969716Z",
+  "config_version": "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1",
+  "generated_at": "2026-10-25T05:40:54.091648Z",
   "results": [
     {
       "method": "Lexical Jaccard baseline",
@@ -16,10 +16,10 @@
     {
       "method": "Aegis contextual lexical (degraded)",
       "precision": 1.0,
-      "recall": 0.621212,
-      "f1": 0.766355,
+      "recall": 0.651515,
+      "f1": 0.788991,
       "false_merges": 0,
-      "missed_pairs": 25,
+      "missed_pairs": 23,
       "review_rate": 1.0
     }
   ],
@@ -47,7 +47,7 @@
     {
       "name": "contradictory or changing reports stay visible",
       "passed": true,
-      "detail": "A conflict was returned for 1 of 1 labeled changing-report groups."
+      "detail": "The source-claim detector returned a conflict for 1 of 1 ground-truth changing-report groups. This detector check supplies the labeled memberships; it does not establish that automatic grouping joined those reports."
     },
     {
       "name": "incomplete reports remain reviewable",
@@ -56,13 +56,16 @@
     }
   ],
   "latency": {
-    "p50_ms": 20.126,
-    "p95_ms": 40.227
+    "p50_ms": 45.111,
+    "p95_ms": 74.932
   },
   "limitations": [
     "All reports and incident labels are synthetic; this small fixed test split does not establish operational accuracy.",
     "Grouping metrics count report pairs; latency is per-report analysis plus incremental grouping on this process and hardware.",
     "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF.",
+    "The Jaccard and fixed-threshold cosine rows are diagnostic comparators, not production engine paths or calibrated probabilities. They use simple anchor-based zone/time eligibility and do not reproduce all production context, ambiguity, and review rules.",
+    "The diagnostic cosine threshold is fixed at 0.78 and was not calibrated or selected using this test split. Its context eligibility matches the Jaccard diagnostic.",
+    "Policy and conflict-detector checks use ground-truth group membership independently of predicted groups. Passing them does not imply successful automatic grouping; pairwise grouping errors and the real API workflow must be assessed separately.",
     "The active Aegis engine used lexical/degraded mode; no semantic result is reported."
   ],
   "failures": [],
@@ -81,12 +84,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west model table.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -103,10 +107,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west model table.",
         "Reported event times are 1.5 minutes apart.",
-        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.418 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -123,12 +130,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: south host stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -145,30 +153,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: bakery island.",
         "Reported event times are 1.5 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis contextual lexical (degraded)",
-      "report_ids": [
-        "test-006",
-        "test-059"
-      ],
-      "texts": [
-        "A tray of water has spilled onto the aisle at the bakery island.",
-        "The puddle by the bakery island remains on the aisle floor."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
-        "Same reported sublocation: bakery island.",
-        "Reported event times are 2.2 minutes apart.",
-        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -185,10 +176,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: stage right monitor.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -205,12 +199,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: ticket scan lane.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -227,12 +222,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: menu stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -249,10 +245,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: north label desk.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -269,9 +268,12 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: north label desk.",
-        "Reported event times are 1.5 minutes apart."
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -288,12 +290,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west bottle filler.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -310,12 +313,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west bottle filler.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -332,12 +336,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: under rear seats.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -354,10 +359,11 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west model table.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized."
       ]
     },
@@ -375,10 +381,11 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: south host stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized."
       ]
     },
@@ -396,12 +403,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: south host stand.",
         "Reported event times are 1.5 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -418,28 +426,12 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: bakery island.",
-        "Reported event times are 0.8 minutes apart."
-      ]
-    },
-    {
-      "kind": "missed_pair",
-      "method": "Aegis contextual lexical (degraded)",
-      "report_ids": [
-        "test-024",
-        "test-059"
-      ],
-      "texts": [
-        "The floor beside the pastry counter is wet from a fallen drink tray.",
-        "The puddle by the bakery island remains on the aisle floor."
-      ],
-      "expected_same_incident": true,
-      "predicted_same_incident": false,
-      "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
-        "Same reported sublocation: bakery island.",
-        "Reported event times are 1.5 minutes apart."
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -456,9 +448,12 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: stage right monitor.",
-        "Reported event times are 0.8 minutes apart."
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     },
     {
@@ -475,12 +470,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: ticket scan lane.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -497,12 +493,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: menu stand.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -519,10 +516,15 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: north label desk.",
         "Reported event times are 0.8 minutes apart.",
-        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "This candidate uses the independent local lexical-hash route; dense results are shown separately and were not mixed into its score.",
+        "Composite total_score uses the local lexical-hash similarity plus context components.",
+        "This route can propose a review candidate but cannot attach it without passing the independent attachment gates.",
+        "Candidate group rank score 0.372 is the mean of all 1 lexical pair composites and is used for threshold and margin checks; total_score remains the anchor pair composite."
       ]
     },
     {
@@ -539,10 +541,13 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: west bottle filler.",
         "Reported event times are 0.8 minutes apart.",
-        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Lexical anchor similarity is below 0.05; do not bridge through another member."
       ]
     },
     {
@@ -559,10 +564,11 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: under rear seats.",
         "Reported event times are 0.8 minutes apart.",
         "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
         "Missing score components were omitted and available weights were renormalized."
       ]
     },
@@ -580,19 +586,22 @@
       "expected_same_incident": true,
       "predicted_same_incident": false,
       "reasons": [
-        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
         "Same reported sublocation: bakery island.",
-        "Reported event times are 0.8 minutes apart."
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Text similarity uses the local lexical-hash fallback; stored vectors were not compared across model revisions.",
+        "Composite total_score uses the local lexical-hash signal.",
+        "Missing score components were omitted and available weights were renormalized."
       ]
     }
   ],
   "workload": {
     "reports": 60,
     "review_reports": 60,
-    "proposed_groups": 33,
-    "confirmation_groups": 33,
+    "proposed_groups": 32,
+    "confirmation_groups": 32,
     "split_operations": 0,
-    "merge_operations": 13,
+    "merge_operations": 12,
     "basis": "Synthetic ground-truth partition corrections: first separate each mixed group, then join fragments of each true incident. One confirmation per proposed group. These are idealized grouping operations, not measured clicks or operator time."
   }
 }

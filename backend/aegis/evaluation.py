@@ -130,8 +130,7 @@ def _create_forced_lexical_engine() -> tuple[Any | None, str | None]:
         return AnalysisEngine(model_loader=lambda: None), None
     except Exception as exc:
         return None, (
-            "Unable to initialize forced lexical AnalysisEngine: "
-            f"{type(exc).__name__}: {exc}"
+            f"Unable to initialize forced lexical AnalysisEngine: {type(exc).__name__}: {exc}"
         )
 
 
@@ -514,7 +513,11 @@ def _conflict_check(
     return {
         "name": "contradictory or changing reports stay visible",
         "passed": total > 0 and found == total,
-        "detail": f"A conflict was returned for {found} of {total} labeled changing-report groups.",
+        "detail": (
+            f"The source-claim detector returned a conflict for {found} of {total} "
+            "ground-truth changing-report groups. This detector check supplies the labeled "
+            "memberships; it does not establish that automatic grouping joined those reports."
+        ),
     }
 
 
@@ -667,6 +670,9 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
         "eligibility and do not reproduce all production context, ambiguity, and review rules.",
         "The diagnostic cosine threshold is fixed at 0.78 and was not calibrated or selected "
         "using this test split. Its context eligibility matches the Jaccard diagnostic.",
+        "Policy and conflict-detector checks use ground-truth group membership independently "
+        "of predicted groups. Passing them does not imply successful automatic grouping; "
+        "pairwise grouping errors and the real API workflow must be assessed separately.",
     ]
     try:
         dataset_version, raw_reports, labels = _load_split()
@@ -740,7 +746,9 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
     semantic_reference_revision = (
         health.get("model_revision")
         if isinstance(health.get("model_revision"), str)
-        else model if mode == "semantic" else None
+        else model
+        if mode == "semantic"
+        else None
     )
     matching_semantic_embeddings = sum(
         report.get("model_revision") == semantic_reference_revision
@@ -789,8 +797,7 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
                     _run_engine(forced_lexical_engine, raw_reports, forced_lexical_failures)
                 )
                 failures.extend(
-                    f"Forced lexical comparison: {failure}"
-                    for failure in forced_lexical_failures
+                    f"Forced lexical comparison: {failure}" for failure in forced_lexical_failures
                 )
                 results.append(
                     _metric_row(
@@ -821,7 +828,7 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
                     truth,
                     semantic_predictions,
                     semantic_reviews,
-                )
+                ),
             )
         elif mode == "semantic" and health.get("model_ready") is not False:
             matching_count = sum(

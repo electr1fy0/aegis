@@ -1,0 +1,1027 @@
+{
+  "dataset_version": "aegis-context-hard-negatives-2026-10-v1",
+  "split": "challenge_dev",
+  "purpose": "Development-only safety challenge authored before model scoring. Labels are synthetic scenario assumptions, not claims that event identity can always be inferred from the report text. Never use this split as held-out evaluation data.",
+  "label_policy": {
+    "same": "The author assigns both reports to one underlying event in the scenario; expected_action attach is a target only when available evidence supports it, not an assertion that text alone proves identity.",
+    "different": "The author assigns reports to distinct underlying events despite identical recorded context; expected_action separate. The input text should not rely on annotation-style “different” or “separate” wording.",
+    "underdetermined": "Available report text cannot establish whether the underlying event is the same; expected_action review and must never auto-attach."
+  },
+  "context_policy": "Every case pair has exactly the same known zone, sublocation, and reported_at to prevent metadata alone from separating the pair.",
+  "cases": [
+    {
+      "id": "same-med-collapse-01",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_condition",
+      "rationale": "Both reports describe the same collapsed visitor and the same response need.",
+      "left": {
+        "id": "same-med-collapse-01-a",
+        "text": "An older visitor collapsed beside the south stair landing and is not responding to staff.",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      },
+      "right": {
+        "id": "same-med-collapse-01-b",
+        "text": "There is an elderly guest down at the south stairs who does not wake when spoken to.",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      }
+    },
+    {
+      "id": "same-med-ankle-02",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_person",
+      "rationale": "Both reports identify Asha and the same ankle injury at the same location.",
+      "left": {
+        "id": "same-med-ankle-02-a",
+        "text": "Asha, wearing a yellow vest, twisted her ankle at the west display row and needs first aid.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      },
+      "right": {
+        "id": "same-med-ankle-02-b",
+        "text": "Please send first aid to Asha at the west display row; she is in the yellow vest and hurt her ankle.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      }
+    },
+    {
+      "id": "same-missing-child-03",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "shared_name_and_description",
+      "rationale": "The same named missing child and clothing description are repeated.",
+      "left": {
+        "id": "same-missing-child-03-a",
+        "text": "Mira says her son Leo, in a green hoodie, has not returned from the north entrance queue.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      },
+      "right": {
+        "id": "same-missing-child-03-b",
+        "text": "At the north entrance line, Mira is looking for Leo; he is the child wearing the green hooded top.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      }
+    },
+    {
+      "id": "same-spill-04",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_hazard",
+      "rationale": "Both reports describe one slippery drink spill by the service counter.",
+      "left": {
+        "id": "same-spill-04-a",
+        "text": "A cup of iced tea broke beside the service counter and the floor is slick.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      },
+      "right": {
+        "id": "same-spill-04-b",
+        "text": "There is spilled tea on the ground next to the serving counter; people could slip.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      }
+    },
+    {
+      "id": "same-exit-05",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_obstruction",
+      "rationale": "Both reports describe the same cart preventing Exit B from opening.",
+      "left": {
+        "id": "same-exit-05-a",
+        "text": "A delivery cart is wedged across the inner Exit B doorway and people cannot get through.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      },
+      "right": {
+        "id": "same-exit-05-b",
+        "text": "The inside door at Exit B will not open because a trolley is blocking the way.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      }
+    },
+    {
+      "id": "same-av-06",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_device_issue",
+      "rationale": "Both reports describe the same blank projector screen at the west display row.",
+      "left": {
+        "id": "same-av-06-a",
+        "text": "The projector at the west display row has lost its picture; the screen is blank.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      },
+      "right": {
+        "id": "same-av-06-b",
+        "text": "There is no image on the west-row projection screen, although the presentation is running.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      }
+    },
+    {
+      "id": "same-ramp-07",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_obstruction",
+      "rationale": "Both reports describe a folded table narrowing the same accessible ramp.",
+      "left": {
+        "id": "same-ramp-07-a",
+        "text": "A folded table is lying across the east ramp and leaves very little room to pass.",
+        "zone_id": "hall",
+        "sublocation": "east ramp",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      },
+      "right": {
+        "id": "same-ramp-07-b",
+        "text": "The accessible ramp on the east side has been narrowed by a table left in the walkway.",
+        "zone_id": "hall",
+        "sublocation": "east ramp",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      }
+    },
+    {
+      "id": "same-med-dizzy-08",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_person",
+      "rationale": "Both reports describe the same named visitor in a purple coat becoming dizzy.",
+      "left": {
+        "id": "same-med-dizzy-08-a",
+        "text": "Nora in a purple coat feels faint in the rear aisle and asked someone to call the medic.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      },
+      "right": {
+        "id": "same-med-dizzy-08-b",
+        "text": "A visitor named Nora, wearing purple, is dizzy at the back aisle and needs medical help.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      }
+    },
+    {
+      "id": "same-water-leak-09",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_hazard",
+      "rationale": "Both reports describe one leak spreading from the ceiling above the same aisle.",
+      "left": {
+        "id": "same-water-leak-09-a",
+        "text": "Water is dripping from the ceiling into the north aisle and making a puddle.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      },
+      "right": {
+        "id": "same-water-leak-09-b",
+        "text": "There is a ceiling leak over the north walkway; water has collected on the floor.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      }
+    },
+    {
+      "id": "same-missing-adult-10",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "shared_name_and_description",
+      "rationale": "Both reports concern the same named adult last seen in a red coat.",
+      "left": {
+        "id": "same-missing-adult-10-a",
+        "text": "Sam is trying to find his father, Arun, last seen in a red coat near the south display row.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      },
+      "right": {
+        "id": "same-missing-adult-10-b",
+        "text": "Arun has not come back to Sam. He was wearing a red coat at the southern display area.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      }
+    },
+    {
+      "id": "same-lighting-11",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_device_issue",
+      "rationale": "Both reports describe one lighting failure over the same aisle.",
+      "left": {
+        "id": "same-lighting-11-a",
+        "text": "The lights above the ticket lane went out and the area is very dim.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      },
+      "right": {
+        "id": "same-lighting-11-b",
+        "text": "There is a power failure in the ticket line lighting; the lane is dark.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      }
+    },
+    {
+      "id": "same-facility-12",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "paraphrase_shared_condition",
+      "rationale": "Both reports describe the same loose handrail at the steps outside the hall.",
+      "left": {
+        "id": "same-facility-12-a",
+        "text": "The handrail at the south steps is wobbling when people hold it.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      },
+      "right": {
+        "id": "same-facility-12-b",
+        "text": "Someone reported a loose rail beside the southern stairway; it shifts under pressure.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      }
+    },
+    {
+      "id": "different-patients-01",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "rationale": "Two explicitly distinct attendees have different clothing and different medical complaints.",
+      "left": {
+        "id": "different-patients-01-a",
+        "text": "A guest in a red jacket twisted an ankle at the west display row and needs first aid.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      },
+      "right": {
+        "id": "different-patients-01-b",
+        "text": "A separate attendee in a blue jacket feels dizzy at the west display row and is asking for medical help.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      }
+    },
+    {
+      "id": "different-missing-people-02",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_named_people",
+      "rationale": "Two different named children are reported missing from the same queue.",
+      "left": {
+        "id": "different-missing-people-02-a",
+        "text": "Mira cannot find her son Leo, who wore a green hoodie at the north entrance queue.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      },
+      "right": {
+        "id": "different-missing-people-02-b",
+        "text": "At that same north entrance line, a different family is looking for Ana, a child in a blue coat.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      }
+    },
+    {
+      "id": "different-devices-03",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "rationale": "A printer jam and a separate monitor failure affect different devices at one booth.",
+      "left": {
+        "id": "different-devices-03-a",
+        "text": "The west display row printer is jammed and will not feed paper.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      },
+      "right": {
+        "id": "different-devices-03-b",
+        "text": "The monitor at the west display row has a blank screen; it is a separate equipment problem.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      }
+    },
+    {
+      "id": "different-spills-04",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_spills_same_context",
+      "rationale": "The reports explicitly describe two separate spills from different containers.",
+      "left": {
+        "id": "different-spills-04-a",
+        "text": "Coffee from a takeaway cup spilled on the left side of the service counter.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      },
+      "right": {
+        "id": "different-spills-04-b",
+        "text": "A separate bottle of orange juice leaked on the right side of the same counter.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      }
+    },
+    {
+      "id": "different-exits-05",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_routes_same_context",
+      "rationale": "The blockage is at Exit A while the ramp obstruction is at Exit B; they are separate access problems.",
+      "left": {
+        "id": "different-exits-05-a",
+        "text": "Exit A is blocked by stacked crates and nobody can use that doorway.",
+        "zone_id": "hall",
+        "sublocation": "main concourse",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      },
+      "right": {
+        "id": "different-exits-05-b",
+        "text": "The ramp by Exit B is narrowed by chairs; this is a different route obstruction.",
+        "zone_id": "hall",
+        "sublocation": "main concourse",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      }
+    },
+    {
+      "id": "different-falls-06",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_named_people",
+      "rationale": "Two named attendees independently fell at the same recorded location and time.",
+      "left": {
+        "id": "different-falls-06-a",
+        "text": "Jon fell at the south stair landing and hurt his wrist; he is receiving first aid.",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      },
+      "right": {
+        "id": "different-falls-06-b",
+        "text": "Maya, a different attendee, also fell at the south stair landing and is bleeding from her palm.",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      }
+    },
+    {
+      "id": "different-leaks-07",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_sources_same_context",
+      "rationale": "One report describes a ceiling leak; the other describes a leaking cooler on the floor.",
+      "left": {
+        "id": "different-leaks-07-a",
+        "text": "Water is dripping from the ceiling into the north aisle and forming a puddle.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      },
+      "right": {
+        "id": "different-leaks-07-b",
+        "text": "A portable cooler has a cracked bottom and is leaking onto the north aisle floor, separate from the ceiling.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      }
+    },
+    {
+      "id": "different-av-08",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "rationale": "Two distinct AV devices have separate faults in the same row.",
+      "left": {
+        "id": "different-av-08-a",
+        "text": "The projector at the west display row has no picture on its screen.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      },
+      "right": {
+        "id": "different-av-08-b",
+        "text": "A different device there, the sound monitor, has lost audio but still displays video.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      }
+    },
+    {
+      "id": "different-fixtures-09",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "rationale": "A fan failure and a lighting failure are separate facility incidents at the ticket lane.",
+      "left": {
+        "id": "different-fixtures-09-a",
+        "text": "The fan above the ticket lane is rattling and has stopped moving air.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      },
+      "right": {
+        "id": "different-fixtures-09-b",
+        "text": "The ticket lane lights are flickering; this is a separate electrical issue from the fan.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      }
+    },
+    {
+      "id": "different-missing-adults-10",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "rationale": "Different named adults are being sought by different relatives at the same display row.",
+      "left": {
+        "id": "different-missing-adults-10-a",
+        "text": "Sam is looking for his father Arun, last seen in a red coat by the south display row.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      },
+      "right": {
+        "id": "different-missing-adults-10-b",
+        "text": "A separate visitor named Dev is missing; his sister last saw him in a gray sweater at the same row.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      }
+    },
+    {
+      "id": "different-medical-11",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_same_context",
+      "rationale": "Two distinct patients have different names, clothing, and symptoms in the same area.",
+      "left": {
+        "id": "different-medical-11-a",
+        "text": "Nora in a purple coat is dizzy in the rear aisle and asks for a medic.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      },
+      "right": {
+        "id": "different-medical-11-b",
+        "text": "A separate person, Eli in a green shirt, has a bleeding cut in the rear aisle.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      }
+    },
+    {
+      "id": "different-handrails-12",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_same_context",
+      "rationale": "The two reports identify separate stair rails at the same broad stair sublocation.",
+      "left": {
+        "id": "different-handrails-12-a",
+        "text": "The handrail on the left side of the south steps is loose and moves when held.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      },
+      "right": {
+        "id": "different-handrails-12-b",
+        "text": "A separate rail on the right side of those steps has a sharp broken bracket.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-medical-01",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "Both reports are generic and could describe one or two guests; no identifying details distinguish them.",
+      "left": {
+        "id": "uncertain-medical-01-a",
+        "text": "Someone near the south stairs looks unwell and may need help.",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-medical-01-b",
+        "text": "A guest at the south stair landing seems faint; could a medic check?",
+        "zone_id": "hall",
+        "sublocation": "south stair landing",
+        "reported_at": "2026-10-25T18:14:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-collapse-02",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "Both describe a person down in the same place and minute but provide no identity or other distinguishing evidence.",
+      "left": {
+        "id": "uncertain-collapse-02-a",
+        "text": "There is a person on the floor near the west display row.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-collapse-02-b",
+        "text": "Someone has gone down by the western displays; staff should take a look.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T18:22:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-exit-03",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "rationale": "The reports may refer to the same door, but do not identify which door or explain the repeated failure.",
+      "left": {
+        "id": "uncertain-exit-03-a",
+        "text": "A door at the inner doorway is difficult to open.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-exit-03-b",
+        "text": "The inside doorway is sticking and guests are having trouble getting through.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T18:31:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-spill-04",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_event_identity",
+      "rationale": "The reports could describe the same spill or two spills; container, side, and source are absent.",
+      "left": {
+        "id": "uncertain-spill-04-a",
+        "text": "There is a wet patch beside the service counter.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-spill-04-b",
+        "text": "The floor near the serving counter is slippery from some liquid.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T18:42:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-missing-child-05",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "The generic missing-child descriptions contain no name, clothing, age, or family information.",
+      "left": {
+        "id": "uncertain-missing-child-05-a",
+        "text": "A family cannot find a child near the north entrance queue.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-missing-child-05-b",
+        "text": "Someone at the north entrance line says a young visitor has not returned.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T19:02:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-missing-adult-06",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "The same broad clothing and location cues could refer to one missing person or multiple visitors.",
+      "left": {
+        "id": "uncertain-missing-adult-06-a",
+        "text": "A guest in a dark coat has not returned to their group near the south displays.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-missing-adult-06-b",
+        "text": "Someone is looking for an adult wearing a dark jacket around the southern display row.",
+        "zone_id": "hall",
+        "sublocation": "south display row",
+        "reported_at": "2026-10-25T19:17:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-dizzy-07",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "No name, distinctive clothing, or other evidence tells whether these are the same patient.",
+      "left": {
+        "id": "uncertain-dizzy-07-a",
+        "text": "A visitor in the rear aisle feels light-headed and wants to sit down.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-dizzy-07-b",
+        "text": "There may be someone dizzy at the back aisle; please check if they need medical help.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T19:29:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-av-08",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "rationale": "The same location and similar display symptoms do not establish whether the reports concern one device.",
+      "left": {
+        "id": "uncertain-av-08-a",
+        "text": "The display at the west row is not showing correctly.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-av-08-b",
+        "text": "A screen near the west displays appears blank or may have lost its signal.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T19:38:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-queue-09",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "changing_condition",
+      "rationale": "A queue may be slowing and then recovering, or two separate queue problems may be reported.",
+      "left": {
+        "id": "uncertain-queue-09-a",
+        "text": "The ticket line is barely moving.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-queue-09-b",
+        "text": "People at the ticket lane are getting through slowly now.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T19:51:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-separated-10",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_identity",
+      "rationale": "A separated attendee and a group waiting for a member could be the same event, but there is no identifier.",
+      "left": {
+        "id": "uncertain-separated-10-a",
+        "text": "A visitor says they cannot find the friends they arrived with in the north aisle.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-separated-10-b",
+        "text": "A group near the north aisle is waiting because one person has not come back.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T20:03:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-changing-exit-11",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "contradictory_account",
+      "rationale": "One report says the exit is blocked and the other says it is clear. This could be a correction, a changed condition, or conflicting observations.",
+      "left": {
+        "id": "uncertain-changing-exit-11-a",
+        "text": "The inner Exit B doorway is blocked and guests cannot pass.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-changing-exit-11-b",
+        "text": "The inside door at Exit B is clear now and people can walk through.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T20:14:00+05:30"
+      }
+    },
+    {
+      "id": "uncertain-rail-12",
+      "relationship": "underdetermined",
+      "expected_action": "review",
+      "evidence_type": "insufficient_object_identity",
+      "rationale": "A loose handrail and shaking steps may describe the same fixture problem, but the affected part is not identified.",
+      "left": {
+        "id": "uncertain-rail-12-a",
+        "text": "Something feels unstable on the south steps when people hold the rail.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      },
+      "right": {
+        "id": "uncertain-rail-12-b",
+        "text": "The stair rail at the southern steps shakes when someone walks past.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:26:00+05:30"
+      }
+    },
+    {
+      "id": "same-av-cable-13",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_tool",
+      "rationale": "The word different refers to cables used on one projector problem, not a second incident.",
+      "left": {
+        "id": "same-av-cable-13-a",
+        "text": "The west display row projector is still blank; a technician tried a different HDMI cable with no change.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T20:38:00+05:30"
+      },
+      "right": {
+        "id": "same-av-cable-13-b",
+        "text": "No image is showing on the projector by the west displays even after a different lead was connected.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T20:38:00+05:30"
+      }
+    },
+    {
+      "id": "same-exit-crew-14",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "rationale": "The word different refers to crew members attempting to clear one blocked doorway.",
+      "left": {
+        "id": "same-exit-crew-14-a",
+        "text": "Different crew members tried to pull the trolley away from Exit B, but the inner door remains blocked.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T20:46:00+05:30"
+      },
+      "right": {
+        "id": "same-exit-crew-14-b",
+        "text": "The Exit B inside doorway is still wedged shut by a delivery cart after staff tried to move it.",
+        "zone_id": "exit-b",
+        "sublocation": "inner doorway",
+        "reported_at": "2026-10-25T20:46:00+05:30"
+      }
+    },
+    {
+      "id": "same-leak-buckets-15",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_containers",
+      "rationale": "Different buckets were placed below one ceiling leak; the reports refer to that continuing leak.",
+      "left": {
+        "id": "same-leak-buckets-15-a",
+        "text": "Different buckets have been set below the drip over the north aisle; water is still spreading on the floor.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T20:54:00+05:30"
+      },
+      "right": {
+        "id": "same-leak-buckets-15-b",
+        "text": "The ceiling leak above the north walkway keeps making the floor wet; staff have put a container there.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T20:54:00+05:30"
+      }
+    },
+    {
+      "id": "same-med-nurses-16",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "rationale": "Different nurses checked on the same named patient and ankle injury.",
+      "left": {
+        "id": "same-med-nurses-16-a",
+        "text": "Different nurses have checked on Asha at the west display row after she twisted her ankle.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T21:02:00+05:30"
+      },
+      "right": {
+        "id": "same-med-nurses-16-b",
+        "text": "Asha is still waiting for first aid by the west displays; her ankle is hurt from the fall.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T21:02:00+05:30"
+      }
+    },
+    {
+      "id": "same-missing-volunteers-17",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "rationale": "Different volunteers search for one named missing child.",
+      "left": {
+        "id": "same-missing-volunteers-17-a",
+        "text": "Different volunteers are searching the north entrance line for Leo, the child in a green hoodie.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T21:10:00+05:30"
+      },
+      "right": {
+        "id": "same-missing-volunteers-17-b",
+        "text": "Leo has not come back to Mira by the north entrance queue; he was wearing a green hooded top.",
+        "zone_id": "registration",
+        "sublocation": "north entrance queue",
+        "reported_at": "2026-10-25T21:10:00+05:30"
+      }
+    },
+    {
+      "id": "same-spill-staff-18",
+      "relationship": "same",
+      "expected_action": "attach",
+      "evidence_type": "incidental_different_helpers",
+      "rationale": "Different staff members respond to one iced-tea spill.",
+      "left": {
+        "id": "same-spill-staff-18-a",
+        "text": "Different staff members placed cones around the iced tea spill at the food court counter.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T21:18:00+05:30"
+      },
+      "right": {
+        "id": "same-spill-staff-18-b",
+        "text": "Tea is still on the floor beside the service counter after a cup broke; keep people away.",
+        "zone_id": "food",
+        "sublocation": "service counter",
+        "reported_at": "2026-10-25T21:18:00+05:30"
+      }
+    },
+    {
+      "id": "different-av-devices-13",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_no_annotation_cue",
+      "rationale": "A projector image failure and a sound-monitor audio failure affect two devices.",
+      "left": {
+        "id": "different-av-devices-13-a",
+        "text": "The projector at the west display row has no image on its screen.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T20:38:00+05:30"
+      },
+      "right": {
+        "id": "different-av-devices-13-b",
+        "text": "The sound monitor by the west displays has lost audio, although its picture remains.",
+        "zone_id": "hall",
+        "sublocation": "west display row",
+        "reported_at": "2026-10-25T20:38:00+05:30"
+      }
+    },
+    {
+      "id": "different-rails-sides-14",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_objects_no_annotation_cue",
+      "rationale": "The left and right handrails have independent physical damage.",
+      "left": {
+        "id": "different-rails-sides-14-a",
+        "text": "The handrail on the left side of the south steps wobbles when held.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:46:00+05:30"
+      },
+      "right": {
+        "id": "different-rails-sides-14-b",
+        "text": "A sharp broken bracket is sticking out from the right-hand rail on the south steps.",
+        "zone_id": "hall",
+        "sublocation": "south steps",
+        "reported_at": "2026-10-25T20:46:00+05:30"
+      }
+    },
+    {
+      "id": "different-patients-names-15",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_people_no_annotation_cue",
+      "rationale": "Two named guests report distinct symptoms at the same location and time.",
+      "left": {
+        "id": "different-patients-names-15-a",
+        "text": "Jon in a red shirt feels dizzy at the rear aisle and needs medical attention.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T20:54:00+05:30"
+      },
+      "right": {
+        "id": "different-patients-names-15-b",
+        "text": "Maya in a blue jacket has a bleeding cut at the rear aisle and is asking for first aid.",
+        "zone_id": "stage",
+        "sublocation": "rear aisle",
+        "reported_at": "2026-10-25T20:54:00+05:30"
+      }
+    },
+    {
+      "id": "different-water-sources-16",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_sources_no_annotation_cue",
+      "rationale": "A ceiling drip and a leaking cooler are separate sources of water.",
+      "left": {
+        "id": "different-water-sources-16-a",
+        "text": "Water is dripping from the ceiling into the north aisle and forming a puddle.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T21:02:00+05:30"
+      },
+      "right": {
+        "id": "different-water-sources-16-b",
+        "text": "A portable cooler with a cracked base is leaking water onto the north aisle floor.",
+        "zone_id": "hall",
+        "sublocation": "north aisle",
+        "reported_at": "2026-10-25T21:02:00+05:30"
+      }
+    },
+    {
+      "id": "different-exits-no-cue-17",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_routes_no_annotation_cue",
+      "rationale": "The blockage at Exit A and obstruction on the Exit B ramp affect distinct access routes.",
+      "left": {
+        "id": "different-exits-no-cue-17-a",
+        "text": "Exit A is blocked by stacked crates and guests cannot pass through its doorway.",
+        "zone_id": "hall",
+        "sublocation": "main concourse",
+        "reported_at": "2026-10-25T21:10:00+05:30"
+      },
+      "right": {
+        "id": "different-exits-no-cue-17-b",
+        "text": "Chairs are narrowing the ramp beside Exit B and leaving little room to move.",
+        "zone_id": "hall",
+        "sublocation": "main concourse",
+        "reported_at": "2026-10-25T21:10:00+05:30"
+      }
+    },
+    {
+      "id": "different-fan-lights-18",
+      "relationship": "different",
+      "expected_action": "separate",
+      "evidence_type": "distinct_devices_no_annotation_cue",
+      "rationale": "A stopped fan and flickering lights are distinct facility failures.",
+      "left": {
+        "id": "different-fan-lights-18-a",
+        "text": "The fan above the ticket lane is rattling and no longer moving air.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T21:18:00+05:30"
+      },
+      "right": {
+        "id": "different-fan-lights-18-b",
+        "text": "Lights over the ticket line are flickering and the lane is dim.",
+        "zone_id": "registration",
+        "sublocation": "ticket lane",
+        "reported_at": "2026-10-25T21:18:00+05:30"
+      }
+    }
+  ],
+  "authoring_record": {
+    "core_36_sha256_before_extension": "401378cc6e68597aa302d1f00c0b29aa4b26fa235603b8fcc476fc9c6672d28a",
+    "core_case_count": 36,
+    "extension_case_count": 12,
+    "extension_note": "After freezing the original 36-case core and before any inference, added six same-event cases using “different” only for tools/helpers and six identifiable context-matched negatives without “different” or “separate” in report text."
+  }
+}
