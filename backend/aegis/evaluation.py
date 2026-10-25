@@ -369,6 +369,8 @@ def _run_engine(
                 raise TypeError("choose_group must return a dictionary")
             incident_id = chosen.get("incident_id")
             reasons = _as_review_reasons(chosen.get("review_reasons"))
+            report["matching_reasons"] = reasons
+            report["matching_evidence"] = chosen.get("evidence", [])
             if reasons:
                 review_ids.add(report_id)
             selected = next((group for group in groups if group["id"] == incident_id), None)
@@ -550,6 +552,76 @@ def _format_engine_method(mode: str, model_ready: Any) -> tuple[str, list[str]]:
     return f"Aegis engine ({mode})", limitations
 
 
+def _error_examples(
+    reports: Sequence[dict[str, Any]],
+    truth: Mapping[str, str],
+    predictions: Mapping[str, str],
+    method: str,
+) -> list[dict[str, Any]]:
+    """Return bounded, real grouping mistakes rather than only runtime failures."""
+    examples = []
+    for left, right in combinations(reports, 2):
+        left_id, right_id = left["id"], right["id"]
+        expected = truth[left_id] == truth[right_id]
+        predicted = predictions[left_id] == predictions[right_id]
+        if expected == predicted:
+            continue
+        context = list(
+            dict.fromkeys(
+                left.get("matching_reasons", [])
+                + right.get("matching_reasons", [])
+                + left.get("review_reasons", [])
+                + right.get("review_reasons", [])
+            )
+        )
+        pair_reasons = [
+            reason
+            for evidence in right.get("matching_evidence", [])
+            if evidence.get("candidate_report_id") == left_id
+            for reason in evidence["reasons"]
+        ]
+        reasons = pair_reasons or [f"Report-level review context: {reason}" for reason in context]
+        examples.append(
+            {
+                "kind": "missed_pair" if expected else "false_merge",
+                "method": method,
+                "report_ids": [left_id, right_id],
+                "texts": [left["text"], right["text"]],
+                "expected_same_incident": expected,
+                "predicted_same_incident": predicted,
+                "reasons": reasons,
+            }
+        )
+        if len(examples) == 40:
+            break
+    return examples
+
+
+def _review_workload(
+    truth: Mapping[str, str], predictions: Mapping[str, str], review_ids: set[str]
+) -> dict[str, Any]:
+    """Count partition corrections with ground truth, without claiming observed operator time."""
+    predicted_groups: dict[str, set[str]] = {}
+    true_groups: dict[str, set[str]] = {}
+    for report_id, predicted_id in predictions.items():
+        true_id = truth[report_id]
+        predicted_groups.setdefault(predicted_id, set()).add(true_id)
+        true_groups.setdefault(true_id, set()).add(predicted_id)
+    return {
+        "reports": len(predictions),
+        "review_reports": len(review_ids.intersection(predictions)),
+        "proposed_groups": len(predicted_groups),
+        "confirmation_groups": len(predicted_groups),
+        "split_operations": sum(len(group) - 1 for group in predicted_groups.values()),
+        "merge_operations": sum(len(group) - 1 for group in true_groups.values()),
+        "basis": (
+            "Synthetic ground-truth partition corrections: first separate each mixed group, "
+            "then join fragments of each true incident. One confirmation per proposed group. "
+            "These are idealized grouping operations, not measured clicks or operator time."
+        ),
+    }
+
+
 def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
     """Run the held-out test split and return the API's Evaluation shape.
 
@@ -716,4 +788,12 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
         "latency": {"p50_ms": _percentile(latencies, 0.5), "p95_ms": _percentile(latencies, 0.95)},
         "limitations": limitations,
         "failures": failures,
+        "error_examples": (
+            _error_examples(prepared, truth, predictions, engine_method)
+            if active_engine is not None
+            else []
+        ),
+        "workload": (
+            _review_workload(truth, predictions, review_ids) if active_engine is not None else None
+        ),
     }

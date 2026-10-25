@@ -115,6 +115,47 @@ function ResultTable({ data }: { data: Evaluation }) {
   );
 }
 
+function EvaluationDiagnostics({ data }: { data: Evaluation }) {
+  const [kind, setKind] = useState("all");
+  const examples = data.error_examples ?? [];
+  const visible = examples.filter((example) => kind === "all" || example.kind === kind);
+  return (
+    <details className="rounded-lg border border-border bg-card p-4">
+      <summary className="cursor-pointer text-sm font-semibold">Review workload and grouping mistakes</summary>
+      <div className="mt-4 space-y-4">
+        {data.workload ? (
+          <section aria-label="Estimated grouping review workload" className="space-y-3">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div><dt className="text-xs text-muted-foreground">Reports flagged</dt><dd>{data.workload.review_reports} / {data.workload.reports}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Group confirmations</dt><dd>{data.workload.confirmation_groups}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Corrective splits</dt><dd>{data.workload.split_operations}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Corrective merges</dt><dd>{data.workload.merge_operations}</dd></div>
+            </dl>
+            <p className="text-xs leading-5 text-muted-foreground">{data.workload.basis}</p>
+          </section>
+        ) : <p className="text-sm text-muted-foreground">Review workload was not recorded for this run.</p>}
+        <label className="flex flex-wrap items-center gap-3 text-sm">
+          Grouping mistake type
+          <select className="rounded-md border border-border bg-background p-2" value={kind} onChange={(event) => setKind(event.target.value)}>
+            <option value="all">All mistakes</option>
+            <option value="missed_pair">Missed pairs</option>
+            <option value="false_merge">False merges</option>
+          </select>
+        </label>
+        <p className="text-xs text-muted-foreground">Up to 40 actual pairwise mistakes from the Aegis result. Runtime errors are listed separately.</p>
+        {visible.length ? visible.map((example) => (
+          <details className="rounded-md border border-border p-3" key={example.report_ids.join(":")}>
+            <summary className="cursor-pointer text-sm">{example.kind === "missed_pair" ? "Missed pair" : "False merge"}: {example.report_ids.join(" / ")}</summary>
+            <p className="my-2 text-xs text-muted-foreground">{example.method} · Expected {example.expected_same_incident ? "one incident" : "separate incidents"}; proposed {example.predicted_same_incident ? "one group" : "separate groups"}.</p>
+            <div className="grid gap-3 sm:grid-cols-2">{example.texts.map((text, index) => <blockquote className="border-l-2 border-border pl-3 text-sm" key={index}>{text}</blockquote>)}</div>
+            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">{example.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>
+          </details>
+        )) : <p className="text-sm text-muted-foreground">No recorded grouping mistakes match this filter.</p>}
+      </div>
+    </details>
+  );
+}
+
 function EvaluationDetails({ data }: { data: Evaluation }) {
   const failedChecks = data.checks.filter((check) => !check.passed);
   const engineMethod = aegisMethod(data);
@@ -156,6 +197,8 @@ function EvaluationDetails({ data }: { data: Evaluation }) {
           </CardContent>
         </Card>
       </div>
+
+      <EvaluationDiagnostics data={data} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Card className="border-border bg-card">

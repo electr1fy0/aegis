@@ -1,8 +1,8 @@
 {
   "dataset_version": "aegis-synthetic-2026-10-v1",
   "model": "lexical-hash-v1",
-  "config_version": "semantic-context-v1+lexical-context-dev-v2",
-  "generated_at": "2026-10-24T14:38:25.246382Z",
+  "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
+  "generated_at": "2026-10-25T02:51:25.969716Z",
   "results": [
     {
       "method": "Lexical Jaccard baseline",
@@ -56,8 +56,8 @@
     }
   ],
   "latency": {
-    "p50_ms": 11.843,
-    "p95_ms": 22.564
+    "p50_ms": 20.126,
+    "p95_ms": 40.227
   },
   "limitations": [
     "All reports and incident labels are synthetic; this small fixed test split does not establish operational accuracy.",
@@ -65,5 +65,534 @@
     "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF.",
     "The active Aegis engine used lexical/degraded mode; no semantic result is reported."
   ],
-  "failures": []
+  "failures": [],
+  "error_examples": [
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-003",
+        "test-021"
+      ],
+      "texts": [
+        "A guest caught a toe by the west model table and now has a sore knee.",
+        "Someone is resting near the western displays after hurting a knee."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west model table.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-003",
+        "test-039"
+      ],
+      "texts": [
+        "A guest caught a toe by the west model table and now has a sore knee.",
+        "A visitor says their knee hurts after a trip beside the model exhibit."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west model table.",
+        "Reported event times are 1.5 minutes apart.",
+        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-005",
+        "test-023"
+      ],
+      "texts": [
+        "A senior visitor using a cane is separated from their companion at the south host stand.",
+        "Staff at the southern welcome point are looking for an older guest's companion."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-006",
+        "test-042"
+      ],
+      "texts": [
+        "A tray of water has spilled onto the aisle at the bakery island.",
+        "There is liquid across the walkway next to the bakery display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-006",
+        "test-059"
+      ],
+      "texts": [
+        "A tray of water has spilled onto the aisle at the bakery island.",
+        "The puddle by the bakery island remains on the aisle floor."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 2.2 minutes apart.",
+        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-010",
+        "test-028"
+      ],
+      "texts": [
+        "Stage right's confidence monitor has stopped showing the speaker notes.",
+        "The small display beside the stage-right microphone is blank."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: stage right monitor.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-011",
+        "test-029"
+      ],
+      "texts": [
+        "The ticket scanning line has expanded across the west-side walkway.",
+        "Check-in visitors are queueing into the western corridor."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: ticket scan lane.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-013",
+        "test-031"
+      ],
+      "texts": [
+        "The menu board at the serving area does not list which dishes contain nuts.",
+        "A diner cannot see the nut information on the food counter menu."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: menu stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-014",
+        "test-032"
+      ],
+      "texts": [
+        "The name tag machine at the north label desk is jammed.",
+        "Badges are stuck inside the northern check-in label printer."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: north label desk.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-014",
+        "test-050"
+      ],
+      "texts": [
+        "The name tag machine at the north label desk is jammed.",
+        "The north registration printer will not feed a name badge."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: north label desk.",
+        "Reported event times are 1.5 minutes apart."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-017",
+        "test-035"
+      ],
+      "texts": [
+        "The west bottle-filling nozzle continues to drip after use.",
+        "A slow leak is coming from the refill fountain on the west side."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west bottle filler.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-017",
+        "test-053"
+      ],
+      "texts": [
+        "The west bottle-filling nozzle continues to drip after use.",
+        "Water keeps seeping from the west-side bottle station tap."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west bottle filler.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-018",
+        "test-054"
+      ],
+      "texts": [
+        "A guest is searching for an earbud case they may have dropped under the rear seats.",
+        "Someone lost their earbuds near the last row behind the stage."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: under rear seats.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-021",
+        "test-039"
+      ],
+      "texts": [
+        "Someone is resting near the western displays after hurting a knee.",
+        "A visitor says their knee hurts after a trip beside the model exhibit."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west model table.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-023",
+        "test-041"
+      ],
+      "texts": [
+        "Staff at the southern welcome point are looking for an older guest's companion.",
+        "A person with a walking stick cannot find the friend who was with them by the host desk."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-023",
+        "test-058"
+      ],
+      "texts": [
+        "Staff at the southern welcome point are looking for an older guest's companion.",
+        "The companion has not been located yet near the south-side host station."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-024",
+        "test-042"
+      ],
+      "texts": [
+        "The floor beside the pastry counter is wet from a fallen drink tray.",
+        "There is liquid across the walkway next to the bakery display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 0.8 minutes apart."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-024",
+        "test-059"
+      ],
+      "texts": [
+        "The floor beside the pastry counter is wet from a fallen drink tray.",
+        "The puddle by the bakery island remains on the aisle floor."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 1.5 minutes apart."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-028",
+        "test-046"
+      ],
+      "texts": [
+        "The small display beside the stage-right microphone is blank.",
+        "A monitor at the right side of the platform has lost its feed."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: stage right monitor.",
+        "Reported event times are 0.8 minutes apart."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-029",
+        "test-047"
+      ],
+      "texts": [
+        "Check-in visitors are queueing into the western corridor.",
+        "The west passage is partially blocked by the entry scan queue."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: ticket scan lane.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-031",
+        "test-049"
+      ],
+      "texts": [
+        "A diner cannot see the nut information on the food counter menu.",
+        "The allergen details for the lunch menu are absent from the display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: menu stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-032",
+        "test-050"
+      ],
+      "texts": [
+        "Badges are stuck inside the northern check-in label printer.",
+        "The north registration printer will not feed a name badge."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: north label desk.",
+        "Reported event times are 0.8 minutes apart.",
+        "Best-versus-runner-up margin is below the prototype minimum of 0.08."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-035",
+        "test-053"
+      ],
+      "texts": [
+        "A slow leak is coming from the refill fountain on the west side.",
+        "Water keeps seeping from the west-side bottle station tap."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: west bottle filler.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.05; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-036",
+        "test-054"
+      ],
+      "texts": [
+        "A small headphone case is missing from the back seating row.",
+        "Someone lost their earbuds near the last row behind the stage."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: under rear seats.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis contextual lexical (degraded)",
+      "report_ids": [
+        "test-042",
+        "test-059"
+      ],
+      "texts": [
+        "There is liquid across the walkway next to the bakery display.",
+        "The puddle by the bakery island remains on the aisle floor."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Text similarity uses the local lexical-hash fallback, not MiniLM semantics.",
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 0.8 minutes apart."
+      ]
+    }
+  ],
+  "workload": {
+    "reports": 60,
+    "review_reports": 60,
+    "proposed_groups": 33,
+    "confirmation_groups": 33,
+    "split_operations": 0,
+    "merge_operations": 13,
+    "basis": "Synthetic ground-truth partition corrections: first separate each mixed group, then join fragments of each true incident. One confirmation per proposed group. These are idealized grouping operations, not measured clicks or operator time."
+  }
 }

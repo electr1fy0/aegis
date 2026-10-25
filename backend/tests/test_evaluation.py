@@ -568,6 +568,8 @@ class EvaluationEntryPointTests(unittest.TestCase):
                 "latency",
                 "limitations",
                 "failures",
+                "error_examples",
+                "workload",
             },
         )
         self.assertEqual(result["dataset_version"], "aegis-synthetic-2026-10-v1")

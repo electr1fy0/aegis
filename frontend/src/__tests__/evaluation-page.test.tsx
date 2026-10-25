@@ -34,6 +34,29 @@ afterEach(() => {
 });
 
 describe("EvaluationPage", () => {
+  it("shows real grouping mistakes and distinguishes modeled correction effort from operator time", async () => {
+    const user = userEvent.setup();
+    getEvaluationMock.mockResolvedValueOnce(makeEvaluation({
+      workload: { reports: 3, review_reports: 3, proposed_groups: 2, confirmation_groups: 2, split_operations: 1, merge_operations: 1, basis: "Idealized grouping operations, not measured clicks or operator time." },
+      error_examples: [
+        { kind: "missed_pair", method: "Aegis lexical", report_ids: ["one", "two"], texts: ["Original report one", "Original report two"], expected_same_incident: true, predicted_same_incident: false, reasons: ["Known event time missing"] },
+        { kind: "false_merge", method: "Aegis lexical", report_ids: ["two", "three"], texts: ["Original report two", "Original report three"], expected_same_incident: false, predicted_same_incident: true, reasons: [] },
+      ],
+    }));
+    render(<EvaluationPage />);
+    await screen.findByRole("heading", { name: "Grouping results" });
+    await user.click(screen.getByText("Review workload and grouping mistakes"));
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
+    expect(screen.getByText("Idealized grouping operations, not measured clicks or operator time.")).toBeVisible();
+    await user.click(screen.getByText("Missed pair: one / two"));
+    expect(screen.getByText("Known event time missing")).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Grouping mistake type"), "false_merge");
+    expect(screen.queryByText("Missed pair: one / two")).not.toBeInTheDocument();
+    await user.click(screen.getByText("False merge: two / three"));
+    expect(screen.getByText(/Expected separate incidents; proposed one group/)).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Grouping mistake type"), "missed_pair");
+    expect(screen.queryByText("False merge: two / three")).not.toBeInTheDocument();
+  });
   it("shows an accessible loading state while evaluation is pending", async () => {
     const pending = deferred<Evaluation>();
     getEvaluationMock.mockReturnValueOnce(pending.promise);

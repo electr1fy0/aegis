@@ -1,0 +1,896 @@
+{
+  "dataset_version": "aegis-synthetic-2026-10-v1",
+  "model": "sentence-transformers/all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "config_version": "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1",
+  "generated_at": "2026-10-25T02:51:28.140837Z",
+  "results": [
+    {
+      "method": "Lexical Jaccard baseline",
+      "precision": 1.0,
+      "recall": 0.060606,
+      "f1": 0.114286,
+      "false_merges": 0,
+      "missed_pairs": 62,
+      "review_rate": 0.083333
+    },
+    {
+      "method": "Semantic cosine baseline",
+      "precision": 1.0,
+      "recall": 0.030303,
+      "f1": 0.058824,
+      "false_merges": 0,
+      "missed_pairs": 64,
+      "review_rate": 0.0
+    },
+    {
+      "method": "Aegis semantic + context",
+      "precision": 1.0,
+      "recall": 0.030303,
+      "f1": 0.058824,
+      "false_merges": 0,
+      "missed_pairs": 64,
+      "review_rate": 1.0
+    }
+  ],
+  "checks": [
+    {
+      "name": "all reports retained",
+      "passed": true,
+      "detail": "60 of 60 input reports have a visible evaluation outcome."
+    },
+    {
+      "name": "held-out fixture cardinality",
+      "passed": true,
+      "detail": "60 reports across 20 incident families; target is 60 reports and 20 families."
+    },
+    {
+      "name": "explicit P0 policy cases",
+      "passed": true,
+      "detail": "P0 returned for 1 of 1 explicit danger cases."
+    },
+    {
+      "name": "negated or hypothetical cases avoid P0",
+      "passed": true,
+      "detail": "No P0 returned for 1 of 1 negative-control groups."
+    },
+    {
+      "name": "contradictory or changing reports stay visible",
+      "passed": true,
+      "detail": "A conflict was returned for 1 of 1 labeled changing-report groups."
+    },
+    {
+      "name": "incomplete reports remain reviewable",
+      "passed": true,
+      "detail": "1 of 1 labeled incomplete groups are unassessed or carry a review reason."
+    }
+  ],
+  "latency": {
+    "p50_ms": 26.542,
+    "p95_ms": 88.282
+  },
+  "limitations": [
+    "All reports and incident labels are synthetic; this small fixed test split does not establish operational accuracy.",
+    "Grouping metrics count report pairs; latency is per-report analysis plus incremental grouping on this process and hardware.",
+    "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; it is not TF-IDF."
+  ],
+  "failures": [],
+  "error_examples": [
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-003",
+        "test-021"
+      ],
+      "texts": [
+        "A guest caught a toe by the west model table and now has a sore knee.",
+        "Someone is resting near the western displays after hurting a knee."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west model table.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-003",
+        "test-039"
+      ],
+      "texts": [
+        "A guest caught a toe by the west model table and now has a sore knee.",
+        "A visitor says their knee hurts after a trip beside the model exhibit."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west model table.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-004",
+        "test-022"
+      ],
+      "texts": [
+        "The lower gate at Exit A will not swing open, and people are waiting.",
+        "Visitors are held up at a jammed bottom Exit A gate."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lower gate.",
+        "Reported event times are 0.8 minutes apart.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-004",
+        "test-040"
+      ],
+      "texts": [
+        "The lower gate at Exit A will not swing open, and people are waiting.",
+        "A barrier panel has fallen across the lower Exit A opening."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lower gate.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-004",
+        "test-057"
+      ],
+      "texts": [
+        "The lower gate at Exit A will not swing open, and people are waiting.",
+        "The bottom gate at Exit A is moving freely again and passage is open."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lower gate.",
+        "Reported event times are 2.2 minutes apart.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-005",
+        "test-023"
+      ],
+      "texts": [
+        "A senior visitor using a cane is separated from their companion at the south host stand.",
+        "Staff at the southern welcome point are looking for an older guest's companion."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-005",
+        "test-041"
+      ],
+      "texts": [
+        "A senior visitor using a cane is separated from their companion at the south host stand.",
+        "A person with a walking stick cannot find the friend who was with them by the host desk."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-005",
+        "test-058"
+      ],
+      "texts": [
+        "A senior visitor using a cane is separated from their companion at the south host stand.",
+        "The companion has not been located yet near the south-side host station."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south host stand.",
+        "Reported event times are 2.2 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-006",
+        "test-024"
+      ],
+      "texts": [
+        "A tray of water has spilled onto the aisle at the bakery island.",
+        "The floor beside the pastry counter is wet from a fallen drink tray."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 0.8 minutes apart.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-006",
+        "test-042"
+      ],
+      "texts": [
+        "A tray of water has spilled onto the aisle at the bakery island.",
+        "There is liquid across the walkway next to the bakery display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: bakery island.",
+        "Reported event times are 1.5 minutes apart.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-007",
+        "test-025"
+      ],
+      "texts": [
+        "The stage wash lights stopped responding at the lighting console.",
+        "No front lights are coming on from the stage lighting controls."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lighting console.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-007",
+        "test-043"
+      ],
+      "texts": [
+        "The stage wash lights stopped responding at the lighting console.",
+        "The operator cannot bring up the stage lights from the console."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lighting console.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-007",
+        "test-060"
+      ],
+      "texts": [
+        "The stage wash lights stopped responding at the lighting console.",
+        "The lighting desk is not controlling the wash lamps over the platform."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lighting console.",
+        "Reported event times are 2.2 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-008",
+        "test-026"
+      ],
+      "texts": [
+        "A stack of exhibition panels sits across the north approach to Exit B.",
+        "Guests at the northern path cannot pass the panel stack near Exit B."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: north approach.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-008",
+        "test-044"
+      ],
+      "texts": [
+        "A stack of exhibition panels sits across the north approach to Exit B.",
+        "The way to Exit B from the north is narrowed by display boards."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: north approach.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-009",
+        "test-027"
+      ],
+      "texts": [
+        "A red tote is still sitting under the window seats with no one claiming it.",
+        "There is an unattended red carry bag beneath the caf\u00e9's window row."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: window seats.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-009",
+        "test-045"
+      ],
+      "texts": [
+        "A red tote is still sitting under the window seats with no one claiming it.",
+        "A red shopping bag has been left under the food court windows."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: window seats.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-010",
+        "test-028"
+      ],
+      "texts": [
+        "Stage right's confidence monitor has stopped showing the speaker notes.",
+        "The small display beside the stage-right microphone is blank."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: stage right monitor.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-010",
+        "test-046"
+      ],
+      "texts": [
+        "Stage right's confidence monitor has stopped showing the speaker notes.",
+        "A monitor at the right side of the platform has lost its feed."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: stage right monitor.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-011",
+        "test-029"
+      ],
+      "texts": [
+        "The ticket scanning line has expanded across the west-side walkway.",
+        "Check-in visitors are queueing into the western corridor."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: ticket scan lane.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-011",
+        "test-047"
+      ],
+      "texts": [
+        "The ticket scanning line has expanded across the west-side walkway.",
+        "The west passage is partially blocked by the entry scan queue."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: ticket scan lane.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-012",
+        "test-030"
+      ],
+      "texts": [
+        "No flames or smoke are present by the east fire door; the smell came from a hot display lamp.",
+        "A report about burning odor was checked at the east door and nobody found smoke."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: east fire door.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-012",
+        "test-048"
+      ],
+      "texts": [
+        "No flames or smoke are present by the east fire door; the smell came from a hot display lamp.",
+        "The east hall exit is clear; the warm smell is from equipment, not a fire."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: east fire door.",
+        "Reported event times are 1.5 minutes apart.",
+        "The exit and facility categories are related but do not establish identity.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-013",
+        "test-031"
+      ],
+      "texts": [
+        "The menu board at the serving area does not list which dishes contain nuts.",
+        "A diner cannot see the nut information on the food counter menu."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: menu stand.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-013",
+        "test-049"
+      ],
+      "texts": [
+        "The menu board at the serving area does not list which dishes contain nuts.",
+        "The allergen details for the lunch menu are absent from the display."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: menu stand.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-014",
+        "test-032"
+      ],
+      "texts": [
+        "The name tag machine at the north label desk is jammed.",
+        "Badges are stuck inside the northern check-in label printer."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: north label desk.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-014",
+        "test-050"
+      ],
+      "texts": [
+        "The name tag machine at the north label desk is jammed.",
+        "The north registration printer will not feed a name badge."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: north label desk.",
+        "Reported event times are 1.5 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-015",
+        "test-033"
+      ],
+      "texts": [
+        "A paving tile is rocking on the west approach just outside Exit A.",
+        "One loose paver shifts underfoot on the outer path by Exit A."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west approach.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-016",
+        "test-034"
+      ],
+      "texts": [
+        "A teenager in a purple jacket is waiting alone by the central hall bench.",
+        "Someone wearing a purple coat says their group left without them near the middle bench."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: central bench.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-016",
+        "test-052"
+      ],
+      "texts": [
+        "A teenager in a purple jacket is waiting alone by the central hall bench.",
+        "A young visitor is separated from their group at the central seating."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: central bench.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-017",
+        "test-035"
+      ],
+      "texts": [
+        "The west bottle-filling nozzle continues to drip after use.",
+        "A slow leak is coming from the refill fountain on the west side."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west bottle filler.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-017",
+        "test-053"
+      ],
+      "texts": [
+        "The west bottle-filling nozzle continues to drip after use.",
+        "Water keeps seeping from the west-side bottle station tap."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west bottle filler.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-018",
+        "test-036"
+      ],
+      "texts": [
+        "A guest is searching for an earbud case they may have dropped under the rear seats.",
+        "A small headphone case is missing from the back seating row."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: under rear seats.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-018",
+        "test-054"
+      ],
+      "texts": [
+        "A guest is searching for an earbud case they may have dropped under the rear seats.",
+        "Someone lost their earbuds near the last row behind the stage."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: under rear seats.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-019",
+        "test-037"
+      ],
+      "texts": [
+        "The rubber threshold strip at the south entrance has lifted at one end.",
+        "A loose floor strip is sticking up by the southern check-in entrance."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south threshold.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-019",
+        "test-055"
+      ],
+      "texts": [
+        "The rubber threshold strip at the south entrance has lifted at one end.",
+        "The entry edging at registration's south doorway has peeled back."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: south threshold.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-020",
+        "test-038"
+      ],
+      "texts": [
+        "A tour group has stopped on the upper landing inside Exit B.",
+        "The interior top landing at Exit B is crowded by a waiting tour."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: upper landing.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Candidate score is below the prototype attachment threshold of 0.82."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-020",
+        "test-056"
+      ],
+      "texts": [
+        "A tour group has stopped on the upper landing inside Exit B.",
+        "People waiting for the gallery tour are gathered across Exit B's upper landing."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: upper landing.",
+        "Reported event times are 1.5 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-021",
+        "test-039"
+      ],
+      "texts": [
+        "Someone is resting near the western displays after hurting a knee.",
+        "A visitor says their knee hurts after a trip beside the model exhibit."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: west model table.",
+        "Reported event times are 0.8 minutes apart.",
+        "A supported category is missing on at least one report.",
+        "Missing score components were omitted and available weights were renormalized.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    },
+    {
+      "kind": "missed_pair",
+      "method": "Aegis semantic + context",
+      "report_ids": [
+        "test-022",
+        "test-040"
+      ],
+      "texts": [
+        "Visitors are held up at a jammed bottom Exit A gate.",
+        "A barrier panel has fallen across the lower Exit A opening."
+      ],
+      "expected_same_incident": true,
+      "predicted_same_incident": false,
+      "reasons": [
+        "Same reported sublocation: lower gate.",
+        "Reported event times are 0.8 minutes apart.",
+        "Anchor similarity is below the prototype minimum of 0.62; do not bridge through another member."
+      ]
+    }
+  ],
+  "workload": {
+    "reports": 60,
+    "review_reports": 60,
+    "proposed_groups": 58,
+    "confirmation_groups": 58,
+    "split_operations": 0,
+    "merge_operations": 38,
+    "basis": "Synthetic ground-truth partition corrections: first separate each mixed group, then join fragments of each true incident. One confirmation per proposed group. These are idealized grouping operations, not measured clicks or operator time."
+  }
+}
