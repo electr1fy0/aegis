@@ -185,8 +185,8 @@ describe("RelatedGroups", () => {
     expect(candidate.getByText("RPT-34")).toBeInTheDocument();
     expect(candidate.getByText("A guest reported a medical incident by the north gate.")).toBeInTheDocument();
     expect(candidate.getByText("Another account describes the same event near the north gate.")).toBeInTheDocument();
-    expect(candidate.getAllByText(/Main Stage · north gate/)).toHaveLength(2);
-    expect(candidate.getByText("2 historical comparisons with this group")).toBeInTheDocument();
+    expect(candidate.getAllByText(/Main Stage, north gate/)).toHaveLength(2);
+    expect(candidate.getByText("2 past comparisons")).toBeInTheDocument();
     expect(candidate.getByText("The accounts share a described event.")).toBeInTheDocument();
     expect(candidate.queryByText("A lower-ranked historical comparison.")).not.toBeInTheDocument();
 
@@ -238,8 +238,7 @@ describe("RelatedGroups", () => {
 
     renderRelated(scenario);
 
-    expect(screen.getByText("Historical comparisons · not probabilities")).toBeInTheDocument();
-    expect(screen.getByText("Historical match signals are shown with the source text and current group membership. A score is a ranking signal, not a probability.")).toBeInTheDocument();
+    expect(screen.getByText("These groups were linked by past report pairs. Similarity scores rank the text; they are not probabilities.")).toBeInTheDocument();
     expect(screen.getByText("Selected group · current membership")).toBeInTheDocument();
     expect(screen.getByText("Other group · current membership")).toBeInTheDocument();
   });
@@ -264,7 +263,7 @@ describe("RelatedGroups", () => {
 
     const card = screen.getByText("Possible north gate incident").closest(".candidate-card");
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText("2 historical comparisons with this group")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("2 past comparisons")).toBeInTheDocument();
   });
 
   it("uses full report IDs and omits the notes panel for legacy evidence without optional notes", () => {

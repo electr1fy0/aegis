@@ -80,8 +80,9 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   await expect(page.getByRole("heading", { name: "Grouping results" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Measured report grouping results" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Policy and retention checks" })).toBeVisible();
-  await expect(page.getByText(/\d+ checks/)).toBeVisible();
-  await expect(page.locator(".divide-y > li").first()).toBeVisible();
+  const policyChecks = page.getByRole("region", { name: "Policy and retention checks" });
+  await expect(policyChecks.getByRole("listitem")).toHaveCount(6);
+  await expect(policyChecks.getByText("Passed", { exact: true })).toHaveCount(6);
   expect(browserErrors).toEqual([]);
 });
 

@@ -464,13 +464,12 @@ export function ReportPage() {
   };
 
   return (
-    <>
+    <section className="report-page" aria-labelledby="report-page-title">
       <div className="page-heading">
         <div className="page-heading-copy">
-          <span className="eyebrow">Report intake</span>
-          <h1>New report</h1>
+          <h1 id="report-page-title">New report</h1>
           <p className="page-subtitle">
-            Preserve what was reported and send it to the coordinator review board.
+            Submit what was observed. A coordinator reviews every report.
           </p>
         </div>
       </div>
@@ -496,9 +495,9 @@ export function ReportPage() {
 
       <div className="report-layout">
         <Card className="form-card">
-          <h2>Incident details</h2>
+          <h2>Report details</h2>
           <p className="form-intro">
-            Keep the reporter’s wording. Missing details stay unknown and remain visible for review.
+            Use the reporter’s words. Leave details blank when they are unknown.
           </p>
 
           {currentEvent && (
@@ -646,7 +645,7 @@ export function ReportPage() {
 
             <div className="submit-row">
               <p className="submit-note">
-                This synthetic exercise records reports for human review. It does not contact responders or dispatch anyone.
+                Your submission goes to the exercise review board.
               </p>
               <Button type="submit" size="lg" disabled={isFormDisabled}>
                 {submitting ? "Submitting…" : "Submit report"}
@@ -688,34 +687,16 @@ export function ReportPage() {
           {draftStatus && <p className="draft-status" role="status">{draftStatus}</p>}
         </Card>
 
-        <Card className="report-guidance">
-          <div>
-            <span className="eyebrow">Coordinator workflow</span>
-            <h2>What happens next</h2>
-          </div>
-          <div className="guidance-row">
-            <span className="guidance-icon" aria-hidden="true">1</span>
-            <div className="guidance-copy">
-              <strong>The original report stays available</strong>
-              <p>Submitting does not overwrite the reporter’s wording, including incomplete or uncertain details.</p>
-            </div>
-          </div>
-          <div className="guidance-row">
-            <span className="guidance-icon" aria-hidden="true">2</span>
-            <div className="guidance-copy">
-              <strong>Grouping is provisional</strong>
-              <p>Location, event time, and text similarity help suggest related reports for a coordinator to inspect.</p>
-            </div>
-          </div>
-          <div className="guidance-row">
-            <span className="guidance-icon" aria-hidden="true">3</span>
-            <div className="guidance-copy">
-              <strong>People remain in control</strong>
-              <p>Priority labels order review. A human coordinator decides how to respond and records any correction.</p>
-            </div>
-          </div>
-        </Card>
+        <aside className="report-guidance" aria-labelledby="report-guidance-heading">
+          <h2 id="report-guidance-heading">What happens next</h2>
+          <p>The original wording stays available, including incomplete or conflicting details.</p>
+          <p>Location, event time, and text similarity suggest related reports for a coordinator to inspect.</p>
+          <p>Priority labels order review. A coordinator decides what to do and records any correction.</p>
+          <p className="report-safety-scope">
+            This is a synthetic exercise. It does not contact emergency services, send messages, dispatch responders, or provide a real-world safety map.
+          </p>
+        </aside>
       </div>
-    </>
+    </section>
   );
 }

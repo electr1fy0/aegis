@@ -122,12 +122,12 @@ function AppFrameContent({ children }: AppFrameProps) {
     <div className="app-shell">
       <header className="topbar">
         <Link to="/dashboard" className="brand" aria-label="Aegis operations home">
-          <span className="brand-mark"><IconShieldCheck size={19} stroke={1.8} /></span>
-          <span className="brand-name">aegis<span className="brand-period">.</span></span>
+          <IconShieldCheck className="brand-mark" size={18} stroke={1.8} aria-hidden="true" />
+          <span className="brand-name">Aegis</span>
         </Link>
 
-        <div className="event-heading" aria-live="polite">
-          <label className="sr-only" htmlFor="shell-event-select">Exercise</label>
+        <div className="event-heading">
+          <label className="shell-event-label" htmlFor="shell-event-select">Exercise</label>
           <select
             id="shell-event-select"
             className="shell-event-select"
@@ -141,7 +141,6 @@ function AppFrameContent({ children }: AppFrameProps) {
               <option key={event.id} value={event.id}>{eventOptionLabel(event)}</option>
             ))}
           </select>
-          <span className="exercise-chip"><span className="chip-dot" />Synthetic exercise</span>
         </div>
 
         <nav className="main-nav" aria-label="Main navigation">
@@ -163,12 +162,12 @@ function AppFrameContent({ children }: AppFrameProps) {
           <div className={`shell-freshness${stream.reconnecting ? " is-reconnecting" : ""}`}>
             <span className="shell-freshness-dot" />
             <span>{stream.reconnecting
-              ? `Reconnecting · last update ${freshnessLabel(stream.lastUpdated, now).replace("Updated ", "")}`
+              ? `Reconnecting. Last update ${freshnessLabel(stream.lastUpdated, now).replace("Updated ", "")}`
               : freshnessLabel(stream.lastUpdated, now)}</span>
           </div>
           <div className="topbar-status" aria-live="polite">
             <span className={`engine-dot engine-dot-${engineState}`} />
-            <span className="engine-label">{engineText}</span>
+            <span className="engine-label" title={engineText}>{engineText}</span>
           </div>
           <label className="theme-control">
             <span>Theme</span>

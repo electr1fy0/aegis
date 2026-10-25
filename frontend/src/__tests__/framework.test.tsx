@@ -284,12 +284,12 @@ describe("application frame, static overview, and route wiring", () => {
     const router = makeRouter("/about");
     render(<RouterProvider router={router} />);
 
-    expect(await screen.findByRole("heading", { name: "Designed for review, not autopilot" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
     expect(screen.getByText("Semantic matching · all-MiniLM-L6-v2")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "About" })).toHaveClass("is-active");
     expect(screen.getAllByRole("listitem")).toHaveLength(8);
-    expect(screen.getByRole("link", { name: /Review measured evaluation/ })).toHaveAttribute("href", "/evaluation");
+    expect(screen.getByRole("link", { name: "View evaluation results" })).toHaveAttribute("href", "/evaluation");
     expect(getSnapshotMock).toHaveBeenCalledOnce();
   });
 
@@ -492,7 +492,7 @@ describe("application frame, static overview, and route wiring", () => {
       "Live updates are reconnecting. The last successful snapshot is still shown.",
     );
     expect(document.querySelector(".shell-freshness")).toHaveClass("is-reconnecting");
-    expect(screen.getByText(/^Reconnecting · last update \d+s ago$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Reconnecting\. Last update \d+s ago$/)).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
   });
 
@@ -540,7 +540,7 @@ describe("application frame, static overview, and route wiring", () => {
     const { container } = render(<RouterProvider router={router} />);
     await waitFor(() => expect(container.querySelector(".engine-dot-offline")).toBeInTheDocument());
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Designed for review, not autopilot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
   });
 
   it("shares one refresh stream and clears the freshness timer on unmount", async () => {

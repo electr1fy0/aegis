@@ -1,103 +1,270 @@
-.time-mode-fieldset {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
+.report-page {
+  width: min(100%, 1280px);
+  margin-inline: auto;
 }
 
-.time-mode-fieldset legend {
-  margin-bottom: 8px;
-  color: var(--foreground);
-  font-size: 11px;
-  font-weight: 600;
+.report-page .page-heading {
+  margin-bottom: 26px;
 }
 
-.time-mode-options {
+.report-page .page-heading-copy {
+  gap: 8px;
+}
+
+.report-page .page-subtitle {
+  max-width: 620px;
+}
+
+.report-page .report-layout {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: start;
+  gap: 36px;
 }
 
-.time-mode-options label {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px;
+.report-page .form-card {
+  gap: 0;
+  padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  cursor: pointer;
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: none;
 }
 
-.time-mode-options label:has(input:checked) {
-  border-color: color-mix(in oklch, var(--brand-highlight) 48%, var(--border));
-  background: color-mix(in oklch, var(--brand-highlight) 8%, var(--surface-soft));
-}
-
-.time-mode-options input {
-  flex: 0 0 auto;
-  margin: 2px 0 0;
-  accent-color: var(--primary);
-}
-
-.time-mode-options span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.time-mode-options strong {
-  color: var(--foreground);
-  font-size: 10px;
+.report-page .form-card h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
   font-weight: 620;
 }
 
-.time-mode-options small {
+.report-page .form-intro {
+  margin: 0 0 12px;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.report-page #event-context {
+  margin: 0 0 20px;
+  font-size: 12px;
+}
+
+.report-page .report-form {
+  display: grid;
+  gap: 21px;
+}
+
+.report-page .form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.report-page .form-field > label,
+.report-page .time-mode-fieldset legend {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 580;
+}
+
+.report-page .field-hint {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.report-page .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.report-page .time-mode-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 17px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.report-page .time-mode-fieldset legend {
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.report-page .time-mode-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.report-page .time-mode-options label {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.report-page .time-mode-options label:has(input:checked) {
+  border: 0;
+  background: transparent;
+}
+
+.report-page .time-mode-options input {
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+  accent-color: var(--primary);
+}
+
+.report-page .time-mode-options span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-page .time-mode-options strong {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 570;
+}
+
+.report-page .time-mode-options small {
+  color: var(--muted-foreground);
+  font-size: 12px;
   font-weight: 400;
-  line-height: 1.4;
-}
-
-.time-mode-detail {
-  margin-top: 8px;
-}
-
-.time-mode-detail input {
-  max-width: 260px;
-}
-
-.draft-status {
-  margin-top: 12px;
-  color: var(--muted-foreground);
-  font-size: 10px;
   line-height: 1.45;
 }
 
-.receipt-copy .cn-button {
+.report-page .time-mode-detail {
+  margin-top: 14px;
+}
+
+.report-page .time-mode-detail input {
+  max-width: 280px;
+}
+
+.report-page .submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 3px;
+}
+
+.report-page .submit-note {
+  max-width: 360px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.report-page .receipt-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.report-page .receipt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.report-page .receipt-copy {
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.report-page .receipt-copy .cn-button {
   margin-left: 6px;
   vertical-align: middle;
 }
 
-.receipt-dashboard-link {
+.report-page .receipt-dashboard-link {
   color: var(--primary);
-  font-size: 10px;
-  font-weight: 620;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.receipt-dashboard-link:hover {
+.report-page .receipt-dashboard-link:hover {
   color: var(--foreground);
 }
 
+.report-page .report-guidance {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+
+.report-page .report-guidance h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.report-page .report-guidance p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.report-page .report-guidance .report-safety-scope {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.report-page .draft-status {
+  margin-top: 16px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 800px) {
-  .time-mode-options {
-    grid-template-columns: 1fr;
+  .report-page .report-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
   }
 
-  .time-mode-options label {
-    padding: 9px 10px;
+  .report-page .report-guidance {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 560px) {
+  .report-page .form-card {
+    padding: 18px;
+  }
+
+  .report-page .form-grid,
+  .report-page .time-mode-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-page .submit-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-page .submit-row button {
+    width: 100%;
   }
 }

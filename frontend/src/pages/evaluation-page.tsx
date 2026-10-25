@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, getEvaluation } from "../lib/api";
 import type { Evaluation } from "../lib/types";
-import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import "./evaluation-page.css";
 
 type EvaluationState =
   | { status: "loading" }
@@ -24,10 +17,10 @@ interface MetadataItemProps {
 
 function MetadataItem({ label, value, detail }: MetadataItemProps) {
   return (
-    <div className="min-w-0 space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="break-words text-sm font-medium text-foreground">{value || "Not reported"}</p>
-      {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
+    <div className="evaluation-metadata-item">
+      <dt>{label}</dt>
+      <dd>{value || "Not reported"}</dd>
+      {detail ? <dd className="evaluation-metadata-detail">{detail}</dd> : null}
     </div>
   );
 }
@@ -68,45 +61,41 @@ function aegisMethod(data: Evaluation): string {
 
 function ResultTable({ data }: { data: Evaluation }) {
   if (data.results.length === 0) {
-    return (
-      <p className="rounded-md border border-border bg-background p-4 text-sm text-muted-foreground">
-        No measured grouping results are available for this run.
-      </p>
-    );
+    return <p className="evaluation-empty">No measured grouping results are available for this run.</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+    <div className="evaluation-table-wrap">
+      <table className="evaluation-results-table">
         <caption className="sr-only">Measured report grouping results</caption>
-        <thead className="bg-muted/60 text-xs text-muted-foreground">
+        <thead>
           <tr>
-            <th className="px-4 py-3 font-medium" scope="col">Method</th>
-            <th className="px-3 py-3 text-right font-medium" scope="col">Precision</th>
-            <th className="px-3 py-3 text-right font-medium" scope="col">Recall</th>
-            <th className="px-3 py-3 text-right font-medium" scope="col">F1</th>
-            <th className="px-3 py-3 text-right font-medium" scope="col">False merge pairs</th>
-            <th className="px-3 py-3 text-right font-medium" scope="col">Missed pairs</th>
-            <th className="px-4 py-3 text-right font-medium" scope="col">Review rate</th>
+            <th scope="col">Method</th>
+            <th scope="col">Precision</th>
+            <th scope="col">Recall</th>
+            <th scope="col">F1</th>
+            <th scope="col">False merge pairs</th>
+            <th scope="col">Missed pairs</th>
+            <th scope="col">Review rate</th>
           </tr>
         </thead>
         <tbody>
           {data.results.map((result, index) => (
-            <tr className="border-t border-border align-top" key={result.method + "-" + index}>
-              <th className="px-4 py-3 font-medium text-foreground" scope="row">
+            <tr key={result.method + "-" + index}>
+              <th scope="row">
                 <span>{result.method}</span>
                 {result.method.toLowerCase().includes("lexical") ? (
-                  <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                  <span className="evaluation-method-detail">
                     Lexical comparison; no semantic model result is implied.
                   </span>
                 ) : null}
               </th>
-              <td className="px-3 py-3 text-right tabular-nums">{percent(result.precision)}</td>
-              <td className="px-3 py-3 text-right tabular-nums">{percent(result.recall)}</td>
-              <td className="px-3 py-3 text-right tabular-nums">{percent(result.f1)}</td>
-              <td className="px-3 py-3 text-right tabular-nums">{result.false_merges}</td>
-              <td className="px-3 py-3 text-right tabular-nums">{result.missed_pairs}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{percent(result.review_rate)}</td>
+              <td>{percent(result.precision)}</td>
+              <td>{percent(result.recall)}</td>
+              <td>{percent(result.f1)}</td>
+              <td>{result.false_merges}</td>
+              <td>{result.missed_pairs}</td>
+              <td>{percent(result.review_rate)}</td>
             </tr>
           ))}
         </tbody>
@@ -120,37 +109,37 @@ function EvaluationDiagnostics({ data }: { data: Evaluation }) {
   const examples = data.error_examples ?? [];
   const visible = examples.filter((example) => kind === "all" || example.kind === kind);
   return (
-    <details className="rounded-lg border border-border bg-card p-4">
-      <summary className="cursor-pointer text-sm font-semibold">Review workload and grouping mistakes</summary>
-      <div className="mt-4 space-y-4">
+    <details className="evaluation-diagnostics">
+      <summary>Review workload and grouping mistakes</summary>
+      <div className="evaluation-diagnostics-content">
         {data.workload ? (
-          <section aria-label="Estimated grouping review workload" className="space-y-3">
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div><dt className="text-xs text-muted-foreground">Reports flagged</dt><dd>{data.workload.review_reports} / {data.workload.reports}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Group confirmations</dt><dd>{data.workload.confirmation_groups}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Corrective splits</dt><dd>{data.workload.split_operations}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Corrective merges</dt><dd>{data.workload.merge_operations}</dd></div>
+          <section aria-label="Estimated grouping review workload" className="evaluation-workload-section">
+            <dl className="evaluation-workload">
+              <div><dt>Reports flagged</dt><dd>{data.workload.review_reports} / {data.workload.reports}</dd></div>
+              <div><dt>Group confirmations</dt><dd>{data.workload.confirmation_groups}</dd></div>
+              <div><dt>Corrective splits</dt><dd>{data.workload.split_operations}</dd></div>
+              <div><dt>Corrective merges</dt><dd>{data.workload.merge_operations}</dd></div>
             </dl>
-            <p className="text-xs leading-5 text-muted-foreground">{data.workload.basis}</p>
+            <p className="evaluation-workload-basis">{data.workload.basis}</p>
           </section>
-        ) : <p className="text-sm text-muted-foreground">Review workload was not recorded for this run.</p>}
-        <label className="flex flex-wrap items-center gap-3 text-sm">
+        ) : <p className="evaluation-note">Review workload was not recorded for this run.</p>}
+        <label className="evaluation-filter">
           Grouping mistake type
-          <select className="rounded-md border border-border bg-background p-2" value={kind} onChange={(event) => setKind(event.target.value)}>
+          <select value={kind} onChange={(event) => setKind(event.target.value)}>
             <option value="all">All mistakes</option>
             <option value="missed_pair">Missed pairs</option>
             <option value="false_merge">False merges</option>
           </select>
         </label>
-        <p className="text-xs text-muted-foreground">Up to 40 actual pairwise mistakes from the Aegis result. Runtime errors are listed separately.</p>
+        <p className="evaluation-note">Up to 40 actual pairwise mistakes from the Aegis result. Runtime errors are listed separately.</p>
         {visible.length ? visible.map((example) => (
-          <details className="rounded-md border border-border p-3" key={example.report_ids.join(":")}>
-            <summary className="cursor-pointer text-sm">{example.kind === "missed_pair" ? "Missed pair" : "False merge"}: {example.report_ids.join(" / ")}</summary>
-            <p className="my-2 text-xs text-muted-foreground">{example.method} · Expected {example.expected_same_incident ? "one incident" : "separate incidents"}; proposed {example.predicted_same_incident ? "one group" : "separate groups"}.</p>
-            <div className="grid gap-3 sm:grid-cols-2">{example.texts.map((text, index) => <blockquote className="border-l-2 border-border pl-3 text-sm" key={index}>{text}</blockquote>)}</div>
-            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">{example.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>
+          <details className="evaluation-example" key={example.report_ids.join(":")}>
+            <summary>{example.kind === "missed_pair" ? "Missed pair" : "False merge"}: {example.report_ids.join(" / ")}</summary>
+            <p className="evaluation-example-method">{example.method} · Expected {example.expected_same_incident ? "one incident" : "separate incidents"}; proposed {example.predicted_same_incident ? "one group" : "separate groups"}.</p>
+            <div className="evaluation-example-texts">{example.texts.map((text, index) => <blockquote key={index}>{text}</blockquote>)}</div>
+            <ul className="evaluation-example-reasons">{example.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>
           </details>
-        )) : <p className="text-sm text-muted-foreground">No recorded grouping mistakes match this filter.</p>}
+        )) : <p className="evaluation-note">No recorded grouping mistakes match this filter.</p>}
       </div>
     </details>
   );
@@ -161,10 +150,10 @@ function EvaluationDetails({ data }: { data: Evaluation }) {
   const engineMethod = aegisMethod(data);
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <Card className="border-border bg-card">
-          <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
+    <div className="evaluation-details">
+      <section className="evaluation-section evaluation-run" aria-labelledby="evaluation-run-heading">
+        <h2 id="evaluation-run-heading">Run details</h2>
+        <dl className="evaluation-metadata">
             <MetadataItem label="Dataset version" value={data.dataset_version} />
             <MetadataItem label="Engine result" value={engineMethod} />
             <MetadataItem label="Model revision" value={data.model} />
@@ -175,122 +164,94 @@ function EvaluationDetails({ data }: { data: Evaluation }) {
               value={milliseconds(data.latency?.p50_ms) + " / " + milliseconds(data.latency?.p95_ms)}
               detail="p50 / p95 per report, including analysis and incremental grouping"
             />
-          </CardContent>
-        </Card>
+        </dl>
+      </section>
 
-        <Card className="border-border bg-card xl:col-span-2">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Grouping results</CardTitle>
-              <Badge variant="secondary">Synthetic regression set</Badge>
-            </div>
-            <CardDescription>
-              Pairwise report-grouping metrics. False merges and misses count report pairs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResultTable data={data} />
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              Similarity scores are ranking signals, not probabilities. These synthetic results do not establish
-              accuracy in real incidents.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <section className="evaluation-section" aria-labelledby="grouping-results-heading">
+        <div className="evaluation-section-heading">
+          <h2 id="grouping-results-heading">Grouping results</h2>
+          <p>Pairwise report-grouping metrics. False merges and misses count report pairs.</p>
+        </div>
+        <ResultTable data={data} />
+        <p className="evaluation-note evaluation-caution">
+          Similarity scores are ranking signals, not probabilities. These synthetic results do not establish accuracy in real incidents.
+        </p>
+      </section>
 
       <EvaluationDiagnostics data={data} />
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Policy and retention checks</CardTitle>
-              <Badge variant="secondary">{data.checks.length} checks</Badge>
-            </div>
-            <CardDescription>
-              The checks show whether the current implementation meets each explicit fixture condition.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data.checks.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {data.checks.map((check, index) => (
-                  <li className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0" key={check.name + "-" + index}>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-sm font-medium text-foreground">{check.name}</p>
-                      <p className="text-xs leading-5 text-muted-foreground">{check.detail}</p>
-                    </div>
-                    <Badge variant={check.passed ? "secondary" : "destructive"}>
-                      {check.passed ? "Passed" : "Failed"}
-                    </Badge>
+      <div className="evaluation-review-layout">
+        <section className="evaluation-section" aria-labelledby="policy-checks-heading">
+          <div className="evaluation-section-heading">
+            <h2 id="policy-checks-heading">Policy and retention checks</h2>
+            <p>The checks show whether this implementation meets each explicit fixture condition.</p>
+          </div>
+          {data.checks.length > 0 ? (
+            <ul className="evaluation-check-list">
+              {data.checks.map((check, index) => (
+                <li key={check.name + "-" + index}>
+                  <div>
+                    <p className="evaluation-check-name">{check.name}</p>
+                    <p className="evaluation-check-detail">{check.detail}</p>
+                  </div>
+                  <span className={`evaluation-check-status${check.passed ? " is-passed" : " is-failed"}`}>
+                    {check.passed ? "Passed" : "Failed"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="evaluation-note">No checks were returned for this evaluation.</p>
+          )}
+        </section>
+
+        <section className="evaluation-section evaluation-failures" aria-labelledby="known-failures-heading">
+          <div className="evaluation-section-heading">
+            <h2 id="known-failures-heading">Known failures</h2>
+            <p>Failed fixture checks and runtime errors are shown separately.</p>
+          </div>
+          <section aria-labelledby="failed-checks-heading">
+            <h3 id="failed-checks-heading">Checks that failed</h3>
+            {failedChecks.length > 0 ? (
+              <ul className="evaluation-plain-list">
+                {failedChecks.map((check, index) => (
+                  <li key={check.name + "-" + index}>
+                    <span className="evaluation-failure-name">{check.name}:</span>{" "}
+                    <span>{check.detail}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">No checks were returned for this evaluation.</p>
+              <p className="evaluation-note">No fixture checks failed in this run.</p>
             )}
-          </CardContent>
-        </Card>
+          </section>
 
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle>Known failures</CardTitle>
-            <CardDescription>
-              Failed fixture checks and runtime errors are shown separately so a successful load cannot hide a miss.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <section aria-labelledby="failed-checks-heading" className="space-y-2">
-              <h3 className="text-xs font-semibold text-foreground" id="failed-checks-heading">
-                Checks that failed
-              </h3>
-              {failedChecks.length > 0 ? (
-                <ul className="list-disc space-y-2 pl-5 text-sm text-foreground">
-                  {failedChecks.map((check, index) => (
-                    <li key={check.name + "-" + index}>
-                      <span className="font-medium">{check.name}:</span>{" "}
-                      <span className="text-muted-foreground">{check.detail}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">No fixture checks failed in this run.</p>
-              )}
-            </section>
-
-            <section aria-labelledby="runtime-failures-heading" className="space-y-2 border-t border-border pt-4">
-              <h3 className="text-xs font-semibold text-foreground" id="runtime-failures-heading">
-                Runtime and analysis errors
-              </h3>
-              {data.failures.length > 0 ? (
-                <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                  {data.failures.map((failure, index) => <li key={index + "-" + failure}>{failure}</li>)}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">No runtime or analysis errors were recorded.</p>
-              )}
-            </section>
-          </CardContent>
-        </Card>
+          <section className="evaluation-runtime-errors" aria-labelledby="runtime-failures-heading">
+            <h3 id="runtime-failures-heading">Runtime and analysis errors</h3>
+            {data.failures.length > 0 ? (
+              <ul className="evaluation-plain-list">
+                {data.failures.map((failure, index) => <li key={index + "-" + failure}>{failure}</li>)}
+              </ul>
+            ) : (
+              <p className="evaluation-note">No runtime or analysis errors were recorded.</p>
+            )}
+          </section>
+        </section>
       </div>
 
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle>Limitations</CardTitle>
-          <CardDescription>
-            Interpret these measurements within the limits of the fixture set and the active engine mode.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.limitations.length > 0 ? (
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
-              {data.limitations.map((limitation, index) => <li key={index + "-" + limitation}>{limitation}</li>)}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No additional limitations were reported.</p>
-          )}
-        </CardContent>
-      </Card>
+      <section className="evaluation-section evaluation-limitations" aria-labelledby="limitations-heading">
+        <div className="evaluation-section-heading">
+          <h2 id="limitations-heading">Limitations</h2>
+          <p>Interpret these measurements within the fixture set and active engine mode.</p>
+        </div>
+        {data.limitations.length > 0 ? (
+          <ul className="evaluation-plain-list">
+            {data.limitations.map((limitation, index) => <li key={index + "-" + limitation}>{limitation}</li>)}
+          </ul>
+        ) : (
+          <p className="evaluation-note">No additional limitations were reported.</p>
+        )}
+      </section>
     </div>
   );
 }
@@ -334,16 +295,12 @@ export function EvaluationPage() {
   };
 
   return (
-    <section aria-labelledby="evaluation-heading" className="space-y-5 bg-background text-foreground">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Measured prototype results
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground" id="evaluation-heading">Evaluation</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Reproducible grouping and policy checks on the fixed synthetic test split. Use the active engine label
-            below to distinguish semantic mode from lexical fallback.
+    <section aria-labelledby="evaluation-heading" className="evaluation-page">
+      <div className="page-heading evaluation-page-heading">
+        <div className="page-heading-copy">
+          <h1 id="evaluation-heading">Evaluation</h1>
+          <p className="page-subtitle">
+            Measured grouping and policy checks for the fixed synthetic test set. The header shows whether semantic matching or lexical fallback is active.
           </p>
         </div>
         <Button
@@ -357,26 +314,20 @@ export function EvaluationPage() {
       </div>
 
       {state.status === "loading" ? (
-        <Card aria-live="polite" className="border-border bg-card" role="status">
-          <CardContent className="p-5 text-sm text-muted-foreground">
-            Loading measured evaluation results…
-          </CardContent>
-        </Card>
+        <div aria-live="polite" className="evaluation-status" role="status">
+          Loading measured evaluation results…
+        </div>
       ) : null}
 
       {state.status === "error" ? (
-        <Card aria-live="assertive" className="border-border bg-card" role="alert">
-          <CardHeader>
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle>{state.unavailable ? "Evaluation unavailable" : "Could not load evaluation"}</CardTitle>
-              {state.unavailable ? <Badge variant="secondary">503 · Not measured</Badge> : null}
-            </div>
-            <CardDescription>{state.message}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Retry after the backend has an available evaluation result.
-          </CardContent>
-        </Card>
+        <section aria-live="assertive" className="evaluation-status is-error" role="alert">
+          <div className="evaluation-status-heading">
+            <h2>{state.unavailable ? "Evaluation unavailable" : "Could not load evaluation"}</h2>
+            {state.unavailable ? <span>503 · Not measured</span> : null}
+          </div>
+          <p>{state.message}</p>
+          <p>Retry after the backend has an available evaluation result.</p>
+        </section>
       ) : null}
 
       {state.status === "success" ? <EvaluationDetails data={state.data} /> : null}

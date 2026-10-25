@@ -11,20 +11,20 @@
   },
   "frontend": {
     "lines": {
-      "total": 1742,
-      "covered": 1742,
+      "total": 1746,
+      "covered": 1746,
       "skipped": 0,
       "pct": 100
     },
     "statements": {
-      "total": 2053,
-      "covered": 2053,
+      "total": 2057,
+      "covered": 2057,
       "skipped": 0,
       "pct": 100
     },
     "functions": {
-      "total": 537,
-      "covered": 537,
+      "total": 538,
+      "covered": 538,
       "skipped": 0,
       "pct": 100
     },
@@ -58,5 +58,16 @@
     "scope": "unchanged regular dependency locks",
     "bun_audit": "no known vulnerabilities",
     "pip_audit": "no known vulnerabilities"
+  },
+  "ui_review": {
+    "custom_effect_scan": "no custom gradients, shadows, glows or backdrop blur",
+    "viewports": [
+      390,
+      1280,
+      1440
+    ],
+    "mobile_horizontal_overflow": false,
+    "map_label_overlap": false,
+    "browser_console_errors": 0
   }
 }

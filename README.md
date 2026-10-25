@@ -42,7 +42,7 @@ The requested initialization command is:
 bunx --bun shadcn@latest init --preset b3PkSQ --template start
 ```
 
-During the original implementation, outbound shell networking was blocked, so the CLI could not complete its download. The official cached registry decoded `b3PkSQ` as Nova style, neutral base, orange theme, neutral charts, Tabler icons, Figtree, inherited headings, default radius, subtle menu accent, and default-translucent menu colour. The frontend uses that configuration, upstream shadcn primitives and Nova styles, and self-hosted Figtree assets. See `frontend/components.json` and its bootstrap notes. No successful remote bootstrap is claimed.
+During the original implementation, outbound shell networking was blocked, so the CLI could not complete its download. The official cached registry decoded `b3PkSQ` as Nova style, neutral base, orange theme, neutral charts, Tabler icons, Figtree, inherited headings, default radius, subtle menu accent, and default-translucent menu colour. The frontend retains the upstream shadcn primitives, Nova styles, and self-hosted Figtree assets. The subsequent UI review uses solid neutral surfaces and blue actions, with no custom gradients, shadows, glows, or backdrop blur. See `frontend/components.json` and its bootstrap notes. No successful remote bootstrap is claimed.
 
 ## Matching modes
 

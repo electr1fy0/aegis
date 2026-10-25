@@ -22,7 +22,6 @@ import {
   IconPrinter,
   IconRefresh,
   IconSearch,
-  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { Button } from "../components/ui/button";
@@ -590,7 +589,6 @@ export function DashboardPage() {
     <div className="dashboard-page" onKeyDown={handleKeyDown}>
       <div className="page-heading">
         <div className="page-heading-copy">
-          <span className="eyebrow">Coordinator workspace</span>
           <h1>Situation overview</h1>
           <p className="page-subtitle">Provisional groups from the current exercise, ready for human review.</p>
         </div>
@@ -611,11 +609,11 @@ export function DashboardPage() {
 
       <div className="dashboard-toolbar">
         <div className="toolbar-left">
-          <span className={`toolbar-caption${providerStatus.reconnecting ? " is-stale" : ""}`}><IconActivity />
+          <span className={`toolbar-caption visually-hidden${providerStatus.reconnecting ? " is-stale" : ""}`}><IconActivity />
             {providerStatus.reconnecting ? "Reconnecting" : providerStatus.lastUpdated ? `Updated ${formatAge(new Date(providerStatus.lastUpdated).toISOString())}` : "Live snapshot"}
           </span>
-          <span className="mini-pill">{snapshot.event.policy_version}</span>
-          <span className="mini-pill matcher-label" title={snapshot.health.model_revision ?? snapshot.health.engine}>{engineLabel(snapshot.health)}</span>
+          <span className="policy-version">Policy {snapshot.event.policy_version}</span>
+          <span className="matcher-label visually-hidden" title={snapshot.health.model_revision ?? snapshot.health.engine}>{engineLabel(snapshot.health)}</span>
         </div>
         <div className="toolbar-right">
           <details className="toolbar-menu replay-menu">
@@ -734,10 +732,10 @@ function SummaryStrip({ reports, groups, review, conflicts, onSelect }: SummaryS
   return (
     <div className="summary-strip">
       <div className="summary-grid" role="group" aria-label="Exercise counts" aria-describedby="summary-scope-note">
-        <SummaryCard value={reports} label="Reports received" icon={<IconMessageCircle />} onClick={() => onSelect("all")} />
-        <SummaryCard value={groups} label="Provisional groups" icon={<IconUsers />} onClick={() => onSelect("active")} />
-        <SummaryCard value={review} label="Awaiting review" icon={<IconAlertTriangle />} tone="warning" onClick={() => onSelect("review")} />
-        <SummaryCard value={conflicts} label="Unresolved conflicts" icon={<IconActivity />} tone="alert" onClick={() => onSelect("conflicts")} />
+        <SummaryCard value={reports} label="Reports received" onClick={() => onSelect("all")} />
+        <SummaryCard value={groups} label="Provisional groups" onClick={() => onSelect("active")} />
+        <SummaryCard value={review} label="Awaiting review" tone="warning" onClick={() => onSelect("review")} />
+        <SummaryCard value={conflicts} label="Unresolved conflicts" tone="alert" onClick={() => onSelect("conflicts")} />
       </div>
       <p className="summary-scope-note" id="summary-scope-note">Counts follow the current search, priority, status, and zone filters across all queue tabs.</p>
     </div>
@@ -747,20 +745,17 @@ function SummaryStrip({ reports, groups, review, conflicts, onSelect }: SummaryS
 function SummaryCard({
   value,
   label,
-  icon,
   tone,
   onClick,
 }: {
   value: number;
   label: string;
-  icon: ReactNode;
   tone?: "warning" | "alert";
   onClick: () => void;
 }) {
   return (
     <button type="button" className={`summary-card${tone ? ` is-${tone}` : ""}`} onClick={onClick} aria-label={`${label}: ${value}. Filter incident queue`}>
       <div className="summary-copy"><strong className="summary-value">{value}</strong><span className="summary-label">{label}</span></div>
-      <span className="summary-icon" aria-hidden="true">{icon}</span>
     </button>
   );
 }
@@ -950,14 +945,23 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
             <path className="map-road" d={roadPath} />
             <path className="map-road" d="M 230 180 L 470 180 L 720 180 M 120 430 L 470 430 L 820 430" />
             <rect className="map-hall" x="305" y="90" width="330" height="182" rx="18" />
-            {zones.map((zone) => (
-              <g key={zone.id}>
-                <rect className="map-zone" x={zone.x - 75} y={zone.y - 34} width="150" height="68" rx="10" />
-                <text className="map-zone-label" x={zone.x} y={zone.y}>{zone.label}</text>
-              </g>
-            ))}
+            {zones.map((zone) => {
+              const labelLines = zone.label.trim().split(/\s+/);
+              const labelHeight = Math.max(96, labelLines.length * 34 + 28);
+              return (
+                <g key={zone.id}>
+                  <rect className="map-zone" x={zone.x - 110} y={zone.y - labelHeight / 2} width="220" height={labelHeight} rx="10" />
+                  <text className="map-zone-label" aria-label={zone.label}>
+                    {labelLines.map((word, index) => (
+                      <tspan key={`${zone.id}-${index}`} x={zone.x} y={zone.y + (index - (labelLines.length - 1) / 2) * 34}>{word}</tspan>
+                    ))}
+                  </text>
+                </g>
+              );
+            })}
             {located.map(({ zone, groups }) => {
               const primary = groups[0]!;
+              const markerY = zone.y + 70;
               const groupReports = groups.reduce((count, incident) => count + incident.report_ids.length, 0);
               const markerLabel = groups.length === 1
                 ? `${primary.title}, ${priorityLabel(primary.priority)}, ${primary.report_ids.length} reports`
@@ -979,9 +983,9 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
                     }
                   }}
                 >
-                  <circle className="map-marker-ring" cx={zone.x} cy={zone.y} r={groups.length > 1 ? 20 : 15} />
-                  <circle className="map-marker-core" cx={zone.x} cy={zone.y} r="9" />
-                  <text className="map-marker-count" x={zone.x} y={zone.y}>{groups.length > 1 ? groups.length : groupReports}</text>
+                  <circle className="map-marker-ring" cx={zone.x} cy={markerY} r={groups.length > 1 ? 20 : 15} />
+                  <circle className="map-marker-core" cx={zone.x} cy={markerY} r="9" />
+                  <text className="map-marker-count" x={zone.x} y={markerY}>{groups.length > 1 ? groups.length : groupReports}</text>
                 </g>
               );
             })}

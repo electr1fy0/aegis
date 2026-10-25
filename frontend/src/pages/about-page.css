@@ -1,0 +1,128 @@
+.about-page {
+  width: min(100%, 1280px);
+  margin-inline: auto;
+}
+
+.about-page .page-heading {
+  margin-bottom: 30px;
+}
+
+.about-page .page-heading-copy {
+  gap: 8px;
+}
+
+.about-page .page-subtitle {
+  max-width: 680px;
+}
+
+.about-page .heading-actions {
+  gap: 8px;
+}
+
+.about-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  align-items: start;
+  gap: 48px;
+}
+
+.about-section h2 {
+  margin: 0 0 16px;
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.about-steps {
+  margin: 0;
+  padding-left: 21px;
+}
+
+.about-steps li {
+  padding: 0 0 18px 5px;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.about-steps li + li {
+  padding-top: 18px;
+}
+
+.about-steps li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.about-steps li::marker {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.about-steps h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.about-steps p,
+.about-scope p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.about-sidebar {
+  display: grid;
+  gap: 28px;
+}
+
+.about-capabilities {
+  display: grid;
+  gap: 11px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.about-scope {
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.about-scope p + p {
+  margin-top: 11px;
+}
+
+.about-evaluation-link {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 570;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.about-evaluation-link:hover {
+  color: var(--foreground);
+}
+
+@media (max-width: 800px) {
+  .about-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (max-width: 560px) {
+  .about-page .heading-actions {
+    width: 100%;
+  }
+
+  .about-page .heading-actions > * {
+    flex: 1;
+  }
+}
