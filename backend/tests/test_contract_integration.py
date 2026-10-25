@@ -912,6 +912,7 @@ def test_demo_event_is_separate_and_snapshot_and_evaluation_follow_contract_sche
         "counts",
         "health",
         "replay",
+        "undoable_actions",
     }
     assert set(previous["counts"]) == {"reports", "incidents", "review", "conflicts"}
     assert {"status", "engine", "model_ready", "model_revision"} == set(previous["health"])
@@ -958,6 +959,8 @@ def test_demo_event_is_separate_and_snapshot_and_evaluation_follow_contract_sche
         "latency",
         "limitations",
         "failures",
+        "error_examples",
+        "workload",
     }
     assert results["dataset_version"]
     assert results["results"]

@@ -26,9 +26,14 @@ from backend.aegis.api import (
 from backend.aegis.models import (
     ConflictReviewRequest,
     GroupingReviewRequest,
+    IncidentNoteRequest,
+    IncidentTitleRequest,
     IngestReportRequest,
+    PriorityResetRequest,
     PriorityReviewRequest,
+    RetryAnalysisRequest,
     StatusReviewRequest,
+    UndoRequest,
 )
 from backend.aegis.storage import SQLiteStore
 
@@ -207,6 +212,11 @@ def test_health_current_event_empty_snapshot_and_lists(system: Any) -> None:
     assert client.get("/api/incidents").json() == []
     assert client.get("/api/audit").json() == initial["audit"]
     assert store.current_event()["id"] == initial["event"]["id"]
+    second = store.create_event("Later event")
+    assert [event["id"] for event in client.get("/api/events").json()] == [
+        second["id"],
+        initial["event"]["id"],
+    ]
 
 
 def test_ingest_preserves_raw_text_returns_typed_public_shape_and_duplicate(system: Any) -> None:
@@ -888,6 +898,35 @@ def test_model_validators_and_public_report_filtering() -> None:
     )
     with pytest.raises(ValueError):
         ConflictReviewRequest(status="resolved", reason="   ", expected_version=1)
+    assert IncidentNoteRequest(text="  Preserve this detail.  ", expected_version=1).text == (
+        "Preserve this detail."
+    )
+    assert (
+        IncidentTitleRequest(
+            title="  Clear title  ", reason="  Clarify the incident.  ", expected_version=1
+        ).title
+        == "Clear title"
+    )
+    assert (
+        PriorityResetRequest(reason="Return to policy.", expected_version=1).expected_version == 1
+    )
+    assert (
+        UndoRequest(reason="Restore the previous state.", expected_version=1).expected_version == 1
+    )
+    assert RetryAnalysisRequest(expected_version=1).expected_version == 1
+    for invalid in (
+        lambda: IncidentNoteRequest(text="  ", expected_version=1),
+        lambda: IncidentTitleRequest(title="  ", reason="Valid reason.", expected_version=1),
+        lambda: IncidentTitleRequest(title="Valid", reason="  ", expected_version=1),
+        lambda: IncidentTitleRequest(title="Valid", reason=" x ", expected_version=1),
+        lambda: PriorityResetRequest(reason="  ", expected_version=1),
+        lambda: PriorityResetRequest(reason=" x ", expected_version=1),
+        lambda: UndoRequest(reason="  ", expected_version=1),
+        lambda: UndoRequest(reason=" x ", expected_version=1),
+        lambda: RetryAnalysisRequest(expected_version=True),
+    ):
+        with pytest.raises(ValueError):
+            invalid()
     raw = {
         "id": "r",
         "event_id": "e",
@@ -908,6 +947,7 @@ def test_model_validators_and_public_report_filtering() -> None:
     }
     assert set(_public_report(raw)) == {
         "id",
+        "display_id",
         "event_id",
         "text",
         "zone_id",
@@ -919,7 +959,327 @@ def test_model_validators_and_public_report_filtering() -> None:
         "incident_id",
         "claims",
         "review_reasons",
+        "model_revision",
+        "confirmed",
     }
+
+
+def test_public_report_revision_confirmation_and_evidence_time(system: Any) -> None:
+    client, _, _, _ = system
+    first = post_report(client, "Exit is blocked", "public-first", zone_id="exit-a")
+    second = post_report(client, "ATTACH exit is clear", "public-second", zone_id="exit-a")
+    assert first["report"]["display_id"] == "R-000001"
+    assert first["incident"]["display_id"] == "I-000001"
+    assert first["report"]["model_revision"] == "fake-v1"
+    assert first["report"]["confirmed"] is False
+    evidence = second["incident"]["evidence"][0]
+    assert evidence["created_at"]
+    assert second["report"]["model_revision"] == "fake-v1"
+    current = second["incident"]
+    confirmed = client.post(
+        "/api/reviews/grouping",
+        json={
+            "action": "confirm",
+            "report_ids": [second["report"]["id"]],
+            "target_incident_id": current["id"],
+            "reason": "Coordinator confirms this match.",
+            "expected_versions": expected(current),
+        },
+    )
+    assert confirmed.status_code == 200
+    report = next(
+        item for item in confirmed.json()["reports"] if item["id"] == second["report"]["id"]
+    )
+    assert report["confirmed"] is True
+
+
+def test_incident_note_title_priority_reset_and_undo_routes(system: Any) -> None:
+    client, _, _, _ = system
+    created = post_report(client, "A report title", "action-routes")
+    incident = created["incident"]
+    title_response = client.post(
+        f"/api/incidents/{incident['id']}/title",
+        json={
+            "title": "Coordinator title",
+            "reason": "Use a clearer event label.",
+            "expected_version": incident["version"],
+        },
+    )
+    assert title_response.status_code == 200
+    titled = next(
+        item for item in title_response.json()["incidents"] if item["id"] == incident["id"]
+    )
+    assert titled["title"] == "Coordinator title"
+    assert titled["original_title"] == "A report title"
+    assert titled["title_override"] is True
+    stale_title = client.post(
+        f"/api/incidents/{incident['id']}/title",
+        json={
+            "title": "Old version",
+            "reason": "This should be rejected.",
+            "expected_version": incident["version"],
+        },
+    )
+    assert stale_title.status_code == 409
+    note_response = client.post(
+        f"/api/incidents/{incident['id']}/notes",
+        json={"text": "  Coordinator observation.  ", "expected_version": titled["version"]},
+    )
+    assert note_response.status_code == 200
+    noted = next(item for item in note_response.json()["incidents"] if item["id"] == incident["id"])
+    assert noted["notes"][0]["text"] == "Coordinator observation."
+    blank_note = client.post(
+        f"/api/incidents/{incident['id']}/notes",
+        json={"text": "  ", "expected_version": noted["version"]},
+    )
+    assert blank_note.status_code == 422
+    missing_note = client.post(
+        "/api/incidents/missing/notes",
+        json={"text": "A valid note.", "expected_version": 1},
+    )
+    assert missing_note.status_code == 404
+    overridden = client.post(
+        f"/api/incidents/{incident['id']}/priority",
+        json={
+            "priority": "P1",
+            "reason": "Escalate for review.",
+            "expected_version": noted["version"],
+        },
+    ).json()["incidents"][0]
+    reset_response = client.post(
+        f"/api/incidents/{incident['id']}/priority/reset",
+        json={"reason": "Return to policy assessment.", "expected_version": overridden["version"]},
+    )
+    assert reset_response.status_code == 200
+    reset_snapshot = reset_response.json()
+    reset_incident = next(
+        item for item in reset_snapshot["incidents"] if item["id"] == incident["id"]
+    )
+    assert reset_incident["priority"] == reset_incident["suggested_priority"]
+    reset_audit = next(
+        item
+        for item in reversed(reset_snapshot["audit"])
+        if item["action"] == "incident.priority_reset"
+    )
+    assert reset_snapshot["undoable_actions"] == [
+        {
+            "audit_id": reset_audit["id"],
+            "incident_id": incident["id"],
+            "action": "incident.priority_reset",
+            "expected_version": reset_incident["version"],
+        }
+    ]
+    undone = client.post(
+        f"/api/audit/{reset_audit['id']}/undo",
+        json={
+            "reason": "Restore the coordinator override.",
+            "expected_version": reset_incident["version"],
+        },
+    )
+    assert undone.status_code == 200
+    after_undo = next(item for item in undone.json()["incidents"] if item["id"] == incident["id"])
+    assert after_undo["priority"] == "P1"
+    assert undone.json()["audit"][-1]["action"] == "incident.action_undone"
+    assert not undone.json()["undoable_actions"]
+    unsupported_audit = next(
+        item for item in undone.json()["audit"] if item["action"] == "event.created"
+    )
+    unsupported = client.post(
+        f"/api/audit/{unsupported_audit['id']}/undo",
+        json={"reason": "Try an unsupported action.", "expected_version": after_undo["version"]},
+    )
+    assert unsupported.status_code == 409
+    reset_again = client.post(
+        f"/api/incidents/{incident['id']}/priority/reset",
+        json={"reason": "Return to policy again.", "expected_version": after_undo["version"]},
+    )
+    assert reset_again.status_code == 200
+    reset_again_incident = next(
+        item for item in reset_again.json()["incidents"] if item["id"] == incident["id"]
+    )
+    no_override = client.post(
+        f"/api/incidents/{incident['id']}/priority/reset",
+        json={
+            "reason": "There is nothing to reset.",
+            "expected_version": reset_again_incident["version"],
+        },
+    )
+    assert no_override.status_code == 409
+
+
+def test_failed_report_retry_preserves_human_membership_and_edits(system: Any) -> None:
+    client, _, engine, _ = system
+    base = post_report(client, "Base incident", "retry-base")
+    engine.bad_analysis = True
+    failed = post_report(client, "ATTACH pending account", "retry-report")
+    assert failed["report"]["analysis_status"] == "failed"
+    moved = client.post(
+        "/api/reviews/grouping",
+        json={
+            "action": "move",
+            "report_ids": [failed["report"]["id"]],
+            "target_incident_id": base["incident"]["id"],
+            "reason": "Coordinator groups these reports.",
+            "expected_versions": {
+                base["incident"]["id"]: base["incident"]["version"],
+                failed["incident"]["id"]: failed["incident"]["version"],
+            },
+        },
+    )
+    assert moved.status_code == 200
+    current = next(
+        item for item in moved.json()["incidents"] if item["id"] == base["incident"]["id"]
+    )
+    titled = client.post(
+        f"/api/incidents/{current['id']}/title",
+        json={
+            "title": "Human reviewed title",
+            "reason": "Keep the coordinator title.",
+            "expected_version": current["version"],
+        },
+    ).json()
+    current = next(item for item in titled["incidents"] if item["id"] == current["id"])
+    noted = client.post(
+        f"/api/incidents/{current['id']}/notes",
+        json={"text": "Keep the entered note.", "expected_version": current["version"]},
+    ).json()
+    current = next(item for item in noted["incidents"] if item["id"] == current["id"])
+    priority = client.post(
+        f"/api/incidents/{current['id']}/priority",
+        json={
+            "priority": "P1",
+            "reason": "Keep human priority.",
+            "expected_version": current["version"],
+        },
+    ).json()
+    current = next(item for item in priority["incidents"] if item["id"] == current["id"])
+    engine.bad_analysis = False
+    retried = client.post(
+        f"/api/reports/{failed['report']['id']}/retry",
+        json={"expected_version": current["version"]},
+    )
+    assert retried.status_code == 200, retried.text
+    snapshot = retried.json()
+    report = next(item for item in snapshot["reports"] if item["id"] == failed["report"]["id"])
+    incident = next(item for item in snapshot["incidents"] if item["id"] == current["id"])
+    assert report["analysis_status"] == "complete"
+    assert report["incident_id"] == current["id"]
+    assert report["text"] == "ATTACH pending account"
+    assert report["model_revision"] == "fake-v1"
+    assert incident["title"] == "Human reviewed title"
+    assert incident["notes"][0]["text"] == "Keep the entered note."
+    assert incident["priority"] == "P1"
+    assert snapshot["counts"]["reports"] == 2
+    assert any(item["action"] == "report.analysis_retry_started" for item in snapshot["audit"])
+    assert any(item["action"] == "report.analyzed" for item in snapshot["audit"])
+    complete_retry = client.post(
+        f"/api/reports/{failed['report']['id']}/retry",
+        json={"expected_version": incident["version"]},
+    )
+    assert complete_retry.status_code == 409
+
+
+def test_startup_pending_recovery_is_bounded_and_keeps_manual_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = SQLiteStore(":memory:")
+    event = store.current_event()
+    first, first_incident, _ = store.create_report_receipt(
+        event_id=event["id"],
+        text="Pending first report",
+        zone_id="stage",
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="startup-first",
+    )
+    second, _second_incident, _ = store.create_report_receipt(
+        event_id=event["id"],
+        text="Pending second report",
+        zone_id="hall",
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="startup-second",
+    )
+    store.update_incident_title(
+        first_incident["id"],
+        "Title entered before restart",
+        "Keep coordinator title.",
+        first_incident["version"],
+    )
+    titled = store.get_incident(first_incident["id"])
+    store.add_incident_note(first_incident["id"], "Manual recovery note.", titled["version"])
+    with store.transaction() as conn:
+        conn.execute(
+            "UPDATE reports SET received_at=? WHERE id=?",
+            ("2026-10-24T00:00:00+00:00", first["id"]),
+        )
+        conn.execute(
+            "UPDATE reports SET received_at=? WHERE id=?",
+            ("2026-10-24T00:00:01+00:00", second["id"]),
+        )
+    monkeypatch.setattr(api_module, "STARTUP_RECOVERY_LIMIT", 1)
+    app = create_app(store=store, engine=FakeEngine())
+    with TestClient(app, base_url="http://localhost"):
+        recovered = store.get_report(first["id"])
+        left_pending = store.get_report(second["id"])
+        assert recovered["analysis_status"] == "complete"
+        assert recovered["incident_id"] == first_incident["id"]
+        assert left_pending["analysis_status"] == "pending"
+        incident = store.get_incident(first_incident["id"])
+        assert incident["title"] == "Title entered before restart"
+        assert incident["notes"][0]["text"] == "Manual recovery note."
+    store.close()
+
+
+def test_pending_report_can_be_explicitly_retried_and_startup_failure_is_contained(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = SQLiteStore(":memory:")
+    engine = FakeEngine()
+    event = store.current_event()
+    app = create_app(store=store, engine=engine)
+    with TestClient(app, base_url="http://localhost") as client:
+        pending, incident, _ = store.create_report_receipt(
+            event_id=event["id"],
+            text="Pending explicit retry",
+            zone_id="stage",
+            sublocation=None,
+            reported_at=None,
+            idempotency_key="explicit-pending",
+        )
+        retried = client.post(
+            f"/api/reports/{pending['id']}/retry",
+            json={"expected_version": incident["version"]},
+        )
+        assert retried.status_code == 200
+        assert retried.json()["reports"][0]["analysis_status"] == "complete"
+        wrong = client.post(
+            f"/api/reports/{pending['id']}/retry",
+            json={"expected_version": incident["version"]},
+        )
+        assert wrong.status_code == 409
+        missing = client.post(
+            "/api/reports/missing/retry", json={"expected_version": incident["version"]}
+        )
+        assert missing.status_code == 404
+
+    interrupted, _, _ = store.create_report_receipt(
+        event_id=event["id"],
+        text="Pending recovery error",
+        zone_id="hall",
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="recovery-error",
+    )
+    monkeypatch.setattr(
+        api_module,
+        "_process_report_analysis",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("recovery failed")),
+    )
+    with TestClient(create_app(store=store, engine=engine), base_url="http://localhost") as client:
+        assert client.get("/api/health").status_code == 200
+    assert store.get_report(interrupted["id"])["analysis_status"] == "pending"
+    store.close()
 
 
 def test_module_main_uses_local_bind_environment(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -146,6 +146,64 @@ def test_utc_serialization_initial_event_reopen_and_audit(tmp_path: Path) -> Non
     reopened.close()
 
 
+def test_sql_migration_executor_skips_empty_statements_and_rejects_incomplete_sql(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = sqlite3.connect(":memory:")
+    monkeypatch.setattr("backend.aegis.storage.sqlite3.complete_statement", lambda _sql: True)
+    SQLiteStore._execute_script_tx(connection, "  \n")
+    monkeypatch.setattr("backend.aegis.storage.sqlite3.complete_statement", lambda _sql: False)
+    with pytest.raises(sqlite3.OperationalError, match="incomplete SQL"):
+        SQLiteStore._execute_script_tx(connection, "SELECT 1;")
+    connection.close()
+
+
+def test_pending_report_bounds_and_retry_guard_paths() -> None:
+    store = SQLiteStore(":memory:")
+    for invalid_limit in (0, -1, True, 1.5, "2"):
+        with pytest.raises(ValueError, match="positive integer"):
+            store.pending_reports(invalid_limit)  # type: ignore[arg-type]
+
+    report, incident, _ = store.create_report_receipt(
+        event_id=store.current_event()["id"],
+        text="Pending retry target",
+        zone_id=None,
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="pending-retry-guard",
+    )
+    assert [row["id"] for row in store.pending_reports(1)] == [report["id"]]
+    retried, retry_incident = store.prepare_report_retry(report["id"], incident["version"])
+    assert retried["analysis_status"] == "pending"
+    assert retry_incident["id"] == incident["id"]
+    assert store.audit_for_event(incident["event_id"])[-1]["action"] == (
+        "report.analysis_retry_started"
+    )
+
+    complete, complete_incident = complete_report(
+        store, "Completed report", "completed-retry-guard"
+    )
+    with pytest.raises(StorageError) as completed:
+        store.prepare_report_retry(complete["id"], complete_incident["version"])
+    assert completed.value.code == "analysis_not_retryable"
+
+    orphan, orphan_incident, _ = store.create_report_receipt(
+        event_id=incident["event_id"],
+        text="Receipt with a missing incident",
+        zone_id=None,
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="retry-missing-incident",
+    )
+    store.connection.execute("PRAGMA foreign_keys=OFF")
+    store.connection.execute("DELETE FROM incidents WHERE id=?", (orphan_incident["id"],))
+    store.connection.execute("PRAGMA foreign_keys=ON")
+    with pytest.raises(StorageError) as missing_incident:
+        store.prepare_report_retry(orphan["id"], orphan_incident["version"])
+    assert missing_incident.value.status_code == 404
+    store.close()
+
+
 def test_memory_storage_receipt_idempotency_and_event_errors() -> None:
     store = SQLiteStore(":memory:")
     event = store.current_event()
@@ -1140,13 +1198,20 @@ def test_grouping_review_rejects_empty_merge_targets() -> None:
     with store.transaction() as conn:
         conn.execute("DELETE FROM memberships WHERE report_id=?", (empty_report["id"],))
         conn.execute(
-            "UPDATE incidents SET event_id=? WHERE id=?", (active_empty["id"], empty["id"])
+            "UPDATE incidents SET event_id=?,display_id=? WHERE id=?",
+            (active_empty["id"], "I-000003", empty["id"]),
         )
         conn.execute(
-            "UPDATE incidents SET event_id=? WHERE id=?", (active_empty["id"], other["id"])
+            "UPDATE incidents SET event_id=?,display_id=? WHERE id=?",
+            (active_empty["id"], "I-000004", other["id"]),
         )
         conn.execute(
-            "UPDATE incidents SET event_id=? WHERE id=?", (active_empty["id"], real_other["id"])
+            "UPDATE incidents SET event_id=?,display_id=? WHERE id=?",
+            (active_empty["id"], "I-000005", real_other["id"]),
+        )
+        conn.execute(
+            "UPDATE display_counters SET last_value=5 WHERE event_id=? AND entity='incident'",
+            (active_empty["id"],),
         )
     with pytest.raises(StorageError, match="Empty incidents"):
         store.apply_grouping_review(
@@ -1373,4 +1438,509 @@ def test_private_storage_helpers_dominant_zone_rank_title_and_empty_rebuild() ->
     store.current_event()
     with store.transaction() as conn:
         store._rebuild_incident_tx(conn, "absent", assessment(), [], increment=True)
+    store.close()
+
+
+def test_additive_migration_backfills_event_local_display_ids_and_preserves_data(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "legacy.sqlite3"
+    legacy = sqlite3.connect(path)
+    legacy.executescript(
+        """
+        CREATE TABLE events (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+            timezone TEXT NOT NULL, exercise INTEGER NOT NULL, policy_version TEXT NOT NULL,
+            created_at TEXT NOT NULL);
+        CREATE TABLE incidents (
+            id TEXT PRIMARY KEY, event_id TEXT NOT NULL, title TEXT NOT NULL, zone_id TEXT,
+            suggested_priority TEXT NOT NULL, priority_reason TEXT NOT NULL, status TEXT NOT NULL,
+            review_required INTEGER NOT NULL, review_reasons_json TEXT NOT NULL,
+            version INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            override_priority TEXT, override_reason TEXT);
+        CREATE TABLE reports (
+            id TEXT PRIMARY KEY, event_id TEXT NOT NULL, idempotency_key TEXT NOT NULL,
+            payload_fingerprint TEXT NOT NULL, text TEXT NOT NULL, source TEXT NOT NULL,
+            zone_id TEXT, sublocation TEXT, category TEXT, reported_at TEXT,
+            received_at TEXT NOT NULL, analysis_status TEXT NOT NULL,
+            review_reasons_json TEXT NOT NULL, UNIQUE(event_id,idempotency_key));
+        """
+    )
+    timestamp = "2026-10-24T12:00:00+00:00"
+    legacy.execute(
+        "INSERT INTO events(id,name,timezone,exercise,policy_version,created_at) "
+        "VALUES('legacy-event','Legacy exercise','UTC',1,'priority-v1',?)",
+        (timestamp,),
+    )
+    legacy.execute(
+        "INSERT INTO incidents(id,event_id,title,zone_id,suggested_priority,priority_reason,"
+        "status,review_required,review_reasons_json,version,created_at,updated_at,"
+        "override_priority,override_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "legacy-incident",
+            "legacy-event",
+            "Legacy title",
+            None,
+            "P2",
+            "Old policy result",
+            "open",
+            0,
+            "[]",
+            1,
+            timestamp,
+            timestamp,
+            None,
+            None,
+        ),
+    )
+    legacy.execute(
+        "INSERT INTO reports(id,event_id,idempotency_key,payload_fingerprint,text,source,"
+        "zone_id,sublocation,category,reported_at,received_at,analysis_status,review_reasons_json) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "legacy-report",
+            "legacy-event",
+            "legacy-key",
+            "legacy-fingerprint",
+            "Original report text",
+            "form",
+            None,
+            None,
+            None,
+            None,
+            timestamp,
+            "failed",
+            "[]",
+        ),
+    )
+    legacy.commit()
+    legacy.close()
+
+    store = SQLiteStore(path, create_event=False)
+    assert store.get_event("legacy-event")["name"] == "Legacy exercise"
+    assert tuple(
+        store.connection.execute(
+            "SELECT text,display_id FROM reports WHERE id='legacy-report'"
+        ).fetchone()
+    ) == ("Original report text", "R-000001")
+    assert tuple(
+        store.connection.execute(
+            "SELECT title,display_id,original_title,title_override FROM incidents "
+            "WHERE id='legacy-incident'"
+        ).fetchone()
+    ) == ("Legacy title", "I-000001", "Legacy title", 0)
+    with store.transaction() as conn:
+        store._migrate_display_ids_and_notes_tx(conn)
+    receipt, incident, duplicate = store.create_report_receipt(
+        event_id="legacy-event",
+        text="New receipt",
+        zone_id=None,
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="new-key",
+    )
+    assert not duplicate
+    assert receipt["display_id"] == "R-000002"
+    assert incident["display_id"] == "I-000002"
+    with pytest.raises(sqlite3.IntegrityError), store.transaction() as conn:
+        conn.execute("UPDATE reports SET display_id='R-000001' WHERE id=?", (receipt["id"],))
+    with pytest.raises(sqlite3.IntegrityError), store.transaction() as conn:
+        conn.execute("UPDATE incidents SET display_id='I-000001' WHERE id=?", (incident["id"],))
+    next_event = store.create_event("Another event")
+    next_report, next_incident, _ = store.create_report_receipt(
+        event_id=next_event["id"],
+        text="Independent numbering",
+        zone_id=None,
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="independent-key",
+    )
+    assert next_report["display_id"] == "R-000001"
+    assert next_incident["display_id"] == "I-000001"
+    assert store.events()[0]["id"] == next_event["id"]
+    assert [
+        row["version"]
+        for row in store.connection.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        )
+    ] == [1, 2]
+    store.close()
+
+
+def test_incident_notes_custom_title_evidence_time_and_rebuild_preservation() -> None:
+    store = SQLiteStore(":memory:")
+    first, incident = complete_report(store, "Original automatic title", "title-first")
+    expected_version = incident["version"]
+    event_id = store.update_incident_title(
+        incident["id"], "Coordinator title", "Clarify the event name.", expected_version
+    )
+    titled = store.get_incident(incident["id"])
+    assert event_id == incident["event_id"]
+    assert titled["title"] == "Coordinator title"
+    assert titled["original_title"] == "Original automatic title"
+    assert titled["title_override"] is True
+    note_event = store.add_incident_note(
+        incident["id"], "Keep reports together for review.", titled["version"]
+    )
+    noted = store.get_incident(incident["id"])
+    assert note_event == incident["event_id"]
+    assert noted["notes"][0]["text"] == "Keep reports together for review."
+    second, second_receipt, _ = store.create_report_receipt(
+        event_id=incident["event_id"],
+        text="A second account for the same event",
+        zone_id="hall",
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="title-second",
+    )
+    evidence = {
+        "report_id": second["id"],
+        "candidate_report_id": first["id"],
+        "semantic_score": 0.8,
+        "location_score": 1.0,
+        "time_score": 0.7,
+        "category_score": 0.9,
+        "total_score": 0.85,
+        "decision": "suggest",
+        "reasons": ["A coordinator should review this match."],
+        "missing_fields": [],
+    }
+    finalized, rebuilt = store.finalize_analysis(
+        second["id"],
+        analysis(),
+        incident["id"],
+        [evidence],
+        assessment(),
+        [],
+    )
+    assert finalized["display_id"] == "R-000002"
+    assert second_receipt["display_id"] == "I-000002"
+    assert rebuilt["title"] == "Coordinator title"
+    assert rebuilt["original_title"] == "Original automatic title"
+    assert rebuilt["notes"] == noted["notes"]
+    assert rebuilt["evidence"][0]["created_at"]
+    audit_actions = [entry["action"] for entry in store.audit_for_event(incident["event_id"])]
+    assert "incident.title_changed" in audit_actions
+    assert "incident.note_added" in audit_actions
+    store.close()
+
+
+def test_incident_notes_survive_a_merge_and_keep_their_audit_history() -> None:
+    store = SQLiteStore(":memory:")
+    event_id = store.current_event()["id"]
+    _, source = complete_report(store, "Source report", "note-merge-source", event_id=event_id)
+    _, target = complete_report(store, "Target report", "note-merge-target", event_id=event_id)
+    store.add_incident_note(source["id"], "Retain this source note.", source["version"])
+    source = store.get_incident(source["id"])
+    target = store.get_incident(target["id"])
+    store.apply_grouping_review(
+        review_request(
+            "merge",
+            [],
+            {source["id"]: source["version"], target["id"]: target["version"]},
+            incident_ids=[source["id"], target["id"]],
+            target=target["id"],
+            reason="Keep the incident context together.",
+        ),
+        ReviewEngine(),
+    )
+    merged = store.get_incident(target["id"])
+    assert merged["notes"][0]["text"] == "Retain this source note."
+    assert any(
+        item["action"] == "incident.note_added" and item["entity_id"] == source["id"]
+        for item in store.audit_for_event(event_id)
+    )
+    store.close()
+
+
+def test_incident_notes_follow_rejected_replacement_and_title_history_is_audited() -> None:
+    store = SQLiteStore(":memory:")
+    report, source = complete_report(store, "Rejected report", "rejected-note-source")
+    store.update_incident_title(
+        source["id"], "Coordinator's original context", "Keep the human title.", source["version"]
+    )
+    source = store.get_incident(source["id"])
+    store.add_incident_note(
+        source["id"], "Keep this note with the reviewed report.", source["version"]
+    )
+    source = store.get_incident(source["id"])
+
+    _, replacement_id = store.apply_grouping_review(
+        review_request(
+            "reject",
+            [report["id"]],
+            expected(source),
+            target=source["id"],
+            reason="Start a new review group.",
+        ),
+        ReviewEngine(),
+    )
+
+    replacement = store.get_incident(replacement_id)
+    assert replacement_id != source["id"]
+    assert replacement["notes"][0]["text"] == "Keep this note with the reviewed report."
+    assert store.get_incident(source["id"]) is None
+    grouping_audit = next(
+        item
+        for item in reversed(store.audit_for_event(source["event_id"]))
+        if item["action"] == "grouping.reject"
+    )
+    historical_source = grouping_audit["before"]["incidents"][source["id"]]
+    assert historical_source["title"] == "Coordinator's original context"
+    assert historical_source["original_title"] == source["original_title"]
+    assert historical_source["notes"][0]["text"] == "Keep this note with the reviewed report."
+    store.close()
+
+
+def test_reject_without_replacement_cannot_delete_the_only_source_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = SQLiteStore(":memory:")
+    report, source = complete_report(store, "Rejected source", "reject-no-replacement")
+    _, target = complete_report(store, "Existing candidate", "reject-existing-target")
+    store.add_incident_note(source["id"], "Keep the source context.", source["version"])
+    source = store.get_incident(source["id"])
+
+    def no_replacement(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    def move_to_existing(
+        conn: sqlite3.Connection,
+        report_ids: list[str],
+        _target_id: str,
+        actor: str,
+        confirmed: bool,
+    ) -> None:
+        for report_id in report_ids:
+            conn.execute(
+                "UPDATE memberships SET incident_id=?,confirmed=?,created_by=? WHERE report_id=?",
+                (target["id"], int(confirmed), actor, report_id),
+            )
+
+    monkeypatch.setattr(store, "_create_review_incident_tx", no_replacement)
+    monkeypatch.setattr(store, "_move_reports_tx", move_to_existing)
+    with pytest.raises(StorageError) as replacement_required:
+        store.apply_grouping_review(
+            review_request(
+                "reject",
+                [report["id"]],
+                expected(source),
+                target=source["id"],
+                reason="Exercise the missing replacement guard.",
+            ),
+            ReviewEngine(),
+        )
+    assert replacement_required.value.code == "replacement_required"
+    after_rollback = store.get_incident(source["id"])
+    assert after_rollback is not None
+    assert after_rollback["notes"][0]["text"] == "Keep the source context."
+    assert store.get_report(report["id"])["incident_id"] == source["id"]
+    store.close()
+
+
+def test_incident_notes_follow_an_empty_source_during_analysis_rebuild() -> None:
+    store = SQLiteStore(":memory:")
+    event_id = store.current_event()["id"]
+    _, target = complete_report(store, "Existing target", "pending-note-target", event_id=event_id)
+    report, source_receipt, _ = store.create_report_receipt(
+        event_id=event_id,
+        text="A second pending report",
+        zone_id=None,
+        sublocation=None,
+        reported_at=None,
+        idempotency_key="pending-note-new",
+    )
+    store.add_incident_note(
+        source_receipt["id"], "Move this with the pending receipt.", source_receipt["version"]
+    )
+    target = store.get_incident(target["id"])
+    store.finalize_analysis(
+        report["id"],
+        analysis(),
+        target["id"],
+        [],
+        assessment(),
+        [],
+    )
+    assert store.get_incident(source_receipt["id"]) is None
+    rebuilt_target = store.get_incident(target["id"])
+    assert [note["text"] for note in rebuilt_target["notes"]] == [
+        "Move this with the pending receipt."
+    ]
+    store.close()
+
+
+def test_priority_override_review_marker_tracks_new_evidence_reset_and_undo() -> None:
+    store = SQLiteStore(":memory:")
+    _, incident = complete_report(store, "Initial evidence", "priority-review-base")
+    store.update_priority(incident["id"], "P2", "Coordinator override.", incident["version"])
+    _, high = complete_report(
+        store,
+        "Urgent evidence",
+        "priority-review-high",
+        event_id=incident["event_id"],
+        target=incident["id"],
+        priority="P0",
+    )
+    marker = "New higher-priority evidence after override needs review"
+    assert marker in high["review_reasons"]
+    current = store.get_incident(incident["id"])
+    store.reset_priority(incident["id"], "Return to current policy priority.", current["version"])
+    reset = store.get_incident(incident["id"])
+    assert reset["override_reason"] is None
+    assert marker not in reset["review_reasons"]
+    reset_action = next(
+        item
+        for item in reversed(store.audit_for_event(incident["event_id"]))
+        if item["action"] == "incident.priority_reset"
+    )
+    store.undo_decision(reset_action["id"], "Restore the prior override.", reset["version"])
+    restored = store.get_incident(incident["id"])
+    assert restored["priority"] == "P2"
+    assert marker in restored["review_reasons"]
+    store.close()
+
+
+def test_priority_reset_and_guarded_compensating_undo() -> None:
+    store = SQLiteStore(":memory:")
+    _, incident = complete_report(store, "Undoable incident", "undo-base")
+    with pytest.raises(StorageError) as missing_reset:
+        store.reset_priority("missing", "Return to policy.", 1)
+    assert missing_reset.value.status_code == 404
+    with pytest.raises(StorageError) as no_override:
+        store.reset_priority(incident["id"], "Return to policy.", incident["version"])
+    assert no_override.value.code == "priority_not_overridden"
+    store.update_priority(incident["id"], "P1", "Raise priority.", incident["version"])
+    overridden = store.get_incident(incident["id"])
+    priority_audit = next(
+        item
+        for item in reversed(store.audit_for_event(incident["event_id"]))
+        if item["action"] == "incident.priority_overridden"
+    )
+    assert store.snapshot_data(incident["event_id"])["undoable_actions"] == [
+        {
+            "audit_id": priority_audit["id"],
+            "incident_id": incident["id"],
+            "action": "incident.priority_overridden",
+            "expected_version": overridden["version"],
+        }
+    ]
+    event_id = store.undo_decision(
+        priority_audit["id"], "Restore the policy result.", overridden["version"]
+    )
+    restored = store.get_incident(incident["id"])
+    assert event_id == incident["event_id"]
+    assert restored["priority"] == restored["suggested_priority"]
+    assert restored["override_reason"] is None
+    assert store.snapshot_data(event_id)["undoable_actions"] == []
+    store.update_priority(incident["id"], "P0", "Escalate pending review.", restored["version"])
+    current = store.get_incident(incident["id"])
+    store.reset_priority(incident["id"], "Use the current policy assessment.", current["version"])
+    reset = store.get_incident(incident["id"])
+    reset_audit = next(
+        item
+        for item in reversed(store.audit_for_event(event_id))
+        if item["action"] == "incident.priority_reset"
+    )
+    store.undo_decision(reset_audit["id"], "Restore the previous override.", reset["version"])
+    assert store.get_incident(incident["id"])["priority"] == "P0"
+    undo_audit = store.audit_for_event(event_id)[-1]
+    assert undo_audit["action"] == "incident.action_undone"
+    assert undo_audit["after"]["undo_of_audit_id"] == reset_audit["id"]
+    with pytest.raises(StorageError) as stale:
+        store.undo_decision(reset_audit["id"], "Undo again.", reset["version"])
+    assert stale.value.code in {"stale_version", "undo_unavailable"}
+
+    current = store.get_incident(incident["id"])
+    store.update_status(incident["id"], "acknowledged", "Coordinator confirms.", current["version"])
+    status = store.get_incident(incident["id"])
+    status_audit = next(
+        item
+        for item in reversed(store.audit_for_event(event_id))
+        if item["action"] == "incident.status_changed"
+    )
+    store.undo_decision(status_audit["id"], "Return to the earlier status.", status["version"])
+    assert store.get_incident(incident["id"])["status"] == "open"
+
+    current = store.get_incident(incident["id"])
+    store.update_status(
+        incident["id"], "acknowledged", "Coordinator confirms again.", current["version"]
+    )
+    status = store.get_incident(incident["id"])
+    status_audit = next(
+        item
+        for item in reversed(store.audit_for_event(event_id))
+        if item["action"] == "incident.status_changed"
+    )
+    store.add_incident_note(incident["id"], "An intervening update.", status["version"])
+    after_note = store.get_incident(incident["id"])
+    assert store.snapshot_data(event_id)["undoable_actions"] == []
+    with pytest.raises(StorageError) as intervening:
+        store.undo_decision(status_audit["id"], "This is stale.", after_note["version"])
+    assert intervening.value.code == "undo_unavailable"
+    with pytest.raises(StorageError) as missing:
+        store.undo_decision("missing", "Missing action.", after_note["version"])
+    assert missing.value.status_code == 404
+    received = next(
+        item for item in store.audit_for_event(event_id) if item["action"] == "report.received"
+    )
+    with pytest.raises(StorageError) as unsupported:
+        store.undo_decision(received["id"], "Wrong action.", after_note["version"])
+    assert unsupported.value.code == "undo_unavailable"
+    assert len(store.audit_for_event(event_id)) >= 8
+    store.close()
+
+
+def test_title_history_and_undo_reject_missing_or_corrupt_incident_state() -> None:
+    store = SQLiteStore(":memory:")
+    with pytest.raises(StorageError) as missing_title:
+        store.update_incident_title("missing", "Valid title", "A valid reason.", 1)
+    assert missing_title.value.status_code == 404
+
+    _, incident = complete_report(store, "Generated title", "title-history")
+    store.update_incident_title(
+        incident["id"], "First human title", "Set the title.", incident["version"]
+    )
+    first = store.get_incident(incident["id"])
+    store.update_incident_title(
+        incident["id"], "Second human title", "Refine the title.", first["version"]
+    )
+    second = store.get_incident(incident["id"])
+    assert second["title"] == "Second human title"
+    assert second["original_title"] == "Generated title"
+
+    event_id = incident["event_id"]
+    store.update_status(incident["id"], "acknowledged", "Ready to close.", second["version"])
+    status = store.get_incident(incident["id"])
+    audit = next(
+        item
+        for item in reversed(store.audit_for_event(event_id))
+        if item["action"] == "incident.status_changed"
+    )
+    with store.transaction() as conn:
+        conn.execute("UPDATE audit_events SET before_json='null' WHERE id=?", (audit["id"],))
+    with pytest.raises(StorageError) as corrupt:
+        store.undo_decision(audit["id"], "Undo malformed history.", status["version"])
+    assert corrupt.value.code == "undo_unavailable"
+
+    with store.transaction() as conn:
+        conn.execute(
+            "UPDATE audit_events SET before_json=? WHERE id=?",
+            ('{"status":"open"}', audit["id"]),
+        )
+        conn.execute("UPDATE incidents SET version=version+1 WHERE id=?", (incident["id"],))
+    stale = store.get_incident(incident["id"])
+    with pytest.raises(StorageError) as mismatch:
+        store.undo_decision(audit["id"], "Undo stale history.", stale["version"])
+    assert mismatch.value.code == "undo_unavailable"
+
+    with store.transaction() as conn:
+        conn.execute("DELETE FROM memberships WHERE incident_id=?", (incident["id"],))
+        conn.execute("DELETE FROM incidents WHERE id=?", (incident["id"],))
+    with pytest.raises(StorageError) as missing_incident:
+        store.undo_decision(audit["id"], "Undo removed incident.", stale["version"])
+    assert missing_incident.value.code == "undo_unavailable"
+
+    with store.transaction() as conn:
+        store._sync_priority_override_review_tx(conn, "missing")
     store.close()

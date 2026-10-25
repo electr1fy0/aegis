@@ -89,8 +89,7 @@ class SQLiteStore:
                 raise
 
     def _initialize_schema(self) -> None:
-        self.connection.executescript(
-            """
+        base_schema = """
             CREATE TABLE IF NOT EXISTS events (
                 seq INTEGER PRIMARY KEY AUTOINCREMENT,
                 id TEXT NOT NULL UNIQUE,
@@ -222,6 +221,108 @@ class SQLiteStore:
                 created_at TEXT NOT NULL
             );
             """
+        self.connection.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations ("
+            "version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        applied = {
+            int(row["version"])
+            for row in self.connection.execute("SELECT version FROM schema_migrations").fetchall()
+        }
+        if 1 not in applied:
+            with self.transaction() as conn:
+                self._execute_script_tx(conn, base_schema)
+                conn.execute(
+                    "INSERT INTO schema_migrations(version,applied_at) VALUES(1,?)",
+                    (iso(utc_now()),),
+                )
+        if 2 not in applied:
+            with self.transaction() as conn:
+                self._migrate_display_ids_and_notes_tx(conn)
+                conn.execute(
+                    "INSERT INTO schema_migrations(version,applied_at) VALUES(2,?)",
+                    (iso(utc_now()),),
+                )
+
+    @staticmethod
+    def _execute_script_tx(conn: sqlite3.Connection, script: str) -> None:
+        pending = ""
+        for line in script.splitlines(keepends=True):
+            pending += line
+            if sqlite3.complete_statement(pending):
+                statement = pending.strip()
+                pending = ""
+                if statement:
+                    conn.execute(statement)
+        if pending.strip():
+            raise sqlite3.OperationalError("incomplete SQL in schema migration")
+
+    @staticmethod
+    def _table_columns_tx(conn: sqlite3.Connection, table: str) -> set[str]:
+        return {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table})")}
+
+    def _migrate_display_ids_and_notes_tx(self, conn: sqlite3.Connection) -> None:
+        incident_columns = self._table_columns_tx(conn, "incidents")
+        if "display_id" not in incident_columns:
+            conn.execute("ALTER TABLE incidents ADD COLUMN display_id TEXT")
+        if "original_title" not in incident_columns:
+            conn.execute("ALTER TABLE incidents ADD COLUMN original_title TEXT")
+        if "title_override" not in incident_columns:
+            conn.execute(
+                "ALTER TABLE incidents ADD COLUMN title_override INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (title_override IN (0,1))"
+            )
+        report_columns = self._table_columns_tx(conn, "reports")
+        if "display_id" not in report_columns:
+            conn.execute("ALTER TABLE reports ADD COLUMN display_id TEXT")
+        conn.execute("UPDATE incidents SET original_title=title WHERE original_title IS NULL")
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS display_counters ("
+            "event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,"
+            "entity TEXT NOT NULL CHECK (entity IN ('report','incident')),"
+            "last_value INTEGER NOT NULL CHECK (last_value >= 0),"
+            "PRIMARY KEY(event_id,entity))"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS incident_notes ("
+            "id TEXT PRIMARY KEY, event_id TEXT NOT NULL REFERENCES events(id), "
+            "incident_id TEXT NOT NULL REFERENCES incidents(id), text TEXT NOT NULL, "
+            "actor TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS incident_notes_incident_idx "
+            "ON incident_notes(incident_id,created_at,id)"
+        )
+        for table, entity, prefix, order_by in (
+            ("reports", "report", "R", "received_at,id"),
+            ("incidents", "incident", "I", "created_at,id"),
+        ):
+            events = conn.execute(
+                f"SELECT DISTINCT event_id FROM {table} ORDER BY event_id"
+            ).fetchall()
+            for event_row in events:
+                event_id = event_row["event_id"]
+                rows = conn.execute(
+                    f"SELECT id FROM {table} WHERE event_id=? ORDER BY {order_by}", (event_id,)
+                ).fetchall()
+                for number, row in enumerate(rows, start=1):
+                    conn.execute(
+                        f"UPDATE {table} SET display_id=? WHERE id=? AND display_id IS NULL",
+                        (f"{prefix}-{number:06d}", row["id"]),
+                    )
+                conn.execute(
+                    "INSERT INTO display_counters(event_id,entity,last_value) VALUES(?,?,?) "
+                    "ON CONFLICT(event_id,entity) DO UPDATE SET last_value=max("
+                    "display_counters.last_value,excluded.last_value)",
+                    (event_id, entity, len(rows)),
+                )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS reports_event_display_id_uq "
+            "ON reports(event_id,display_id) WHERE display_id IS NOT NULL"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS incidents_event_display_id_uq "
+            "ON incidents(event_id,display_id) WHERE display_id IS NOT NULL"
         )
 
     def create_event(
@@ -279,6 +380,11 @@ class SQLiteStore:
             ).fetchone()
             return self._event_dict(row) if row else None
 
+    def events(self) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self.connection.execute("SELECT * FROM events ORDER BY seq DESC").fetchall()
+            return [self._event_dict(row) for row in rows]
+
     @staticmethod
     def _event_dict(row: sqlite3.Row) -> dict[str, Any]:
         return {
@@ -289,6 +395,27 @@ class SQLiteStore:
             "created_at": row["created_at"],
             "policy_version": row["policy_version"],
         }
+
+    @staticmethod
+    def _next_display_id_tx(conn: sqlite3.Connection, event_id: str, entity: str) -> str:
+        prefix = {"report": "R", "incident": "I"}[entity]
+        row = conn.execute(
+            "SELECT last_value FROM display_counters WHERE event_id=? AND entity=?",
+            (event_id, entity),
+        ).fetchone()
+        if row is None:
+            number = 1
+            conn.execute(
+                "INSERT INTO display_counters(event_id,entity,last_value) VALUES(?,?,?)",
+                (event_id, entity, number),
+            )
+        else:
+            number = int(row["last_value"]) + 1
+            conn.execute(
+                "UPDATE display_counters SET last_value=? WHERE event_id=? AND entity=?",
+                (number, event_id, entity),
+            )
+        return f"{prefix}-{number:06d}"
 
     def create_report_receipt(
         self,
@@ -333,9 +460,12 @@ class SQLiteStore:
             timestamp = iso(utc_now())
             report_id = str(uuid.uuid4())
             incident_id = str(uuid.uuid4())
+            report_display_id = self._next_display_id_tx(conn, event_id, "report")
+            incident_display_id = self._next_display_id_tx(conn, event_id, "incident")
             reasons = ["Analysis pending"]
             incident = {
                 "id": incident_id,
+                "display_id": incident_display_id,
                 "event_id": event_id,
                 "title": self._title(text),
                 "zone_id": zone_id,
@@ -349,12 +479,15 @@ class SQLiteStore:
                 "updated_at": timestamp,
                 "override_priority": None,
                 "override_reason": None,
+                "original_title": self._title(text),
+                "title_override": False,
             }
             conn.execute(
                 "INSERT INTO "
                 "incidents(id,event_id,title,zone_id,suggested_priority,priority_reason,"
-                "status,review_required,review_reasons_json,version,created_at,updated_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                "status,review_required,review_reasons_json,version,created_at,updated_at,"
+                "display_id,original_title,title_override) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     incident_id,
                     event_id,
@@ -368,13 +501,16 @@ class SQLiteStore:
                     1,
                     timestamp,
                     timestamp,
+                    incident_display_id,
+                    incident["original_title"],
+                    0,
                 ),
             )
             conn.execute(
                 "INSERT INTO "
                 "reports(id,event_id,idempotency_key,payload_fingerprint,text,source,zone_id,"
-                "sublocation,category,reported_at,received_at,analysis_status,review_reasons_json) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "sublocation,category,reported_at,received_at,analysis_status,review_reasons_json,"
+                "display_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     report_id,
                     event_id,
@@ -389,6 +525,7 @@ class SQLiteStore:
                     timestamp,
                     "pending",
                     _json(reasons),
+                    report_display_id,
                 ),
             )
             conn.execute(
@@ -437,6 +574,7 @@ class SQLiteStore:
     def _report_dict(self, row: sqlite3.Row, include_embedding: bool = False) -> dict[str, Any]:
         report = {
             "id": row["id"],
+            "display_id": row["display_id"],
             "event_id": row["event_id"],
             "text": row["text"],
             "zone_id": row["zone_id"],
@@ -448,12 +586,12 @@ class SQLiteStore:
             "incident_id": row["incident_id"],
             "claims": _unjson(row["claims_json"], []),
             "review_reasons": _unjson(row["review_reasons_json"], []),
+            "model_revision": row["model_revision"],
+            "confirmed": bool(row["confirmed"]),
         }
         if include_embedding:
             report["embedding"] = _unjson(row["embedding_json"], None)
-            report["model_revision"] = row["model_revision"]
             report["source"] = row["source"]
-            report["confirmed"] = bool(row["confirmed"])
         return report
 
     def get_report(self, report_id: str) -> dict[str, Any] | None:
@@ -476,6 +614,56 @@ class SQLiteStore:
                 (event_id,),
             ).fetchall()
             return [self._report_dict(row, include_embedding=True) for row in rows]
+
+    def pending_reports(self, limit: int = 20) -> list[dict[str, Any]]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+            raise ValueError("limit must be a positive integer")
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT id FROM reports WHERE analysis_status='pending' "
+                "ORDER BY received_at,id LIMIT ?",
+                (limit,),
+            ).fetchall()
+            return [self._report_tx(self.connection, row["id"]) for row in rows]
+
+    def prepare_report_retry(
+        self,
+        report_id: str,
+        expected_version: int,
+        actor: str = "coordinator",
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Authorize an explicit retry and leave the raw receipt in place."""
+        with self.transaction() as conn:
+            report = self._report_tx(conn, report_id)
+            incident_row = conn.execute(
+                "SELECT * FROM incidents WHERE id=?", (report["incident_id"],)
+            ).fetchone()
+            if incident_row is None:
+                raise StorageError(404, "not_found", "Incident was not found.")
+            self._check_version(incident_row, expected_version)
+            if report["analysis_status"] == "complete":
+                raise StorageError(
+                    409,
+                    "analysis_not_retryable",
+                    "Completed report analysis cannot be retried.",
+                )
+            before = {
+                "analysis_status": report["analysis_status"],
+                "incident_id": report["incident_id"],
+            }
+            conn.execute("UPDATE reports SET analysis_status='pending' WHERE id=?", (report_id,))
+            pending_report = self._report_tx(conn, report_id)
+            self._audit_tx(
+                conn,
+                report["event_id"],
+                actor,
+                "report.analysis_retry_started",
+                report_id,
+                None,
+                before,
+                {"analysis_status": "pending", "incident_id": pending_report["incident_id"]},
+            )
+            return pending_report, self._incident_tx(conn, pending_report["incident_id"])
 
     def get_groups_for_event(self, event_id: str) -> list[dict[str, Any]]:
         with self._lock:
@@ -543,6 +731,7 @@ class SQLiteStore:
         *,
         engine: Any | None = None,
         receipt_incident_id: str | None = None,
+        preserve_membership: bool = False,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         with self.transaction() as conn:
             report = self._report_tx(conn, report_id)
@@ -554,7 +743,8 @@ class SQLiteStore:
             analysis = dict(analysis)
             evidence = list(evidence)
             human_changed_membership = (
-                (receipt_incident_id is not None and old_incident_id != receipt_incident_id)
+                preserve_membership
+                or (receipt_incident_id is not None and old_incident_id != receipt_incident_id)
                 or bool(report.get("confirmed"))
                 or (
                     receipt_incident_id is not None
@@ -669,6 +859,10 @@ class SQLiteStore:
                     "SELECT count(*) AS n FROM memberships WHERE incident_id=?", (old_incident_id,)
                 ).fetchone()["n"]
                 if count == 0:
+                    conn.execute(
+                        "UPDATE incident_notes SET incident_id=? WHERE incident_id=?",
+                        (target_incident_id, old_incident_id),
+                    )
                     conn.execute("DELETE FROM incidents WHERE id=?", (old_incident_id,))
                 else:
                     old_assessment = None
@@ -732,6 +926,8 @@ class SQLiteStore:
         report_id: str,
         message: str,
         fallback_assessment: dict[str, Any] | None = None,
+        *,
+        preserve_membership: bool = False,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Turn a stored pending receipt into a visible failed singleton."""
         assessment = fallback_assessment or {
@@ -753,6 +949,7 @@ class SQLiteStore:
             assessment,
             [],
             failure=message,
+            preserve_membership=preserve_membership,
         )
 
     def _insert_evidence_tx(
@@ -843,25 +1040,21 @@ class SQLiteStore:
                 dict.fromkeys([*review_reasons, "Conflicting or changing reports need review"])
             )
         suggested = assessment.get("priority", row["suggested_priority"])
-        override = row["override_priority"]
-        if override is not None and self._priority_rank(suggested) < self._priority_rank(override):
-            review_reasons = list(
-                dict.fromkeys(
-                    [*review_reasons, "New higher-priority evidence after override needs review"]
-                )
-            )
         zone_id = self._dominant_zone(reports)
-        title = row["title"]
-        if reports:
-            title = self._title(reports[0]["text"])
+        generated_title = self._title(reports[0]["text"]) if reports else row["title"]
+        title = row["title"] if row["title_override"] else generated_title
+        original_title = row["original_title"] or generated_title
+        if not row["title_override"]:
+            original_title = generated_title
         version = int(row["version"]) + int(increment)
         now = iso(utc_now())
         conn.execute(
             "UPDATE incidents SET "
-            "title=?,zone_id=?,suggested_priority=?,priority_reason=?,review_required=?,"
+            "title=?,original_title=?,zone_id=?,suggested_priority=?,priority_reason=?,review_required=?,"
             "review_reasons_json=?,version=?,updated_at=? WHERE id=?",
             (
                 title,
+                original_title,
                 zone_id,
                 suggested,
                 assessment.get("reason", ""),
@@ -871,6 +1064,32 @@ class SQLiteStore:
                 now,
                 incident_id,
             ),
+        )
+        self._sync_priority_override_review_tx(conn, incident_id)
+
+    def _sync_priority_override_review_tx(self, conn: sqlite3.Connection, incident_id: str) -> None:
+        row = conn.execute(
+            "SELECT override_priority,suggested_priority,review_reasons_json FROM incidents "
+            "WHERE id=?",
+            (incident_id,),
+        ).fetchone()
+        if row is None:
+            return
+        marker = "New higher-priority evidence after override needs review"
+        reasons = _unjson(row["review_reasons_json"], [])
+        if row["override_priority"] is not None and self._priority_rank(
+            row["suggested_priority"]
+        ) < self._priority_rank(row["override_priority"]):
+            reasons = list(dict.fromkeys([*reasons, marker]))
+        else:
+            reasons = [reason for reason in reasons if reason != marker]
+        unresolved = conn.execute(
+            "SELECT count(*) AS n FROM conflicts WHERE incident_id=? AND status='unresolved'",
+            (incident_id,),
+        ).fetchone()["n"]
+        conn.execute(
+            "UPDATE incidents SET review_reasons_json=?,review_required=? WHERE id=?",
+            (_json(reasons), int(bool(reasons) or bool(unresolved)), incident_id),
         )
 
     @staticmethod
@@ -981,6 +1200,7 @@ class SQLiteStore:
         priority = row["override_priority"] or row["suggested_priority"]
         return {
             "id": row["id"],
+            "display_id": row["display_id"],
             "event_id": row["event_id"],
             "title": row["title"],
             "zone_id": row["zone_id"],
@@ -1003,6 +1223,7 @@ class SQLiteStore:
                     "decision": item["decision"],
                     "reasons": _unjson(item["reasons_json"], []),
                     "missing_fields": _unjson(item["missing_fields_json"], []),
+                    "created_at": item["created_at"],
                 }
                 for item in evidence_rows
             ],
@@ -1022,6 +1243,21 @@ class SQLiteStore:
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
             "override_reason": row["override_reason"],
+            "notes": [
+                {
+                    "id": item["id"],
+                    "text": item["text"],
+                    "actor": item["actor"],
+                    "created_at": item["created_at"],
+                }
+                for item in conn.execute(
+                    "SELECT id,text,actor,created_at FROM incident_notes WHERE incident_id=? "
+                    "ORDER BY created_at,id",
+                    (incident_id,),
+                ).fetchall()
+            ],
+            "original_title": row["original_title"],
+            "title_override": bool(row["title_override"]),
         }
 
     def audit_for_event(self, event_id: str) -> list[dict[str, Any]]:
@@ -1088,12 +1324,242 @@ class SQLiteStore:
                 reports = self.reports_for_event(event_id)
                 incidents = self.incidents_for_event(event_id)
                 audit = self.audit_for_event(event_id)
+                undoable_actions = self._undoable_actions_tx(self.connection, event_id)
             except Exception:
                 self.connection.rollback()
                 raise
             else:
                 self.connection.commit()
-        return {"event": event, "reports": reports, "incidents": incidents, "audit": audit}
+        return {
+            "event": event,
+            "reports": reports,
+            "incidents": incidents,
+            "audit": audit,
+            "undoable_actions": undoable_actions,
+        }
+
+    def _undoable_actions_tx(self, conn: sqlite3.Connection, event_id: str) -> list[dict[str, Any]]:
+        incidents = conn.execute(
+            "SELECT * FROM incidents WHERE event_id=? ORDER BY created_at,id", (event_id,)
+        ).fetchall()
+        result = []
+        allowed = {
+            "incident.priority_overridden",
+            "incident.priority_reset",
+            "incident.status_changed",
+        }
+        for incident in incidents:
+            latest = conn.execute(
+                "SELECT id,action,after_json FROM audit_events WHERE event_id=? AND entity_id=? "
+                "ORDER BY seq DESC LIMIT 1",
+                (event_id, incident["id"]),
+            ).fetchone()
+            if latest is None or latest["action"] not in allowed:
+                continue
+            after = _unjson(latest["after_json"], None)
+            if not isinstance(after, dict) or after.get("version") != incident["version"]:
+                continue
+            result.append(
+                {
+                    "audit_id": latest["id"],
+                    "incident_id": incident["id"],
+                    "action": latest["action"],
+                    "expected_version": int(incident["version"]),
+                }
+            )
+        return result
+
+    def add_incident_note(
+        self,
+        incident_id: str,
+        text: str,
+        expected_version: int,
+        actor: str = "coordinator",
+    ) -> str:
+        with self.transaction() as conn:
+            row = conn.execute("SELECT * FROM incidents WHERE id=?", (incident_id,)).fetchone()
+            if row is None:
+                raise StorageError(404, "not_found", "Incident was not found.")
+            self._check_version(row, expected_version)
+            before = self._incident_tx(conn, incident_id)
+            now = iso(utc_now())
+            note = {
+                "id": str(uuid.uuid4()),
+                "text": text,
+                "actor": actor,
+                "created_at": now,
+            }
+            conn.execute(
+                "INSERT INTO incident_notes(id,event_id,incident_id,text,actor,created_at) "
+                "VALUES(?,?,?,?,?,?)",
+                (note["id"], row["event_id"], incident_id, text, actor, now),
+            )
+            conn.execute(
+                "UPDATE incidents SET version=version+1,updated_at=? WHERE id=?",
+                (now, incident_id),
+            )
+            after = self._incident_tx(conn, incident_id)
+            self._audit_tx(
+                conn,
+                row["event_id"],
+                actor,
+                "incident.note_added",
+                incident_id,
+                text,
+                before,
+                after,
+            )
+            return row["event_id"]
+
+    def update_incident_title(
+        self,
+        incident_id: str,
+        title: str,
+        reason: str,
+        expected_version: int,
+        actor: str = "coordinator",
+    ) -> str:
+        with self.transaction() as conn:
+            row = conn.execute("SELECT * FROM incidents WHERE id=?", (incident_id,)).fetchone()
+            if row is None:
+                raise StorageError(404, "not_found", "Incident was not found.")
+            self._check_version(row, expected_version)
+            before = self._incident_tx(conn, incident_id)
+            original_title = row["original_title"] or row["title"]
+            if not row["title_override"]:
+                original_title = row["title"]
+            now = iso(utc_now())
+            conn.execute(
+                "UPDATE incidents SET title=?,original_title=?,title_override=1,version=version+1,"
+                "updated_at=? WHERE id=?",
+                (title, original_title, now, incident_id),
+            )
+            after = self._incident_tx(conn, incident_id)
+            self._audit_tx(
+                conn,
+                row["event_id"],
+                actor,
+                "incident.title_changed",
+                incident_id,
+                reason,
+                before,
+                after,
+            )
+            return row["event_id"]
+
+    def reset_priority(
+        self,
+        incident_id: str,
+        reason: str,
+        expected_version: int,
+        actor: str = "coordinator",
+    ) -> str:
+        with self.transaction() as conn:
+            row = conn.execute("SELECT * FROM incidents WHERE id=?", (incident_id,)).fetchone()
+            if row is None:
+                raise StorageError(404, "not_found", "Incident was not found.")
+            self._check_version(row, expected_version)
+            if row["override_priority"] is None:
+                raise StorageError(
+                    409, "priority_not_overridden", "There is no priority override to reset."
+                )
+            before = self._incident_tx(conn, incident_id)
+            now = iso(utc_now())
+            conn.execute(
+                "UPDATE incidents SET override_priority=NULL,override_reason=NULL,"
+                "version=version+1,"
+                "updated_at=? WHERE id=?",
+                (now, incident_id),
+            )
+            self._sync_priority_override_review_tx(conn, incident_id)
+            after = self._incident_tx(conn, incident_id)
+            self._audit_tx(
+                conn,
+                row["event_id"],
+                actor,
+                "incident.priority_reset",
+                incident_id,
+                reason,
+                before,
+                after,
+            )
+            return row["event_id"]
+
+    def undo_decision(
+        self,
+        audit_id: str,
+        reason: str,
+        expected_version: int,
+        actor: str = "coordinator",
+    ) -> str:
+        with self.transaction() as conn:
+            action_row = conn.execute(
+                "SELECT * FROM audit_events WHERE id=?", (audit_id,)
+            ).fetchone()
+            if action_row is None:
+                raise StorageError(404, "not_found", "Audit action was not found.")
+            if action_row["action"] not in {
+                "incident.priority_overridden",
+                "incident.priority_reset",
+                "incident.status_changed",
+            }:
+                raise StorageError(409, "undo_unavailable", "This action cannot be undone.")
+            latest = conn.execute(
+                "SELECT id FROM audit_events WHERE event_id=? AND entity_id=? "
+                "ORDER BY seq DESC LIMIT 1",
+                (action_row["event_id"], action_row["entity_id"]),
+            ).fetchone()
+            if latest is None or latest["id"] != audit_id:
+                raise StorageError(
+                    409, "undo_unavailable", "This action is no longer the latest change."
+                )
+            row = conn.execute(
+                "SELECT * FROM incidents WHERE id=? AND event_id=?",
+                (action_row["entity_id"], action_row["event_id"]),
+            ).fetchone()
+            if row is None:
+                raise StorageError(409, "undo_unavailable", "The incident no longer exists.")
+            self._check_version(row, expected_version)
+            before_action = _unjson(action_row["before_json"], None)
+            after_action = _unjson(action_row["after_json"], None)
+            if (
+                not isinstance(before_action, dict)
+                or not isinstance(after_action, dict)
+                or after_action.get("version") != int(row["version"])
+            ):
+                raise StorageError(
+                    409, "undo_unavailable", "The incident changed after this action."
+                )
+            before = self._incident_tx(conn, row["id"])
+            now = iso(utc_now())
+            if action_row["action"] == "incident.status_changed":
+                conn.execute(
+                    "UPDATE incidents SET status=?,version=version+1,updated_at=? WHERE id=?",
+                    (before_action["status"], now, row["id"]),
+                )
+            else:
+                previous_reason = before_action.get("override_reason")
+                previous_priority = (
+                    before_action.get("priority") if previous_reason is not None else None
+                )
+                conn.execute(
+                    "UPDATE incidents SET override_priority=?,override_reason=?,version=version+1,"
+                    "updated_at=? WHERE id=?",
+                    (previous_priority, previous_reason, now, row["id"]),
+                )
+                self._sync_priority_override_review_tx(conn, row["id"])
+            after = self._incident_tx(conn, row["id"])
+            self._audit_tx(
+                conn,
+                row["event_id"],
+                actor,
+                "incident.action_undone",
+                row["id"],
+                reason,
+                before,
+                {"incident": after, "undo_of_audit_id": audit_id},
+            )
+            return row["event_id"]
 
     def update_priority(
         self,
@@ -1116,6 +1582,7 @@ class SQLiteStore:
                 "id=?",
                 (priority, reason, now, incident_id),
             )
+            self._sync_priority_override_review_tx(conn, incident_id)
             after = self._incident_tx(conn, incident_id)
             self._audit_tx(
                 conn,
@@ -1469,6 +1936,10 @@ class SQLiteStore:
                 )
                 for incident_id in requested_incident_ids:
                     if incident_id != target_id:
+                        conn.execute(
+                            "UPDATE incident_notes SET incident_id=? WHERE incident_id=?",
+                            (target_id, incident_id),
+                        )
                         conn.execute("DELETE FROM incidents WHERE id=?", (incident_id,))
             else:  # split
                 if requested_incident_ids and target_id and target_id not in requested_incident_ids:
@@ -1518,6 +1989,21 @@ class SQLiteStore:
                     action == "merge" and incident_id != target_id
                 ):
                     self._migrate_rejections_tx(conn, event_id, incident_id, target_id)
+                    conn.execute(
+                        "UPDATE incident_notes SET incident_id=? WHERE incident_id=?",
+                        (target_id, incident_id),
+                    )
+                else:
+                    if new_incident_id is None:
+                        raise StorageError(
+                            409,
+                            "replacement_required",
+                            "An emptied incident needs a replacement before it can be removed.",
+                        )
+                    conn.execute(
+                        "UPDATE incident_notes SET incident_id=? WHERE incident_id=?",
+                        (new_incident_id, incident_id),
+                    )
                 conn.execute("DELETE FROM incidents WHERE id=?", (incident_id,))
 
             if action in {"confirm", "move", "merge"}:
@@ -1646,13 +2132,14 @@ class SQLiteStore:
         self, conn: sqlite3.Connection, event_id: str, reports: list[dict[str, Any]]
     ) -> str:
         incident_id = str(uuid.uuid4())
+        display_id = self._next_display_id_tx(conn, event_id, "incident")
         now = iso(utc_now())
         first = reports[0]
         conn.execute(
             "INSERT INTO "
             "incidents(id,event_id,title,zone_id,suggested_priority,priority_reason,status,"
-            "review_required,review_reasons_json,version,created_at,updated_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "review_required,review_reasons_json,version,created_at,updated_at,display_id,"
+            "original_title,title_override) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 incident_id,
                 event_id,
@@ -1666,6 +2153,9 @@ class SQLiteStore:
                 1,
                 now,
                 now,
+                display_id,
+                self._title(first["text"]),
+                0,
             ),
         )
         return incident_id

@@ -22,19 +22,26 @@ from .models import (
     DemoSessionRequest,
     EmptyRequest,
     Evaluation,
+    Event,
     GroupingReviewRequest,
     Health,
     Incident,
+    IncidentNoteRequest,
+    IncidentTitleRequest,
     IngestReportRequest,
     IngestReportResponse,
+    PriorityResetRequest,
     PriorityReviewRequest,
     Report,
+    RetryAnalysisRequest,
     Snapshot,
     StatusReviewRequest,
+    UndoRequest,
 )
 from .storage import SQLiteStore, StorageError
 
 logger = logging.getLogger("aegis.api")
+STARTUP_RECOVERY_LIMIT = 20
 
 
 class APIError(Exception):
@@ -71,6 +78,21 @@ def create_app(
                 application.state.store = SQLiteStore(path)
             if application.state.engine is None:
                 application.state.engine = _engine_from_runtime()
+            for report in application.state.store.pending_reports(STARTUP_RECOVERY_LIMIT):
+                try:
+                    _process_report_analysis(
+                        application.state.store,
+                        application.state.engine,
+                        report,
+                        preserve_membership=True,
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "Pending report recovery failed for report %s (%s)",
+                        report["id"],
+                        type(exc).__name__,
+                        exc_info=exc,
+                    )
             yield
         finally:
             if owns_store and application.state.store is not None:
@@ -242,6 +264,10 @@ def create_app(
             raise APIError(503, "event_unavailable", "No exercise event is available.")
         return {"event": event, "zones": _zones()}
 
+    @application.get("/api/events", response_model=list[Event])
+    def list_events(request: Request) -> list[dict[str, Any]]:
+        return get_store(request).events()
+
     @application.get("/api/reports", response_model=list[Report])
     def list_reports(request: Request, event_id: str | None = None) -> list[dict[str, Any]]:
         store_value = get_store(request)
@@ -312,6 +338,47 @@ def create_app(
         store_value.update_status(incident_id, body.status, body.reason, body.expected_version)
         incident = store_value.get_incident(incident_id)
         return _snapshot(request, incident["event_id"] if incident else None)
+
+    @application.post("/api/incidents/{incident_id}/notes", response_model=Snapshot)
+    def add_incident_note(
+        incident_id: str, body: IncidentNoteRequest, request: Request
+    ) -> dict[str, Any]:
+        event_id = get_store(request).add_incident_note(
+            incident_id, body.text, body.expected_version
+        )
+        return _snapshot(request, event_id)
+
+    @application.post("/api/incidents/{incident_id}/title", response_model=Snapshot)
+    def update_incident_title(
+        incident_id: str, body: IncidentTitleRequest, request: Request
+    ) -> dict[str, Any]:
+        event_id = get_store(request).update_incident_title(
+            incident_id, body.title, body.reason, body.expected_version
+        )
+        return _snapshot(request, event_id)
+
+    @application.post("/api/incidents/{incident_id}/priority/reset", response_model=Snapshot)
+    def reset_incident_priority(
+        incident_id: str, body: PriorityResetRequest, request: Request
+    ) -> dict[str, Any]:
+        event_id = get_store(request).reset_priority(
+            incident_id, body.reason, body.expected_version
+        )
+        return _snapshot(request, event_id)
+
+    @application.post("/api/audit/{audit_id}/undo", response_model=Snapshot)
+    def undo_audit_action(audit_id: str, body: UndoRequest, request: Request) -> dict[str, Any]:
+        event_id = get_store(request).undo_decision(audit_id, body.reason, body.expected_version)
+        return _snapshot(request, event_id)
+
+    @application.post("/api/reports/{report_id}/retry", response_model=Snapshot)
+    def retry_report_analysis(
+        report_id: str, body: RetryAnalysisRequest, request: Request
+    ) -> dict[str, Any]:
+        store_value = get_store(request)
+        report, _ = store_value.prepare_report_retry(report_id, body.expected_version)
+        _process_report_analysis(store_value, get_engine(request), report, preserve_membership=True)
+        return _snapshot(request, report["event_id"])
 
     @application.post("/api/conflicts/{conflict_id}/review", response_model=Snapshot)
     def review_conflict(
@@ -459,27 +526,45 @@ def _ingest(body: IngestReportRequest, request: Request) -> dict[str, Any]:
     if duplicate:
         return {"report": _public_report(report), "incident": incident, "duplicate": True}
 
-    # The receipt and singleton were committed above. Model failure cannot erase either.
+    finalized_report, finalized_incident = _process_report_analysis(
+        store_value, engine_value, report
+    )
+    return {
+        "report": _public_report(finalized_report),
+        "incident": finalized_incident,
+        "duplicate": False,
+    }
+
+
+def _process_report_analysis(
+    store_value: SQLiteStore,
+    engine_value: Any,
+    report: dict[str, Any],
+    *,
+    preserve_membership: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Analyze one committed receipt, preserving its current group when requested."""
     try:
         analysis = engine_value.analyze_report(
-            body.text,
-            zone_id=body.zone_id,
-            sublocation=body.sublocation,
-            reported_at=body.reported_at,
+            report["text"],
+            zone_id=report["zone_id"],
+            sublocation=report["sublocation"],
+            reported_at=report["reported_at"],
         )
         if not isinstance(analysis, dict):
             raise TypeError("analyze_report must return a dictionary")
         incoming = {**report, **analysis}
-        all_groups = store_value.get_groups_for_event(event["id"])
+        event_id = report["event_id"]
+        all_groups = store_value.get_groups_for_event(event_id)
         candidate_groups = []
         for group in all_groups:
             complete_reports = [
                 item for item in group["reports"] if item["analysis_status"] == "complete"
             ]
-            if group["id"] != incident["id"] and complete_reports:
+            if group["id"] != report["incident_id"] and complete_reports:
                 candidate_groups.append({"id": group["id"], "reports": complete_reports})
         decision = engine_value.choose_group(
-            incoming, candidate_groups, store_value.rejection_pairs(event["id"])
+            incoming, candidate_groups, store_value.rejection_pairs(event_id)
         )
         if not isinstance(decision, dict):
             raise TypeError("choose_group must return a dictionary")
@@ -510,7 +595,8 @@ def _ingest(body: IngestReportRequest, request: Request) -> dict[str, Any]:
             assessment,
             generated_conflicts,
             engine=engine_value,
-            receipt_incident_id=incident["id"],
+            receipt_incident_id=report["incident_id"],
+            preserve_membership=preserve_membership,
         )
     except Exception as exc:
         logger.error(
@@ -521,7 +607,11 @@ def _ingest(body: IngestReportRequest, request: Request) -> dict[str, Any]:
         )
         fallback_assessment = None
         try:
-            policy_report = {"id": report["id"], "text": body.text, "zone_id": body.zone_id}
+            policy_report = {
+                "id": report["id"],
+                "text": report["text"],
+                "zone_id": report["zone_id"],
+            }
             fallback_assessment = engine_value.assess_priority([policy_report])
             if not isinstance(fallback_assessment, dict):
                 raise TypeError("assess_priority must return a dictionary")
@@ -533,38 +623,35 @@ def _ingest(body: IngestReportRequest, request: Request) -> dict[str, Any]:
                 exc_info=policy_exc,
             )
         failed_report, failed_incident = store_value.fail_pending_analysis(
-            report["id"], type(exc).__name__, fallback_assessment
+            report["id"],
+            type(exc).__name__,
+            fallback_assessment,
+            preserve_membership=preserve_membership,
         )
-        return {
-            "report": _public_report(failed_report),
-            "incident": failed_incident,
-            "duplicate": False,
-        }
-
-    return {
-        "report": _public_report(finalized_report),
-        "incident": finalized_incident,
-        "duplicate": False,
-    }
+        return failed_report, failed_incident
+    return finalized_report, finalized_incident
 
 
 def _public_report(report: dict[str, Any]) -> dict[str, Any]:
     """Remove internal model/replay metadata while preserving the public report shape."""
     return {
-        key: report[key]
-        for key in (
-            "id",
-            "event_id",
-            "text",
-            "zone_id",
-            "sublocation",
-            "category",
-            "reported_at",
-            "received_at",
-            "analysis_status",
-            "incident_id",
-            "claims",
-            "review_reasons",
+        key: report.get(key, default)
+        for key, default in (
+            ("id", None),
+            ("display_id", None),
+            ("event_id", None),
+            ("text", None),
+            ("zone_id", None),
+            ("sublocation", None),
+            ("category", None),
+            ("reported_at", None),
+            ("received_at", None),
+            ("analysis_status", None),
+            ("incident_id", None),
+            ("claims", []),
+            ("review_reasons", []),
+            ("model_revision", None),
+            ("confirmed", False),
         )
     }
 

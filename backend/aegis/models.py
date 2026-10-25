@@ -65,6 +65,13 @@ class Event(StrictModel):
     policy_version: str
 
 
+class CoordinatorNote(StrictModel):
+    id: str
+    text: str
+    actor: str
+    created_at: datetime
+
+
 class Claim(StrictModel):
     field: str
     value: str
@@ -73,6 +80,7 @@ class Claim(StrictModel):
 
 class Report(StrictModel):
     id: str
+    display_id: str | None = None
     event_id: str
     text: str
     zone_id: str | None
@@ -84,6 +92,8 @@ class Report(StrictModel):
     incident_id: str
     claims: list[Claim]
     review_reasons: list[str]
+    model_revision: str | None = None
+    confirmed: bool = False
 
 
 class Evidence(StrictModel):
@@ -97,6 +107,7 @@ class Evidence(StrictModel):
     decision: Literal["attach", "suggest", "separate"]
     reasons: list[str]
     missing_fields: list[str]
+    created_at: datetime | None = None
 
 
 class Conflict(StrictModel):
@@ -111,6 +122,7 @@ class Conflict(StrictModel):
 
 class Incident(StrictModel):
     id: str
+    display_id: str | None = None
     event_id: str
     title: str
     zone_id: str | None
@@ -127,6 +139,9 @@ class Incident(StrictModel):
     created_at: datetime
     updated_at: datetime
     override_reason: str | None
+    notes: list[CoordinatorNote] = Field(default_factory=list)
+    original_title: str | None = None
+    title_override: bool = False
 
 
 class Audit(StrictModel):
@@ -164,6 +179,13 @@ class Counts(StrictModel):
     conflicts: int
 
 
+class UndoableAction(StrictModel):
+    audit_id: str
+    incident_id: str
+    action: str
+    expected_version: int
+
+
 class Snapshot(StrictModel):
     event: Event
     zones: list[Zone]
@@ -173,6 +195,7 @@ class Snapshot(StrictModel):
     counts: Counts
     health: Health
     replay: Replay | None
+    undoable_actions: list[UndoableAction] = Field(default_factory=list)
 
 
 class IngestReportRequest(StrictModel):
@@ -300,6 +323,66 @@ class ConflictReviewRequest(StrictModel):
         return value.strip()
 
 
+class IncidentNoteRequest(StrictModel):
+    text: str = Field(min_length=1, max_length=2000)
+    expected_version: Version
+
+    @field_validator("text")
+    @classmethod
+    def note_must_contain_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("text must contain a non-whitespace character")
+        return value.strip()
+
+
+class IncidentTitleRequest(StrictModel):
+    title: str = Field(min_length=1, max_length=120)
+    reason: str = Field(min_length=3, max_length=1000)
+    expected_version: Version
+
+    @field_validator("title")
+    @classmethod
+    def title_must_contain_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("title must contain a non-whitespace character")
+        return value.strip()
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_contain_text(cls, value: str) -> str:
+        if len(value.strip()) < 3:
+            raise ValueError("reason must contain at least 3 non-whitespace characters")
+        return value.strip()
+
+
+class PriorityResetRequest(StrictModel):
+    reason: str = Field(min_length=3, max_length=1000)
+    expected_version: Version
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_contain_text(cls, value: str) -> str:
+        if len(value.strip()) < 3:
+            raise ValueError("reason must contain at least 3 non-whitespace characters")
+        return value.strip()
+
+
+class UndoRequest(StrictModel):
+    reason: str = Field(min_length=3, max_length=1000)
+    expected_version: Version
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_contain_text(cls, value: str) -> str:
+        if len(value.strip()) < 3:
+            raise ValueError("reason must contain at least 3 non-whitespace characters")
+        return value.strip()
+
+
+class RetryAnalysisRequest(StrictModel):
+    expected_version: Version
+
+
 class DemoSessionRequest(StrictModel):
     scenario: Literal["demo", "busy", "edge"]
 
@@ -329,6 +412,26 @@ class EvaluationLatency(StrictModel):
     p95_ms: float
 
 
+class EvaluationErrorExample(StrictModel):
+    kind: Literal["missed_pair", "false_merge"]
+    method: str
+    report_ids: tuple[str, str]
+    texts: tuple[str, str]
+    expected_same_incident: bool
+    predicted_same_incident: bool
+    reasons: list[str]
+
+
+class EvaluationWorkload(StrictModel):
+    reports: int
+    review_reports: int
+    proposed_groups: int
+    confirmation_groups: int
+    split_operations: int
+    merge_operations: int
+    basis: str
+
+
 class Evaluation(StrictModel):
     dataset_version: str
     model: str
@@ -339,3 +442,5 @@ class Evaluation(StrictModel):
     latency: EvaluationLatency
     limitations: list[str]
     failures: list[str]
+    error_examples: list[EvaluationErrorExample] = Field(default_factory=list)
+    workload: EvaluationWorkload | None = None
