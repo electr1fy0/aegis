@@ -3,6 +3,7 @@ import type {
   ConflictReviewInput,
   CurrentEvent,
   Evaluation,
+  EventInfo,
   GroupingReviewInput,
   Incident,
   PriorityInput,
@@ -114,6 +115,30 @@ export function getEvaluation(): Promise<Evaluation> {
 
 export function getEventsCurrent(): Promise<CurrentEvent> {
   return requestJson("/api/events/current");
+}
+
+export function getEvents(signal?: AbortSignal): Promise<EventInfo[]> {
+  return requestJson("/api/events", { signal });
+}
+
+export function addIncidentNote(id: string, input: { text: string; expected_version: number }): Promise<Snapshot> {
+  return requestJson(`/api/incidents/${encodeURIComponent(id)}/notes`, jsonRequest(input));
+}
+
+export function updateIncidentTitle(id: string, input: { title: string; reason: string; expected_version: number }): Promise<Snapshot> {
+  return requestJson(`/api/incidents/${encodeURIComponent(id)}/title`, jsonRequest(input));
+}
+
+export function resetPriority(id: string, input: { reason: string; expected_version: number }): Promise<Snapshot> {
+  return requestJson(`/api/incidents/${encodeURIComponent(id)}/priority/reset`, jsonRequest(input));
+}
+
+export function undoDecision(auditId: string, input: { reason: string; expected_version: number }): Promise<Snapshot> {
+  return requestJson(`/api/audit/${encodeURIComponent(auditId)}/undo`, jsonRequest(input));
+}
+
+export function retryAnalysis(reportId: string, input: { expected_version: number }): Promise<Snapshot> {
+  return requestJson(`/api/reports/${encodeURIComponent(reportId)}/retry`, jsonRequest(input));
 }
 
 export function getReports(eventId?: string): Promise<Report[]> {

@@ -1,20 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ApiError,
+  addIncidentNote,
   advanceReplay,
   getAudit,
   getEvaluation,
   getEventsCurrent,
+  getEvents,
   getIncidents,
   getReports,
   getSnapshot,
   reviewConflict,
   reviewGrouping,
+  resetPriority,
+  retryAnalysis,
   REQUEST_TIMEOUT_MS,
   startReplay,
   submitReport,
   updatePriority,
   updateStatus,
+  updateIncidentTitle,
+  undoDecision,
 } from "../lib/api";
 import { evaluationFixture, snapshotFixture } from "./fixtures";
 
@@ -36,6 +42,25 @@ describe("API client", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("lists exercises and encodes the new audited workflow endpoint identifiers", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([snapshotFixture.event]));
+    await expect(getEvents()).resolves.toEqual([snapshotFixture.event]);
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/events", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    const workflows = [
+      [() => addIncidentNote("id/one", { text: "Observation", expected_version: 2 }), "/api/incidents/id%2Fone/notes"],
+      [() => updateIncidentTitle("id/one", { title: "Exit update", reason: "Clearer label", expected_version: 2 }), "/api/incidents/id%2Fone/title"],
+      [() => resetPriority("id/one", { reason: "Return to policy", expected_version: 2 }), "/api/incidents/id%2Fone/priority/reset"],
+      [() => undoDecision("audit/one", { reason: "Correct accidental change", expected_version: 2 }), "/api/audit/audit%2Fone/undo"],
+      [() => retryAnalysis("report/one", { expected_version: 2 }), "/api/reports/report%2Fone/retry"],
+    ] as const;
+    for (const [invoke, endpoint] of workflows) {
+      fetchMock.mockResolvedValueOnce(jsonResponse(snapshotFixture));
+      await expect(invoke()).resolves.toEqual(snapshotFixture);
+      expect(fetchMock).toHaveBeenLastCalledWith(endpoint, expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } }));
+      expect(JSON.parse(fetchMock.mock.lastCall![1]!.body as string).expected_version).toBe(2);
+    }
   });
 
   it("loads the default snapshot and passes an AbortSignal through", async () => {

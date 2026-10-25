@@ -27,6 +27,7 @@ export interface Claim {
 
 export interface Report {
   id: string;
+  display_id?: string | null;
   event_id: string;
   text: string;
   zone_id: string | null;
@@ -38,6 +39,8 @@ export interface Report {
   incident_id: string;
   claims: Claim[];
   review_reasons: string[];
+  model_revision?: string | null;
+  confirmed?: boolean;
 }
 
 export interface Evidence {
@@ -51,6 +54,21 @@ export interface Evidence {
   decision: EvidenceDecision;
   reasons: string[];
   missing_fields: string[];
+  created_at?: string | null;
+}
+
+export interface CoordinatorNote {
+  id: string;
+  text: string;
+  actor: string;
+  created_at: string;
+}
+
+export interface UndoableAction {
+  audit_id: string;
+  incident_id: string;
+  action: string;
+  expected_version: number;
 }
 
 export interface Conflict {
@@ -65,6 +83,7 @@ export interface Conflict {
 
 export interface Incident {
   id: string;
+  display_id?: string | null;
   event_id: string;
   title: string;
   zone_id: string | null;
@@ -81,6 +100,9 @@ export interface Incident {
   created_at: string;
   updated_at: string;
   override_reason: string | null;
+  notes?: CoordinatorNote[];
+  original_title?: string | null;
+  title_override?: boolean;
 }
 
 export interface AuditEntry {
@@ -127,6 +149,7 @@ export interface Snapshot {
   counts: SnapshotCounts;
   health: Health;
   replay: Replay | null;
+  undoable_actions?: UndoableAction[];
 }
 
 export interface EvaluationResult {
@@ -155,6 +178,28 @@ export interface Evaluation {
   latency: { p50_ms: number; p95_ms: number };
   limitations: string[];
   failures: string[];
+  error_examples?: EvaluationErrorExample[];
+  workload?: EvaluationWorkload;
+}
+
+export interface EvaluationErrorExample {
+  kind: "missed_pair" | "false_merge";
+  method: string;
+  report_ids: [string, string];
+  texts: [string, string];
+  expected_same_incident: boolean;
+  predicted_same_incident: boolean;
+  reasons: string[];
+}
+
+export interface EvaluationWorkload {
+  reports: number;
+  review_reports: number;
+  proposed_groups: number;
+  confirmation_groups: number;
+  split_operations: number;
+  merge_operations: number;
+  basis: string;
 }
 
 export type GroupingAction = "confirm" | "reject" | "move" | "merge" | "split";
