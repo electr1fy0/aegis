@@ -8,14 +8,34 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-ZONES: list[dict[str, Any]] = [
+LEGACY_ZONES: list[dict[str, Any]] = [
     {"id": "stage", "label": "Main Stage", "x": 230, "y": 180},
     {"id": "exit-a", "label": "Exit A", "x": 120, "y": 430},
     {"id": "exit-b", "label": "Exit B", "x": 820, "y": 430},
-    {"id": "food", "label": "Food Court", "x": 720, "y": 180},
     {"id": "registration", "label": "Registration", "x": 470, "y": 430},
     {"id": "hall", "label": "Exhibition Hall", "x": 470, "y": 180},
 ]
+# Shared with the frontend's SVG region picker; the image coordinates are schematic.
+_CAMPUS_MAP = json.loads(
+    (Path(__file__).resolve().parents[2] / "data" / "campus-map.json").read_text(encoding="utf-8")
+)
+_REGION_BY_ZONE = {
+    zone_id: region for region in _CAMPUS_MAP["regions"] for zone_id in region["zoneIds"]
+}
+_VIEW_X, _VIEW_Y, _VIEW_WIDTH, _VIEW_HEIGHT = _CAMPUS_MAP["viewBox"]
+CAMPUS_ZONES: list[dict[str, Any]] = []
+for _zone in _CAMPUS_MAP["zones"]:
+    _points = _REGION_BY_ZONE[_zone["id"]]["points"]
+    _cx = sum(point[0] for point in _points) / len(_points)
+    _cy = sum(point[1] for point in _points) / len(_points)
+    CAMPUS_ZONES.append(
+        dict(
+            _zone,
+            x=round((_cx - _VIEW_X) / _VIEW_WIDTH * 1000),
+            y=round((_cy - _VIEW_Y) / _VIEW_HEIGHT * 600),
+        )
+    )
+ZONES = [dict(zone, selectable=False) for zone in LEGACY_ZONES] + CAMPUS_ZONES
 
 _SCENARIO_NAMES = frozenset({"demo", "busy", "edge"})
 _SCENARIO_DIR = Path(__file__).resolve().parents[2] / "data" / "scenarios"

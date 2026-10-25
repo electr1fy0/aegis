@@ -1,3 +1,4 @@
+import { MenuSelect } from "../components/ui/menu-select";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, getEvaluation } from "../lib/api";
 import type { Evaluation } from "../lib/types";
@@ -123,14 +124,13 @@ function EvaluationDiagnostics({ data }: { data: Evaluation }) {
             <p className="evaluation-workload-basis">{data.workload.basis}</p>
           </section>
         ) : <p className="evaluation-note">Review workload was not recorded for this run.</p>}
-        <label className="evaluation-filter">
+        <div className="evaluation-filter"><label htmlFor="grouping-mistake-type">
           Grouping mistake type
-          <select value={kind} onChange={(event) => setKind(event.target.value)}>
+          </label><MenuSelect id="grouping-mistake-type" value={kind} onChange={(event) => setKind(event.target.value)}>
             <option value="all">All mistakes</option>
             <option value="missed_pair">Missed pairs</option>
             <option value="false_merge">False merges</option>
-          </select>
-        </label>
+          </MenuSelect></div>
         <p className="evaluation-note">Up to 40 actual pairwise mistakes from the Aegis result. Runtime errors are listed separately.</p>
         {visible.length ? visible.map((example) => (
           <details className="evaluation-example" key={example.report_ids.join(":")}>

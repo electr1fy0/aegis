@@ -1,3 +1,7 @@
+import { IconCheck, IconChevronDown, IconMapPin } from "@tabler/icons-react";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "../components/ui/dialog";
+import { CampusMap } from "../components/campus-map";
+import { MenuSelect } from "../components/ui/menu-select";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, getSnapshot, submitReport } from "../lib/api";
 import type { CurrentEvent, ReportInput, ReportReceipt } from "../lib/types";
@@ -224,8 +228,10 @@ export function ReportPage() {
   const [timeError, setTimeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const mountedRef = useRef(false);
+  const receiptRef = useRef<HTMLElement>(null);
   const currentEventRef = useRef<CurrentEvent | null>(null);
   const draftRef = useRef<ReportDraft | null>(null);
   const eventRequestRef = useRef<AbortController | null>(null);
@@ -242,6 +248,7 @@ export function ReportPage() {
       const restored = loadReportDraft(loadedEvent.event.id, createIdempotencyKey());
       draftRef.current = restored;
       setDraft(restored);
+      setDetailsOpen(!!restored.sublocation || restored.timeMode !== "unknown");
       setDraftStatus(restored.receipt
         ? "Report receipt restored on this device."
         : hasReportDraftContent(restored)
@@ -414,6 +421,11 @@ export function ReportPage() {
         setDraftStatus(savedReceipt
           ? "Report receipt saved on this device."
           : "Report received. Receipt storage is unavailable; keep this page open.");
+        requestAnimationFrame(() => {
+          if (!mountedRef.current || currentEventRef.current?.event.id !== activeEvent.event.id) return;
+          receiptRef.current?.focus({ preventScroll: true });
+          receiptRef.current?.scrollIntoView?.({ block: "start", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        });
       }
       setCopyMessage("");
       void shared?.refresh();
@@ -450,6 +462,8 @@ export function ReportPage() {
     setSubmitError(null);
   };
 
+  useEffect(() => { if (timeError) setDetailsOpen(true); }, [timeError]);
+
   const copyFullId = async (label: string, id: string) => {
     try {
       if (!window.navigator.clipboard?.writeText) {
@@ -469,21 +483,11 @@ export function ReportPage() {
         <div className="page-heading-copy">
           <h1 id="report-page-title">New report</h1>
           <p className="page-subtitle">
-            Describe what you observed; leave unknown details blank.
+            Use the reporter’s words. Add only what you know.
           </p>
         </div>
       </div>
 
-      {loadingEvent && (
-        <div className="status-banner" role="status" aria-live="polite">
-          Loading the current exercise and its zones…
-        </div>
-      )}
-      {selectedEventPending && !loadingEvent && (
-        <div className="status-banner" role="status" aria-live="polite">
-          Loading the selected exercise. Your other event draft stays saved on this device.
-        </div>
-      )}
       {eventError && (
         <div className="status-banner is-error" role="alert">
           <span>{eventError}</span>
@@ -495,14 +499,49 @@ export function ReportPage() {
 
       <div className="report-layout">
         <Card className="form-card">
-          {currentEvent && (
-            <p className="field-hint" id="event-context">
-              Submitting to <strong>{currentEvent.event.name}</strong> ({currentEvent.event.timezone}).
-            </p>
+          {receipt && (
+            <section ref={receiptRef} tabIndex={-1} className="receipt-card" role="status" aria-live="polite" aria-label="Submission receipt">
+              <div className="receipt-head"><span className="receipt-check"><IconCheck size={20} /></span>
+                <span>{receipt.duplicate ? "Existing report receipt" : "Report received"}</span>
+                {receipt.duplicate && <Badge variant="outline">Duplicate retry</Badge>}
+              </div>
+              <p className="receipt-copy">
+                {receipt.duplicate
+                  ? "This submission was already received. The original report and incident are shown below."
+                  : "The report was saved and remains available to the coordinator."}
+              </p>
+              <p className="receipt-copy"><a className="receipt-dashboard-link" href={dashboardReceiptHref(receipt.report.event_id, receipt.incident.id)}>Open this incident on the operations board</a></p>
+              <details className="receipt-details"><summary>Receipt details</summary>
+              <p className="receipt-copy">
+                <strong>Report ID</strong> <span className="mono" title={receipt.report.id}>{displayIdentifier(receipt.report.id, receipt.report.display_id)}</span>
+                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("report ID", receipt.report.id)}>Copy full ID</Button>
+              </p>
+              <p className="receipt-copy">
+                <strong>Incident ID</strong> <span className="mono" title={receipt.incident.id}>{displayIdentifier(receipt.incident.id, receipt.incident.display_id)}</span>
+                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("incident ID", receipt.incident.id)}>Copy full ID</Button>
+              </p>
+
+              {copyMessage && <p className="field-hint" role="status">{copyMessage}</p>}
+              <p className="receipt-copy">
+                <strong>Priority</strong>{" "}
+                <Badge variant={priorityVariant(receipt.incident.priority)}>
+                  {receipt.incident.priority}
+                </Badge>{" "}
+                · {receipt.report.analysis_status} analysis
+              </p>
+              <blockquote className="receipt-copy">{receipt.report.text}</blockquote>
+              </details>
+            </section>
           )}
 
+          <p className="field-hint report-context" id="event-context" role={loadingEvent || selectedEventPending ? "status" : undefined} aria-live="polite">
+            {loadingEvent ? "Loading the current exercise…" : selectedEventPending
+              ? "Loading the selected exercise. Your draft stays saved."
+              : currentEvent ? <>Submitting to <strong>{currentEvent.event.name}</strong> ({currentEvent.event.timezone}).</> : "Exercise unavailable."}
+          </p>
+
           <form className="report-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-            <div className="form-field">
+            <div className="form-field report-description-field">
               <label htmlFor="report-description">Report description</label>
               <Textarea
                 id="report-description"
@@ -513,7 +552,7 @@ export function ReportPage() {
                   setTextError(null);
                   setSubmitError(null);
                 }}
-                placeholder="Describe what was observed, using the reporter’s own words."
+                placeholder="What happened?"
                 required
                 maxLength={4000}
                 aria-invalid={textError ? true : undefined}
@@ -525,7 +564,7 @@ export function ReportPage() {
                   {textError}
                 </p>
               ) : (
-                <p className="field-hint" id="report-description-help">
+                <p className="field-hint report-character-count" id="report-description-help" data-near-limit={text.length >= 3500}>
                   {text.length}/4,000
                 </p>
               )}
@@ -533,8 +572,8 @@ export function ReportPage() {
 
             <div className="form-grid">
               <div className="form-field">
-                <label htmlFor="report-zone">Zone</label>
-                <select
+                <label htmlFor="report-zone">Location <span className="optional-label" aria-hidden="true">Optional</span></label>
+                <MenuSelect
                   id="report-zone"
                   name="zone_id"
                   className="form-select"
@@ -546,16 +585,40 @@ export function ReportPage() {
                   disabled={isFormDisabled}
                 >
                   <option value="">Unknown / not provided</option>
-                  {currentEvent?.zones.map((zone) => (
+                  {currentEvent?.zones.filter((zone) => zone.id === zoneId && zone.selectable === false).map((zone) => (
+                    <option key={zone.id} value={zone.id} disabled>{zone.label} (saved draft)</option>
+                  ))}
+                  {currentEvent?.zones.filter((zone) => zone.selectable !== false).map((zone) => (
                     <option key={zone.id} value={zone.id}>
                       {zone.label}
                     </option>
                   ))}
-                </select>
+                </MenuSelect>
               </div>
 
+              <Dialog>
+                <DialogTrigger render={<Button type="button" variant="outline" className="map-picker-button" />} disabled={isFormDisabled}>
+                  <IconMapPin size={17} />Choose on map
+                </DialogTrigger>
+                <DialogContent className="location-dialog">
+                  <DialogHeader>
+                    <DialogTitle>Choose a location</DialogTitle>
+                    <DialogDescription>Select a building or area on the campus map.</DialogDescription>
+                  </DialogHeader>
+                  <div className="location-map-content">
+                    <CampusMap zones={currentEvent?.zones ?? []} value={zoneId} disabled={isFormDisabled} showHeading={false}
+                      onValueChange={(nextZoneId) => { updateDraft({ zoneId: nextZoneId }); setSubmitError(null); }} />
+                  </div>
+                  <div className="location-dialog-footer"><DialogClose render={<Button type="button" size="lg" />}>Done</DialogClose></div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <details className="report-extra-details" open={detailsOpen} onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
+              <summary><span>Add time or a specific spot</span><IconChevronDown size={16} aria-hidden="true" /></summary>
+              <div className="report-extra-details-body" hidden={!detailsOpen}>
               <div className="form-field">
-                <label htmlFor="report-sublocation">Sublocation (optional)</label>
+                <label htmlFor="report-sublocation">Specific spot</label>
                 <Input
                   id="report-sublocation"
                   name="sublocation"
@@ -569,8 +632,6 @@ export function ReportPage() {
                   disabled={isFormDisabled}
                 />
               </div>
-            </div>
-
             <fieldset className="form-field time-mode-fieldset" aria-describedby={timeDescriptionId}>
               <legend>When was this observed?</legend>
               <div className="time-mode-options">
@@ -619,6 +680,9 @@ export function ReportPage() {
               {timeError && <p className="form-error" id="event-time-error" role="alert">{timeError}</p>}
             </fieldset>
 
+              </div>
+            </details>
+
             {submitError && (
               <p className="form-error" role="alert">
                 {submitError}
@@ -632,37 +696,6 @@ export function ReportPage() {
             </div>
           </form>
 
-          {receipt && (
-            <section className="receipt-card" role="status" aria-live="polite" aria-label="Submission receipt">
-              <div className="receipt-head">
-                <span>{receipt.duplicate ? "Existing report receipt" : "Report received"}</span>
-                {receipt.duplicate && <Badge variant="outline">Duplicate retry</Badge>}
-              </div>
-              <p className="receipt-copy">
-                {receipt.duplicate
-                  ? "This submission was already received. The original report and incident are shown below."
-                  : "The report was saved and remains available to the coordinator."}
-              </p>
-              <p className="receipt-copy">
-                <strong>Report ID</strong> <span className="mono" title={receipt.report.id}>{displayIdentifier(receipt.report.id, receipt.report.display_id)}</span>
-                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("report ID", receipt.report.id)}>Copy full ID</Button>
-              </p>
-              <p className="receipt-copy">
-                <strong>Incident ID</strong> <span className="mono" title={receipt.incident.id}>{displayIdentifier(receipt.incident.id, receipt.incident.display_id)}</span>
-                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("incident ID", receipt.incident.id)}>Copy full ID</Button>
-              </p>
-              <p className="receipt-copy"><a className="receipt-dashboard-link" href={dashboardReceiptHref(receipt.report.event_id, receipt.incident.id)}>Open this incident on the operations board</a></p>
-              {copyMessage && <p className="field-hint" role="status">{copyMessage}</p>}
-              <p className="receipt-copy">
-                <strong>Priority</strong>{" "}
-                <Badge variant={priorityVariant(receipt.incident.priority)}>
-                  {receipt.incident.priority}
-                </Badge>{" "}
-                · {receipt.report.analysis_status} analysis
-              </p>
-              <blockquote className="receipt-copy">{receipt.report.text}</blockquote>
-            </section>
-          )}
           {draftStatus && <p className="draft-status" role="status">{draftStatus}</p>}
         </Card>
 

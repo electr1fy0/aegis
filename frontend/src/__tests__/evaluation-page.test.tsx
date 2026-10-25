@@ -1,3 +1,4 @@
+import { chooseOption } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -50,11 +51,11 @@ describe("EvaluationPage", () => {
     expect(screen.getByText("Idealized grouping operations, not measured clicks or operator time.")).toBeVisible();
     await user.click(screen.getByText("Missed pair: one / two"));
     expect(screen.getByText("Known event time missing")).toBeVisible();
-    await user.selectOptions(screen.getByLabelText("Grouping mistake type"), "false_merge");
+    await chooseOption(user, screen.getByLabelText("Grouping mistake type"), "false_merge");
     expect(screen.queryByText("Missed pair: one / two")).not.toBeInTheDocument();
     await user.click(screen.getByText("False merge: two / three"));
     expect(screen.getByText(/Expected separate incidents; proposed one group/)).toBeVisible();
-    await user.selectOptions(screen.getByLabelText("Grouping mistake type"), "missed_pair");
+    await chooseOption(user, screen.getByLabelText("Grouping mistake type"), "missed_pair");
     expect(screen.queryByText("False merge: two / three")).not.toBeInTheDocument();
   });
   it("shows an accessible loading state while evaluation is pending", async () => {

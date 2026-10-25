@@ -1,3 +1,5 @@
+import userEvent from "@testing-library/user-event";
+import { chooseOption } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -39,6 +41,18 @@ import { Route as reportRoute } from "../routes/report";
 import { Route as evaluationRoute } from "../routes/evaluation";
 import { Route as aboutRoute } from "../routes/about";
 import { eventFixture, healthFixture, snapshotFixture } from "./fixtures";
+
+async function openThemeChoice(value: string) {
+  const name = value.charAt(0).toUpperCase() + value.slice(1);
+  if (!screen.queryByRole("menuitemradio", { name })) {
+    await userEvent.click(await screen.findByRole("button", { name: "Settings and information" }));
+  }
+  return screen.findByRole("menuitemradio", { name });
+}
+
+async function chooseTheme(value: string) {
+  await userEvent.click(await openThemeChoice(value));
+}
 
 vi.mock("../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/api")>();
@@ -285,9 +299,11 @@ describe("application frame, static overview, and route wiring", () => {
     render(<RouterProvider router={router} />);
 
     expect(await screen.findByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Exercise" })).toHaveTextContent("Aegis Campus Safety Exercise");
     expect(screen.getByText("Semantic matching · all-MiniLM-L6-v2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "About Aegis", hidden: true })).toHaveClass("is-active");
+    await userEvent.click(screen.getByRole("button", { name: "Settings and information" }));
+    expect(await screen.findByRole("menuitem", { name: "About Aegis" })).toHaveClass("is-active");
+    await userEvent.keyboard("{Escape}");
     expect(screen.getAllByRole("listitem")).toHaveLength(8);
     expect(screen.getByRole("link", { name: "View evaluation results" })).toHaveAttribute("href", "/evaluation");
     expect(getSnapshotMock).toHaveBeenCalledOnce();
@@ -326,23 +342,21 @@ describe("application frame, static overview, and route wiring", () => {
 
     expect(await screen.findByText(/^Updated \d+s ago$/)).toBeInTheDocument();
     expect(screen.getByLabelText("Exercise")).toHaveValue(eventFixture.id);
-    fireEvent.click(screen.getByLabelText("Settings and information"));
-    const theme = screen.getByLabelText("Theme");
-    expect(theme).toHaveValue("system");
+    expect(await openThemeChoice("system")).toHaveAttribute("aria-checked", "true");
     expect(document.documentElement).not.toHaveClass("dark");
 
-    fireEvent.change(theme, { target: { value: "dark" } });
+    await chooseTheme("dark");
     expect(themeStorage.setItem).toHaveBeenCalledWith("aegis.theme", "dark");
     expect(document.documentElement).toHaveClass("dark");
     expect(document.documentElement.style.colorScheme).toBe("dark");
-    fireEvent.change(theme, { target: { value: "light" } });
+    await chooseTheme("light");
     expect(document.documentElement).not.toHaveClass("dark");
     expect(document.documentElement.style.colorScheme).toBe("light");
-    fireEvent.change(theme, { target: { value: "system" } });
+    await chooseTheme("system");
     systemDark = true;
     systemChange.listener?.();
     expect(document.documentElement).toHaveClass("dark");
-    fireEvent.change(theme, { target: { value: "solarized" } });
+    expect(await openThemeChoice("system")).toHaveAttribute("aria-checked", "true");
     expect(document.documentElement).toHaveClass("dark");
 
     if (originalMatchMedia) Object.defineProperty(window, "matchMedia", originalMatchMedia);
@@ -367,12 +381,10 @@ describe("application frame, static overview, and route wiring", () => {
     const view = render(<RouterProvider router={router} />);
 
     try {
-      fireEvent.click(await screen.findByLabelText("Settings and information"));
-      const theme = await screen.findByLabelText("Theme");
-      expect(theme).toHaveValue(preference);
+      expect(await openThemeChoice(preference)).toHaveAttribute("aria-checked", "true");
       if (preference === "dark") expect(document.documentElement).toHaveClass("dark");
       else expect(document.documentElement).not.toHaveClass("dark");
-      fireEvent.change(theme, { target: { value: preference === "dark" ? "light" : "dark" } });
+      await chooseTheme(preference === "dark" ? "light" : "dark");
       if (preference === "dark") expect(document.documentElement).not.toHaveClass("dark");
       else expect(document.documentElement).toHaveClass("dark");
     } finally {
@@ -393,10 +405,8 @@ describe("application frame, static overview, and route wiring", () => {
     const view = render(<RouterProvider router={router} />);
 
     try {
-      fireEvent.click(await screen.findByLabelText("Settings and information"));
-      const theme = await screen.findByLabelText("Theme");
-      expect(theme).toHaveValue("system");
-      fireEvent.change(theme, { target: { value: "dark" } });
+      expect(await openThemeChoice("system")).toHaveAttribute("aria-checked", "true");
+      await chooseTheme("dark");
       expect(document.documentElement).toHaveClass("dark");
     } finally {
       view.unmount();
@@ -441,10 +451,11 @@ describe("application frame, static overview, and route wiring", () => {
 
     const exercise = await screen.findByLabelText("Exercise");
     await waitFor(() => expect(exercise).toHaveValue("event-older"));
-    const olderOption = exercise.querySelector<HTMLOptionElement>('option[value="event-older"]');
-    const newerOption = exercise.querySelector<HTMLOptionElement>('option[value="event-newer"]');
-    const legacyOption = exercise.querySelector<HTMLOptionElement>('option[value="event-legacy"]');
-    const invalidZoneOption = exercise.querySelector<HTMLOptionElement>('option[value="event-invalid-zone"]');
+    await userEvent.click(exercise);
+    const olderOption = document.querySelector('[role="option"][data-value="event-older"]');
+    const newerOption = document.querySelector('[role="option"][data-value="event-newer"]');
+    const legacyOption = document.querySelector('[role="option"][data-value="event-legacy"]');
+    const invalidZoneOption = document.querySelector('[role="option"][data-value="event-invalid-zone"]');
     expect(olderOption?.textContent).toContain(eventFixture.name);
     expect(newerOption?.textContent).toContain(eventFixture.name);
     expect(olderOption?.textContent).not.toBe(newerOption?.textContent);
@@ -453,14 +464,14 @@ describe("application frame, static overview, and route wiring", () => {
     expect(invalidZoneOption).toHaveTextContent("Invalid zone exercise");
     expect(invalidZoneOption?.textContent).not.toContain("2026");
 
-    fireEvent.change(exercise, { target: { value: "event-newer" } });
+    await userEvent.keyboard("{Escape}");
+    await chooseOption(userEvent.setup(), exercise, "event-newer");
     expect(exercise).toHaveValue("event-newer");
     expect(new URL(window.location.href).searchParams.get("event")).toBe("event-newer");
     expect(new URL(window.location.href).searchParams.get("queue")).toBe("review");
 
-    fireEvent.change(exercise, { target: { value: "event-older" } });
-    fireEvent.change(exercise, { target: { value: "" } });
-    expect(exercise).toHaveValue("event-newer");
+    await chooseOption(userEvent.setup(), exercise, "event-older");
+    expect(exercise).toHaveValue("event-older");
   });
 
   it("formats minute and hour freshness from the last successful snapshot time", async () => {
@@ -500,7 +511,7 @@ describe("application frame, static overview, and route wiring", () => {
     );
     expect(document.querySelector(".shell-freshness")).toHaveClass("is-reconnecting");
     expect(screen.getByText("Reconnecting")).toBeVisible();
-    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Exercise" })).toHaveTextContent("Aegis Campus Safety Exercise");
   });
 
   it("shows loading and unavailable labels when there is no retained event", async () => {
@@ -509,10 +520,11 @@ describe("application frame, static overview, and route wiring", () => {
     getSnapshotMock.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectSnapshot = reject; }));
     const router = makeRouter("/about");
     render(<RouterProvider router={router} />);
-    expect(await screen.findByRole("option", { name: "Loading current exercise" })).toBeInTheDocument();
+    const exercise = await screen.findByRole("combobox", { name: "Exercise" });
+    await waitFor(() => expect(exercise).toHaveTextContent("Loading current exercise"));
 
     await act(async () => rejectSnapshot(new Error("backend unavailable")));
-    expect(await screen.findByRole("option", { name: "Exercise unavailable" })).toBeInTheDocument();
+    await waitFor(() => expect(exercise).toHaveTextContent("Exercise unavailable"));
     expect(screen.getByLabelText("Exercise")).toBeDisabled();
   });
 
@@ -546,7 +558,7 @@ describe("application frame, static overview, and route wiring", () => {
     const router = makeRouter("/about");
     render(<RouterProvider router={router} />);
     expect(await screen.findByText("Offline")).toBeVisible();
-    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Exercise" })).toHaveTextContent("Aegis Campus Safety Exercise");
     expect(screen.getByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
   });
 
@@ -631,7 +643,7 @@ describe("application frame, static overview, and route wiring", () => {
     const router = trackHistory(getRouter());
     await router.load();
     const html = renderToString(<RouterProvider router={router} />);
-    expect(html).toContain('<html lang="en" class="dark style-nova">');
+    expect(html).toContain('<html lang="en" class="style-nova">');
     expect(html).toContain('name="description" content="Synthetic event coordination workspace"');
     expect(html).toContain('id="app"');
     window.history.replaceState(null, "", "/");

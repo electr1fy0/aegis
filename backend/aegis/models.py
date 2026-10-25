@@ -50,6 +50,7 @@ class ErrorResponse(StrictModel):
 
 
 class Zone(StrictModel):
+    selectable: bool = True
     id: str
     label: str
     x: float

@@ -1,3 +1,4 @@
+import { chooseOption, filterControl } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -284,6 +285,21 @@ describe("dashboard interaction regressions", () => {
     expect(screen.getByText("Text similarity")).toBeInTheDocument();
   });
 
+  it("reveals filters on demand and keeps choices until they are reset", async () => {
+    const { user } = await renderDashboard(dashboardSnapshot());
+    expect(screen.queryByRole("combobox", { name: "Filter by priority" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await chooseOption(user, await screen.findByRole("combobox", { name: "Filter by priority" }), "P0");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("combobox", { name: "Filter by priority" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filters, 1 active" }));
+    expect(await screen.findByRole("combobox", { name: "Filter by priority" })).toHaveValue("P0");
+    await user.click(screen.getByRole("button", { name: "Reset filters" }));
+    expect(screen.getByRole("combobox", { name: "Filter by priority" })).toHaveValue("all");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Filters" })).toHaveFocus());
+  });
+
   it("prints the brief and downloads the current JSON and formula-safe CSV snapshot", async () => {
     const createObjectURL = vi.fn((blob: Blob) => `blob:brief-${createdBlobs.push(blob)}`);
     const revokeObjectURL = vi.fn();
@@ -300,20 +316,22 @@ describe("dashboard interaction regressions", () => {
     const snapshot = dashboardSnapshot("=1+1");
     const { user } = await renderDashboard(snapshot);
 
-    await user.click(screen.getByText("Export").closest("summary")!);
-    await user.click(screen.getByRole("button", { name: "Print incident brief" }));
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Print incident brief" }));
     expect(printed).toHaveBeenCalledOnce();
     expect(document.querySelector(".print-brief")).toHaveTextContent("Aegis Campus Safety Exercise · Incident brief");
     expect(document.querySelector(".print-brief")).toHaveTextContent("RPT-001");
 
-    await user.click(screen.getByRole("button", { name: "Download JSON" }));
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Download JSON" }));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(createdBlobs[0]?.type).toBe("application/json;charset=utf-8");
     expect(JSON.parse(await createdBlobs[0]!.text()).incidents[0].title).toBe("=1+1");
     expect(downloads[0]).toEqual({ href: "blob:brief-1", filename: "aegis-event-demo-brief.json" });
     expect(revokeObjectURL).toHaveBeenNthCalledWith(1, "blob:brief-1");
 
-    await user.click(screen.getByRole("button", { name: "Download CSV" }));
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Download CSV" }));
     expect(createObjectURL).toHaveBeenCalledTimes(2);
     expect(createdBlobs[1]?.type).toBe("text/csv;charset=utf-8");
     expect(await createdBlobs[1]!.text()).toContain("incident-001,INC-001,'=1+1,P0");
@@ -352,7 +370,7 @@ describe("dashboard interaction regressions", () => {
     useSnapshotMock.mockReturnValue(stateFor(empty));
     cleanup();
     const emptyView = render(<DashboardPage />);
-    await screen.findByText("No incidents match this filter.");
+    await screen.findByText("No reports yet");
     fireEvent.keyDown(emptyView.container.querySelector(".dashboard-page")!, { key: "j" });
     expect(screen.getByRole("region", { name: "Incident inspector" })).toHaveTextContent("Select a provisional group");
   });
@@ -383,7 +401,7 @@ describe("dashboard interaction regressions", () => {
     const queue = screen.getByRole("region", { name: "Incident queue" });
     expect(within(queue).getByText("Unlocated alarm group")).toBeInTheDocument();
     expect(within(queue).queryByText("Guest collapsed near Main Stage")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by zone" })).toHaveValue("unlocated");
+    expect(await filterControl("Filter by location")).toHaveValue("unlocated");
   });
 
   it("changes the zone and sort controls and leaves workspace arrow navigation alone", async () => {
@@ -399,12 +417,18 @@ describe("dashboard interaction regressions", () => {
     expect(document.activeElement).toBe(mapTab);
     expect(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }).closest("article")).toHaveAttribute("aria-current", "true");
 
-    const zone = screen.getByRole("combobox", { name: "Filter by zone" });
-    await user.selectOptions(zone, "stage");
+    const zone = await filterControl("Filter by location");
+    await chooseOption(user, zone, "stage");
     expect(zone).toHaveValue("stage");
-    const sort = screen.getByRole("combobox", { name: "Sort incidents" });
-    await user.selectOptions(sort, "latest_report");
+    const sort = await filterControl("Sort incidents");
+    await chooseOption(user, sort, "latest_report");
     expect(sort).toHaveValue("latest_report");
+    sort.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(await screen.findByRole("listbox")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(sort).toHaveFocus();
+    expect(sort).toHaveAttribute("aria-expanded", "false");
     const queue = screen.getByRole("region", { name: "Incident queue" });
     const titles = Array.from(queue.querySelectorAll(".incident-row-title")).map((row) => row.childNodes[0]?.textContent);
     expect(titles).toEqual(["Second Main Stage group", "Guest collapsed near Main Stage"]);
@@ -526,9 +550,9 @@ describe("dashboard interaction regressions", () => {
     }
 
     const queue = screen.getByRole("region", { name: "Incident queue" });
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "resolved");
+    await chooseOption(user, await filterControl("Filter by status"), "resolved");
     expect(within(queue).getByText("No incidents match this filter.")).toBeInTheDocument();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "open");
+    await chooseOption(user, await filterControl("Filter by status"), "open");
     expect(within(queue).getByText("Second Main Stage group")).toBeInTheDocument();
   });
 
@@ -628,7 +652,7 @@ describe("dashboard interaction regressions", () => {
     const identityLabel = mode === "move" ? "Destination group" : "Keep group identity";
     const previewPrefix = mode === "move" ? "Destination:" : "Group identity:";
     if (mode === "move") {
-      await user.selectOptions(screen.getByRole("combobox", { name: identityLabel }), target.id);
+      await chooseOption(user, screen.getByRole("combobox", { name: identityLabel }), target.id);
     }
     expect(screen.getByText(`${previewPrefix} ${target.title}`)).toBeInTheDocument();
 
@@ -697,7 +721,7 @@ describe("dashboard interaction regressions", () => {
         onSaved={vi.fn()}
       />,
     );
-    await user.selectOptions(screen.getByRole("combobox", { name: "Destination group" }), target.id);
+    await chooseOption(user, screen.getByRole("combobox", { name: "Destination group" }), target.id);
     expect(screen.getByText(`Destination: ${target.title}`)).toBeInTheDocument();
   });
 });

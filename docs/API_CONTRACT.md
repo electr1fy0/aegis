@@ -11,7 +11,7 @@ The API validates the raw Host header against `AEGIS_ALLOWED_HOSTS` (default `lo
 `Status = "open" | "acknowledged" | "monitoring" | "resolved"`
 
 - Event: `{id,name,timezone,exercise,created_at,policy_version}`.
-- Zone: `{id,label,x,y}`; schematic uses a 1000 by 600 viewbox.
+- Zone: `{id,label,x,y,selectable?}`; `selectable` defaults to true. Legacy replay zones have `selectable:false` and retain labels for historical reports. The schematic uses a 1000 by 600 viewbox.
 - Claim: `{field,value,span}`. `span` is original supporting text, not numerical offsets.
 - Report: `{id,event_id,text,zone_id,sublocation,category,reported_at,received_at,analysis_status,incident_id,claims,review_reasons}`. Nullable fields are explicit null. Status: complete/pending/failed.
 - Evidence: `{report_id,candidate_report_id,semantic_score,location_score,time_score,category_score,total_score,decision,reasons,missing_fields}`. Context scores nullable. Decision: attach/suggest/separate. Scores are ranking signals, not probabilities.
@@ -24,7 +24,7 @@ The API validates the raw Host header against `AEGIS_ALLOWED_HOSTS` (default `lo
 
 Workflow extensions: Report includes `display_id`, `model_revision` and `confirmed`; Incident includes `display_id`, `notes`, `original_title` and `title_override`; Evidence includes its historical `created_at`. Display IDs are stable and unique within an event and entity kind. Notes are `{id,text,actor,created_at}`. Snapshot also includes `undoable_actions: [{audit_id,incident_id,action,expected_version}]`, computed by the server from current state. Optional legacy response fields have defaults.
 
-Zones: `stage` Main Stage (230,180), `exit-a` Exit A (120,430), `exit-b` Exit B (820,430), `food` Food Court (720,180), `registration` Registration (470,430), `hall` Exhibition Hall (470,180). Labels are illustrative, not a real safety map.
+Zones: selectable locations are transcribed from the supplied VIT Vellore campus map, including hostel blocks, academic buildings, sports facilities, utilities, and services. `data/campus-map.json` defines the shared catalog and source-image SVG regions; `backend/aegis/fixtures.py` projects their centers onto the schematic canvas. Legacy `stage`, `exit-a`, `exit-b`, `registration`, and `hall` IDs remain valid for replay and historical records, but are omitted from option menus. The schematic is illustrative and is not a navigation or safety map.
 
 ## Endpoints
 

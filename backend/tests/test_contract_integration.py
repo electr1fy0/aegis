@@ -918,7 +918,7 @@ def test_demo_event_is_separate_and_snapshot_and_evaluation_follow_contract_sche
     assert {"status", "engine", "model_ready", "model_revision"} == set(previous["health"])
     assert previous["reports"][0]["event_id"] == old_event_id
     assert previous["reports"][0]["text"] == "The lift is broken in the exhibition hall."
-    assert {zone["id"] for zone in previous["zones"]} == {
+    assert {zone["id"] for zone in previous["zones"]} >= {
         "stage",
         "exit-a",
         "exit-b",

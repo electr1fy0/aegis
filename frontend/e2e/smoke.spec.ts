@@ -12,16 +12,20 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Situation overview" })).toBeVisible();
 
-  await page.locator(".replay-menu > summary").click();
-  await page.getByLabel("Synthetic scenario").selectOption("demo");
-  await page.getByRole("button", { name: "Start replay" }).click();
+  await page.getByRole("button", { name: "Replay", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Demo replay" }).click();
+  await page.getByRole("menuitem", { name: "Start replay" }).click();
+  await page.getByRole("button", { name: "Replay", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Step 0 of 24" })).toBeVisible();
 
   for (let step = 1; step <= 24; step += 1) {
-    await page.getByRole("button", { name: "Next report" }).click();
+    await page.getByRole("menuitem", { name: "Next report" }).click();
+    await page.getByRole("button", { name: "Replay", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: `Step ${step} of 24` })).toBeVisible();
   }
 
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
   const reportsCount = page.locator(".summary-card").filter({ hasText: "Reports received" }).locator(".summary-value");
   const groupsCount = page.locator(".summary-card").filter({ hasText: "Provisional groups" }).locator(".summary-value");
   const conflictsCount = page.locator(".summary-card").filter({ hasText: "Unresolved conflicts" }).locator(".summary-value");
@@ -47,8 +51,10 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   await page.getByRole("link", { name: "New report" }).click();
   await expect(page.getByRole("heading", { name: "New report" })).toBeVisible();
   await page.getByRole("textbox", { name: "Report description" }).fill(reportText);
-  await page.getByLabel("Zone").selectOption("food");
-  await page.getByLabel("Sublocation").fill("service counter");
+  await page.getByRole("combobox", { name: "Location", exact: true }).click();
+  await page.getByRole("option", { name: "Food Court", exact: true }).click();
+  await page.getByText("Add time or a specific spot").click();
+  await page.getByLabel("Specific spot").fill("service counter");
   await page.getByRole("radio", { name: /Just observed/ }).check();
   await page.getByRole("button", { name: "Submit report" }).click();
 
@@ -75,7 +81,8 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   const audit = page.getByRole("region", { name: "Coordinator audit" });
   await expect(audit.getByText(confirmationReason, { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Evaluation" }).click();
+  await page.getByRole("button", { name: "Settings and information" }).click();
+  await page.getByRole("menuitem", { name: "Evaluation" }).click();
   await expect(page.getByRole("heading", { name: "Evaluation" })).toBeVisible();
   await expect(page.getByText("Dataset version", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Grouping results" })).toBeVisible();
@@ -96,11 +103,13 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   const initial = await started.json();
   const eventId = initial.event.id as string;
   const token = randomUUID();
-  const text = `Synthetic ${token}: a visitor is unconscious beside the exhibition hall inner doorway.`;
+  const text = `Synthetic ${token}: a visitor is unconscious beside the Technology Tower inner doorway.`;
   await page.goto(`/report?event=${eventId}`);
   await page.getByRole("textbox", { name: "Report description" }).fill(text);
-  await page.getByLabel("Zone", { exact: true }).selectOption("hall");
-  await page.getByLabel("Sublocation (optional)", { exact: true }).fill("inner doorway");
+  await page.getByRole("combobox", { name: "Location", exact: true }).click();
+  await page.getByRole("option", { name: "Technology Tower", exact: true }).click();
+  await page.getByText("Add time or a specific spot").click();
+  await page.getByLabel("Specific spot", { exact: true }).fill("inner doorway");
   await page.getByRole("radio", { name: /Just observed/ }).check();
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Report description" })).toHaveValue(text);
@@ -128,7 +137,8 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   await expect(page.locator(".notes-list")).toContainText(note);
 
   await page.getByRole("button", { name: "Override priority", exact: true }).click();
-  await page.getByLabel("Coordinator priority override").selectOption("P2");
+  await page.getByRole("combobox", { name: "Coordinator priority override" }).click();
+  await page.getByRole("option", { name: "P2 · standard review" }).click();
   await page.locator(".action-form").filter({ has: page.getByLabel("Coordinator priority override") }).getByRole("textbox", { name: "Reason", exact: true }).fill("Demonstrate a reversible synthetic review decision.");
   await page.getByRole("button", { name: "Save priority", exact: true }).click();
   await page.getByRole("button", { name: "Reset to suggested priority" }).click();
@@ -139,9 +149,9 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   await page.getByRole("button", { name: "Save undo", exact: true }).click();
   await expect(page.getByText("The last eligible decision was undone.", { exact: true })).toBeVisible();
 
-  await page.locator(".export-menu > summary").click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
   const downloadPending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download CSV" }).click();
+  await page.getByRole("menuitem", { name: "Download CSV" }).click();
   const download = await downloadPending;
   const csv = await readFile((await download.path())!, "utf8");
   expect(csv).toContain(reportId!);
@@ -151,14 +161,31 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   const next = await page.request.post("/api/demo/session", { data: { scenario: "busy" } });
   const nextId = (await next.json()).event.id as string;
   await page.goto(`/dashboard?event=${nextId}`);
-  await page.getByLabel("Exercise", { exact: true }).selectOption(eventId);
+  await page.getByRole("combobox", { name: "Exercise", exact: true }).click();
+  await page.locator(`[role="option"][data-value="${eventId}"]`).click();
   await expect(page.locator(".incident-row-main").filter({ hasText: "Exhibition hall observation" })).toBeVisible();
   await page.getByLabel("Settings and information").click();
-  await page.getByLabel("Theme", { exact: true }).selectOption("light");
+  await page.getByRole("menuitemradio", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Map", exact: true }).click();
   await expect(page.getByRole("button", { name: "Map", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBeFalsy();
   expect(browserErrors).toEqual([]);
+});
+
+test("small-screen report reveals location picking without shifting its map targets", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/report");
+  await expect(page.getByRole("textbox", { name: "Report description" })).toBeEnabled();
+  await expect(page.getByLabel("Specific spot", { exact: true })).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+
+  await page.getByRole("button", { name: "Choose on map" }).click();
+  const aBlock = page.getByRole("button", { name: "Select A Block", exact: true });
+  await aBlock.click();
+  await expect(aBlock).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Location", exact: true })).toContainText("A Block");
+  await expect(page.getByRole("button", { name: "Choose on map" })).toBeFocused();
 });

@@ -1,7 +1,11 @@
+import { Popover, PopoverTrigger, PopoverContent, PopoverHeader, PopoverTitle, PopoverDescription } from "../components/ui/popover";
+import { CampusMap, CAMPUS_ZONE_IDS } from "../components/campus-map";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "../components/ui/dropdown-menu";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   IconActivity,
+  IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconArrowsExchange,
   IconChevronRight,
@@ -26,7 +30,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { NativeSelect } from "../components/ui/native-select";
+import { MenuSelect } from "../components/ui/menu-select";
 import { Textarea } from "../components/ui/textarea";
 import { useSnapshot } from "../hooks/use-snapshot";
 import {
@@ -449,6 +453,13 @@ export function DashboardPage() {
     setSelectedIncidentIds([]);
     const incident = source.incidents.find((item) => item.id === incidentId)!;
     markIncidentRead(incident, source.event.id);
+    if (typeof window !== "undefined" && window.matchMedia?.("(max-width: 900px)").matches) {
+      requestAnimationFrame(() => {
+        const inspector = document.querySelector<HTMLElement>(".inspector-panel");
+        inspector?.focus({ preventScroll: true });
+        inspector?.scrollIntoView?.({ block: "start", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      });
+    }
   };
 
   const onGroupingSaved = (next: Snapshot, message: string, moveNext = false) => {
@@ -518,9 +529,21 @@ export function DashboardPage() {
     }
   };
 
+  const closeInspector = () => {
+    setInspectorOpen(false);
+    requestAnimationFrame(() => {
+      const target = view === "map"
+        ? document.querySelector<HTMLElement>(".map-panel [aria-pressed='true']")
+        : queueListRef.current?.querySelector<HTMLElement>("article[aria-current='true'] .incident-row-main");
+      target?.focus({ preventScroll: true });
+      if (window.matchMedia?.("(max-width: 900px)").matches) target?.scrollIntoView?.({ block: "nearest" });
+    });
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
     const target = event.target;
-    if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
+    if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], [role='combobox'], [role='listbox'], [role='menu']")) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (event.key === "/") {
       const search = document.querySelector<HTMLInputElement>(".queue-search input[type='search']");
@@ -539,7 +562,7 @@ export function DashboardPage() {
         setStatusOpen(false);
         setSelectedIncidentIds([]);
         setSelectedReportIds([]);
-        setInspectorOpen(false);
+        closeInspector();
       }
       return;
     }
@@ -605,27 +628,31 @@ export function DashboardPage() {
       />
 
       <div className="dashboard-toolbar">
+        <div className="workspace-switch" role="group" aria-label="Dashboard workspace view">
+        <button type="button" aria-pressed={view === "queue"} onClick={() => setView("queue")}>Queue</button>
+        <button type="button" aria-pressed={view === "map"} onClick={() => setView("map")}>Map</button>
+      </div>
         <div className="toolbar-right">
-          <details className="toolbar-menu replay-menu">
-            <summary><IconPlayerPlay />Replay</summary>
-            <div className="toolbar-menu-content">
-              <label htmlFor="replay-scenario">Synthetic scenario</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}><IconPlayerPlay />Replay</DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-56">
+              <DropdownMenuRadioGroup value={scenario} onValueChange={(value) => setScenario(value as ReplayScenario)}>
+                <DropdownMenuLabel>Synthetic scenario</DropdownMenuLabel>
               {activeReplay && <p className="replay-progress" role="status">Step {activeReplay.cursor} of {activeReplay.total} · {activeReplay.scenario}</p>}
-              <NativeSelect id="replay-scenario" className="toolbar-select" value={scenario} onChange={(event) => setScenario(event.target.value as ReplayScenario)}>
-                <option value="demo">Demo replay</option><option value="busy">Busy replay</option><option value="edge">Edge cases replay</option>
-              </NativeSelect>
-              <Button variant="outline" size="sm" disabled={replayPending} onClick={() => void handleReplayStart()}><IconPlayerPlay />{replayPending ? "Starting…" : "Start replay"}</Button>
-              {activeReplay && <Button variant="secondary" size="sm" disabled={replayPending || activeReplay.cursor >= activeReplay.total} onClick={() => void handleReplayNext(activeReplay)}><IconPlayerTrackNext />{activeReplay.cursor >= activeReplay.total ? "Replay complete" : replayPending ? "Advancing…" : "Next report"}</Button>}
-            </div>
-          </details>
+                <DropdownMenuRadioItem value="demo" closeOnClick={false}>Demo replay</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="busy" closeOnClick={false}>Busy replay</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="edge" closeOnClick={false}>Edge cases replay</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={replayPending} onClick={() => void handleReplayStart()}><IconPlayerPlay />{replayPending ? "Starting…" : "Start replay"}</DropdownMenuItem>
+              {activeReplay && <DropdownMenuItem disabled={replayPending || activeReplay.cursor >= activeReplay.total} onClick={() => void handleReplayNext(activeReplay)}><IconPlayerTrackNext />{activeReplay.cursor >= activeReplay.total ? "Replay complete" : replayPending ? "Advancing…" : "Next report"}</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ExportMenu snapshot={snapshot} />
         </div>
       </div>
 
-      <div className="workspace-switch" role="group" aria-label="Dashboard workspace view">
-        <button type="button" aria-pressed={view === "queue"} onClick={() => setView("queue")}>Queue</button>
-        <button type="button" aria-pressed={view === "map"} onClick={() => setView("map")}>Map</button>
-      </div>
+
       <div className={`workspace-grid is-${view}${inspectorOpen ? " is-inspector-open" : " is-inspector-closed"}`}>
         <IncidentQueue
           incidents={visibleIncidents}
@@ -693,10 +720,10 @@ export function DashboardPage() {
             selectIncident(incidentId);
           }}
           onNextReview={selectNextReview}
-          onClose={() => setInspectorOpen(false)}
+          onClose={closeInspector}
         />
       </div>
-      {!inspectorOpen && <button type="button" className="open-inspector-button" onClick={() => setInspectorOpen(true)}>Open incident inspector</button>}
+      {!inspectorOpen && selectedIncident && <button type="button" className="open-inspector-button" onClick={() => setInspectorOpen(true)}>Open incident inspector</button>}
 
       <AuditTimeline snapshot={snapshot} />
 
@@ -740,7 +767,7 @@ function SummaryCard({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={`summary-card${tone ? ` is-${tone}` : ""}`} onClick={onClick} aria-label={`${label}: ${value}. Filter incident queue`}>
+    <button type="button" className={`summary-card${tone && value > 0 ? ` is-${tone}` : ""}`} onClick={onClick} aria-label={`${label}: ${value}. Filter incident queue`}>
       <div className="summary-copy"><strong className="summary-value">{value}</strong><span className="summary-label">{label}</span></div>
     </button>
   );
@@ -777,6 +804,8 @@ function IncidentQueue({
   onToggleIncident,
   onMerge,
 }: IncidentQueueProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilters = Number(criteria.priority !== "all") + Number(criteria.status !== "all") + Number(criteria.zone !== "all") + Number(criteria.sort !== "priority");
   const filters: { id: QueueFilter; label: string }[] = [
     { id: "active", label: "Active" }, { id: "review", label: "Review" },
     { id: "conflicts", label: "Conflicts" }, { id: "all", label: "All" },
@@ -806,25 +835,41 @@ function IncidentQueue({
         <label className="queue-search">
           <IconSearch size={15} />
           <span className="visually-hidden">Search incidents by title, ID, report text, or location</span>
-          <Input type="search" value={criteria.query} placeholder="Search title, ID, report, location" onChange={(event) => onCriteriaChange({ query: event.target.value })} />
+          <Input type="search" value={criteria.query} placeholder="Search incidents" onChange={(event) => onCriteriaChange({ query: event.target.value })} />
         </label>
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <PopoverTrigger render={<Button type="button" variant="outline" className="queue-filters-trigger" />} aria-label={activeFilters ? `Filters, ${activeFilters} active` : "Filters"}>
+            <IconAdjustmentsHorizontal size={17} />Filters{activeFilters > 0 && <span className="filter-count">{activeFilters}</span>}
+          </PopoverTrigger>
+          <PopoverContent align="end" className="queue-filters-popover">
+            <PopoverHeader><PopoverTitle>Filter incidents</PopoverTitle><PopoverDescription>Show what matters to you right now.</PopoverDescription></PopoverHeader>
         <div className="queue-filter-selects">
-          <label><span className="visually-hidden">Filter by priority</span><NativeSelect aria-label="Filter by priority" value={criteria.priority} onChange={(event) => onCriteriaChange({ priority: event.target.value as QueueCriteria["priority"] })}>
+          <div className="select-field"><label htmlFor="filter-priority">Priority</label><MenuSelect id="filter-priority" aria-label="Filter by priority" value={criteria.priority} onChange={(event) => onCriteriaChange({ priority: event.target.value as QueueCriteria["priority"] })}>
             <option value="all">Any priority</option><option value="P0">P0 · Immediate</option><option value="P1">P1 · High</option><option value="P2">P2 · Standard</option><option value="UNASSESSED">Unassessed</option>
-          </NativeSelect></label>
-          <label><span className="visually-hidden">Filter by status</span><NativeSelect aria-label="Filter by status" value={criteria.status} onChange={(event) => onCriteriaChange({ status: event.target.value as QueueCriteria["status"] })}>
+          </MenuSelect></div>
+          <div className="select-field"><label htmlFor="filter-status">Status</label><MenuSelect id="filter-status" aria-label="Filter by status" value={criteria.status} onChange={(event) => onCriteriaChange({ status: event.target.value as QueueCriteria["status"] })}>
             <option value="all">Any status</option><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="monitoring">Monitoring</option><option value="resolved">Resolved</option>
-          </NativeSelect></label>
-          <label><span className="visually-hidden">Filter by zone</span><NativeSelect aria-label="Filter by zone" value={criteria.zone} onChange={(event) => onCriteriaChange({ zone: event.target.value })}>
-            <option value="all">Any zone</option><option value="unlocated">Has unlocated report</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
-          </NativeSelect></label>
-          <label><span className="visually-hidden">Sort incidents</span><NativeSelect aria-label="Sort incidents" value={criteria.sort} onChange={(event) => onCriteriaChange({ sort: event.target.value as QueueSort })}>
+          </MenuSelect></div>
+          <div className="select-field"><label htmlFor="filter-zone">Location</label><MenuSelect id="filter-zone" aria-label="Filter by location" value={criteria.zone} onChange={(event) => onCriteriaChange({ zone: event.target.value })}>
+            <option value="all">Any location</option><option value="unlocated">Has unlocated report</option>{zones.filter((zone) => zone.id === criteria.zone && zone.selectable === false).map((zone) => <option key={zone.id} value={zone.id} disabled>{zone.label} (legacy replay)</option>)}{zones.filter((zone) => zone.selectable !== false).map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
+          </MenuSelect></div>
+          <div className="select-field"><label htmlFor="sort-incidents">Sort by</label><MenuSelect id="sort-incidents" aria-label="Sort incidents" value={criteria.sort} onChange={(event) => onCriteriaChange({ sort: event.target.value as QueueSort })}>
             <option value="priority">Priority</option><option value="oldest_unreviewed">Oldest unreviewed</option><option value="newest_update">Newest update</option><option value="latest_report">Latest report</option>
-          </NativeSelect></label>
+          </MenuSelect></div>
         </div>
+            <div className="popover-actions">
+              <Button type="button" variant="ghost" size="sm" disabled={activeFilters === 0} onClick={() => onCriteriaChange({ priority: "all", status: "all", zone: "all", sort: "priority" })}>Reset filters</Button>
+              <Button type="button" size="sm" onClick={() => setFiltersOpen(false)}>Done</Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
       {incidents.length === 0 ? (
-        <div className="queue-empty">No incidents match this filter.</div>
+        <div className="queue-empty">
+          {reports.length === 0 && !criteria.query && activeFilters === 0
+            ? <><strong>No reports yet</strong><p>New reports will appear here, ready for review.</p></>
+            : <><p>No incidents match this filter.</p>{(activeFilters > 0 || criteria.query) && <Button type="button" size="sm" variant="ghost" onClick={() => onCriteriaChange({ ...defaultCriteria, filter: "all" })}>Clear filters</Button>}</>}
+        </div>
       ) : (
         <div
           className="queue-list"
@@ -909,29 +954,39 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
     const groups = incidents.filter((incident) => incident.zone_id === zone.id);
     return groups.length ? [{ zone, groups: sortIncidentsByPriority(groups) }] : [];
   });
-  const mapZones = [...zones].sort((left, right) => left.x - right.x);
+  const hasCampusMap = zones.some((zone) => zone.selectable !== false && CAMPUS_ZONE_IDS.has(zone.id) && (zone.id !== "food" || zone.selectable === true));
+  const selectedZoneId = incidents.find((incident) => incident.id === selectedIncidentId)?.zone_id ?? "";
+  const legacyLocated = located.filter(({ zone }) => !CAMPUS_ZONE_IDS.has(zone.id));
+  const visibleZones = located.map(({ zone }) => zone);
+  const mapZones = [...visibleZones].sort((left, right) => left.x - right.x);
   const roadPath = mapZones.map((zone, index) => `${index === 0 ? "M" : "L"} ${zone.x} ${zone.y}`).join(" ");
 
   return (
-    <section className="workspace-panel map-panel" aria-labelledby="map-heading">
+    <section className={`workspace-panel map-panel${hasCampusMap ? " has-campus-map" : ""}`} aria-labelledby="map-heading">
       <div className="panel-header">
-        <h2 className="panel-title" id="map-heading"><IconMap />Campus schematic</h2>
-        <span className="panel-meta">Illustrative · not to scale</span>
+        <h2 className="panel-title" id="map-heading"><IconMap />{hasCampusMap ? "Campus map" : "Campus schematic"}</h2>
+        <span className="panel-meta">{hasCampusMap ? "Numbers show active groups" : "Illustrative · not to scale"}</span>
       </div>
       <div className="map-wrap">
-        <div className="map-caption">
+        {!hasCampusMap && <div className="map-caption">
           <div className="map-caption-copy"><strong>Reported locations</strong><span>Active groups matching queue filters with known zones.</span></div>
           <div className="map-legend" aria-label="Marker legend">
             <span className="map-legend-item"><i className="legend-dot is-risk" />P0</span>
             <span className="map-legend-item"><i className="legend-dot" />Other</span>
           </div>
-        </div>
-        <div className="map-canvas">
+        </div>}
+        {hasCampusMap ? <CampusMap showHeading={false} zones={zones} value={expandedZoneId ?? selectedZoneId}
+          counts={Object.fromEntries(located.map(({ zone, groups }) => [zone.id, groups.length]))}
+          onValueChange={(zoneId) => {
+            setExpandedZoneId(zoneId);
+            const groups = incidents.filter((incident) => incident.zone_id === zoneId);
+            if (groups.length === 1) onSelect(groups[0]!.id);
+          }} /> : <div className="map-canvas">
           <svg className="map-svg" viewBox="0 0 1000 600" role="img" aria-label="Illustrative campus zone map">
             <path className="map-road" d={roadPath} />
             <path className="map-road" d="M 230 180 L 470 180 L 720 180 M 120 430 L 470 430 L 820 430" />
             <rect className="map-hall" x="305" y="90" width="330" height="182" rx="18" />
-            {zones.map((zone) => {
+            {visibleZones.map((zone) => {
               const labelLines = zone.label.trim().split(/\s+/);
               const labelHeight = Math.max(96, labelLines.length * 34 + 28);
               return (
@@ -976,10 +1031,17 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
               );
             })}
           </svg>
-        </div>
+        </div>}
+        {hasCampusMap && legacyLocated.length > 0 && <div className="map-group-list" aria-label="Replay locations outside the reference map">
+          <strong>Replay locations outside the reference map</strong>
+          {legacyLocated.map(({ zone, groups }) => <button key={zone.id} type="button" onClick={() => { setExpandedZoneId(zone.id); if (groups.length === 1) onSelect(groups[0]!.id); }}>
+            <span>{zone.label}</span><span>{groups.length} groups</span>
+          </button>)}
+        </div>}
         {expandedZone && (
           <div className="map-group-list" aria-label={`Groups in ${expandedZone.label}`}>
             <strong>{expandedZone.label} · groups at this location</strong>
+            {!incidents.some((incident) => incident.zone_id === expandedZoneId) && <p className="field-hint">No active groups at this location match the current filters.</p>}
             {incidents.filter((incident) => incident.zone_id === expandedZoneId).map((incident) => (
               <button key={incident.id} type="button" className={selectedIncidentId === incident.id ? "is-selected" : ""} onClick={() => onSelect(incident.id)}>
                 <span className={`priority-rail priority-rail-${incident.priority}`} /><span>{incident.title}</span><span>{incident.priority} · {incident.report_ids.length} reports</span>
@@ -991,7 +1053,7 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
           <span><IconMapPin size={13} /> <strong>Unlocated reports</strong> · filter queue</span><span>{unlocatedCount}</span>
         </button>
       </div>
-      <p className="map-note">Illustrative event zones only. This schematic is not a live safety map and does not imply verified conditions.</p>
+      <p className="map-note">Reference locations only. This map does not show verified conditions or live navigation.</p>
     </section>
   );
 }
@@ -1069,7 +1131,7 @@ function IncidentInspector({
   }, [snapshot.event.id, incident?.id]);
   if (!incident) {
     return (
-      <section className="workspace-panel inspector-panel" aria-label="Incident inspector">
+      <section tabIndex={-1} className="workspace-panel inspector-panel" aria-label="Incident inspector">
         <div className="panel-header"><h2 className="panel-title">Incident inspector</h2><Button className="inspector-close-button" size="xs" variant="ghost" onClick={onClose}><IconX />Close</Button></div>
         <div className="inspector-empty"><IconMapPin /><strong>Select a provisional group</strong><span>Review its source reports, evidence, priority rule, and coordinator actions.</span></div>
       </section>
@@ -1098,7 +1160,7 @@ function IncidentInspector({
   const undoableAction = snapshot.undoable_actions?.find((action) => action.incident_id === incident.id);
 
   return (
-    <section className="workspace-panel inspector-panel" aria-labelledby="inspector-heading">
+    <section tabIndex={-1} className="workspace-panel inspector-panel" aria-labelledby="inspector-heading">
       <div className="panel-header">
         <h2 className="panel-title" id="inspector-heading">Incident inspector</h2>
         <div className="inspector-head-actions"><button type="button" className="copy-id" aria-label={`Copy full incident ID ${incident.id}`} onClick={() => void copyValue(incident.id).then((copied) => onNotice({ kind: copied ? "success" : "error", message: copied ? "Full incident ID copied." : "Clipboard access is unavailable." }))}><IconCopy size={14} />{shortDisplayId(incident.display_id, incident.id, "INC")}</button><details className="incident-technical-details"><summary>Details</summary><span>Version {incident.version}</span><span>{incident.id}</span></details><Button className="inspector-close-button" size="xs" variant="ghost" onClick={onClose}><IconX />Close</Button></div>
@@ -1240,12 +1302,12 @@ function IncidentInspector({
           <div className="inspector-section-heading"><h3>Coordinator actions</h3><span className="panel-meta">Each decision is audited</span></div>
           <div className="action-row">
             <Button size="sm" variant="outline" onClick={() => onReviewMode(reviewMode === "confirm" ? null : "confirm")}><IconCircleCheck />Confirm grouping</Button>
-            <Button size="sm" variant="outline" disabled={selectedReportIds.length === 0} onClick={() => onReviewMode(reviewMode === "reject" ? null : "reject")}><IconX />Reject pairing</Button>
+            {selectedReportIds.length > 0 && <Button size="sm" variant="outline" onClick={() => onReviewMode(reviewMode === "reject" ? null : "reject")}><IconX />Reject pairing</Button>}
           </div>
           {selectedReportIds.length > 0 && <div className="action-row"><Button size="sm" variant="secondary" onClick={() => onReviewMode(reviewMode === "move" ? null : "move")}><IconArrowsExchange />Move selected</Button><Button size="sm" variant="secondary" onClick={() => onReviewMode(reviewMode === "split" ? null : "split")}><IconGitMerge />Split selected reports</Button></div>}
           {selectedIncidentIds.length > 1 && <Button size="sm" variant="secondary" onClick={() => onReviewMode("merge")}><IconGitMerge />Merge {selectedIncidentIds.length} selected groups</Button>}
-          {selectedReportIds.length === 0 && <p className="action-note">Select one or more source reports to move, split, or reject a pairing.</p>}
-          <div className="action-row">
+
+          <div className="action-row secondary-actions">
             <Button size="sm" variant="ghost" onClick={() => onPriorityOpen(!priorityOpen)}>Override priority</Button>
             <Button size="sm" variant="ghost" onClick={() => onStatusOpen(!statusOpen)}>Change status</Button>
           </div>
@@ -1464,14 +1526,14 @@ function UndoActionForm({ action, incident, onSaved, onNotice }: { action: NonNu
 }
 
 function ExportMenu({ snapshot }: { snapshot: Snapshot }) {
-  return <details className="toolbar-menu export-menu">
-    <summary><IconFileExport />Export</summary>
-    <div className="toolbar-menu-content">
-      <Button variant="outline" size="sm" onClick={() => window.print()}><IconPrinter />Print incident brief</Button>
-      <Button variant="outline" size="sm" onClick={() => saveFile(`aegis-${snapshot.event.id}-brief.json`, "application/json;charset=utf-8", exportSnapshotJson(snapshot))}><IconDownload />Download JSON</Button>
-      <Button variant="outline" size="sm" onClick={() => saveFile(`aegis-${snapshot.event.id}-brief.csv`, "text/csv;charset=utf-8", exportSnapshotCsv(snapshot))}><IconDownload />Download CSV</Button>
-    </div>
-  </details>;
+  return <DropdownMenu>
+    <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}><IconFileExport />Export</DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="min-w-56">
+      <DropdownMenuItem onClick={() => window.print()}><IconPrinter />Print incident brief</DropdownMenuItem>
+      <DropdownMenuItem onClick={() => saveFile(`aegis-${snapshot.event.id}-brief.json`, "application/json;charset=utf-8", exportSnapshotJson(snapshot))}><IconDownload />Download JSON</DropdownMenuItem>
+      <DropdownMenuItem onClick={() => saveFile(`aegis-${snapshot.event.id}-brief.csv`, "text/csv;charset=utf-8", exportSnapshotCsv(snapshot))}><IconDownload />Download CSV</DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>;
 }
 
 function PrintBrief({ snapshot }: { snapshot: Snapshot }) {
@@ -1591,15 +1653,14 @@ export function GroupingReviewForm({
     <form className="action-form" onSubmit={(event) => void handleSubmit(event)}>
       <strong className="action-note">{titles[mode]}</strong>
       {(mode === "move" || mode === "merge") && (
-        <label>
+        <div className="select-field"><label htmlFor="group-destination">
           {mode === "move" ? "Destination group" : "Keep group identity"}
-          <NativeSelect className="w-full" value={targetIncidentId} onChange={(event) => setTargetIncidentId(event.target.value)}>
+          </label><MenuSelect id="group-destination" className="w-full" value={targetIncidentId} onChange={(event) => setTargetIncidentId(event.target.value)}>
             {mode === "move" && <option value="" disabled>Choose a destination group</option>}
             {(mode === "merge" ? incidents.filter((item) => mergeIncidentIds.includes(item.id)) : otherIncidents).map((item) => (
               <option key={item.id} value={item.id}>{item.title}</option>
             ))}
-          </NativeSelect>
-        </label>
+          </MenuSelect></div>
       )}
       <label>
         Coordinator reason
@@ -1686,11 +1747,10 @@ function PriorityForm({ incident, onCancel, onSaved, onNotice, onNextReview }: P
 
   return (
     <form className="action-form" onSubmit={(event) => void handleSubmit(event)}>
-      <label>Coordinator priority override
-        <NativeSelect className="w-full" value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
+      <div className="select-field"><label htmlFor="coordinator-priority">Coordinator priority override
+        </label><MenuSelect id="coordinator-priority" className="w-full" value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
           <option value="P0">P0 · immediate review</option><option value="P1">P1 · urgent review</option><option value="P2">P2 · standard review</option><option value="UNASSESSED">Unassessed · needs review</option>
-        </NativeSelect>
-      </label>
+        </MenuSelect></div>
       <label>Reason<Textarea className="min-h-24" value={reason} minLength={3} maxLength={1000} required placeholder="What did you verify?" onChange={(event) => setReason(event.target.value)} /></label>
       {error && <span className="form-error" role="alert">{error}</span>}
       <VersionConflictNotice
@@ -1750,11 +1810,10 @@ function StatusForm({ incident, onCancel, onSaved, onNotice, onNextReview }: Sta
 
   return (
     <form className="action-form" onSubmit={(event) => void handleSubmit(event)}>
-      <label>Workflow status
-        <NativeSelect className="w-full" value={status} onChange={(event) => setStatus(event.target.value as IncidentStatus)}>
+      <div className="select-field"><label htmlFor="workflow-status">Workflow status
+        </label><MenuSelect id="workflow-status" className="w-full" value={status} onChange={(event) => setStatus(event.target.value as IncidentStatus)}>
           <option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="monitoring">Monitoring</option><option value="resolved">Resolved</option>
-        </NativeSelect>
-      </label>
+        </MenuSelect></div>
       <label>Reason<Textarea className="min-h-24" value={reason} minLength={3} maxLength={1000} required placeholder="Record what changed." onChange={(event) => setReason(event.target.value)} /></label>
       {error && <span className="form-error" role="alert">{error}</span>}
       <VersionConflictNotice

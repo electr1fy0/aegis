@@ -1,3 +1,4 @@
+import { chooseOption } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -160,7 +161,7 @@ describe("dashboard priority and status actions", () => {
   it("requires a meaningful reason and saves an audited priority override", async () => {
     const { user } = await renderDashboard();
     await user.click(screen.getByRole("button", { name: "Override priority" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Coordinator priority override" }), "P1");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Coordinator priority override" }), "P1");
     await user.type(screen.getByRole("textbox", { name: "Reason" }), "no");
     await user.click(screen.getByRole("button", { name: "Save priority" }));
 
@@ -195,7 +196,7 @@ describe("dashboard priority and status actions", () => {
     render(<DashboardPage />);
     await screen.findByRole("heading", { name: "Guest collapsed near Main Stage" });
     await user.click(screen.getByRole("button", { name: "Override priority" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Coordinator priority override" }), "P2");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Coordinator priority override" }), "P2");
     const reason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(reason, "Reviewed with the operations lead.");
     await user.click(screen.getByRole("button", { name: "Save priority" }));
@@ -222,7 +223,7 @@ describe("dashboard priority and status actions", () => {
   it("saves status changes and shows server errors without losing the reason", async () => {
     const { user } = await renderDashboard();
     await user.click(screen.getByRole("button", { name: "Change status" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "acknowledged");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Workflow status" }), "acknowledged");
     const reason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(reason, "no");
     await user.click(screen.getByRole("button", { name: "Save status" }));
@@ -244,7 +245,7 @@ describe("dashboard priority and status actions", () => {
     expect(await screen.findByText("Status changed to Acknowledged.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Change status" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
     const failedReason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(failedReason, "Monitor until facilities confirms.");
     updateStatusMock.mockRejectedValueOnce(new Error("Status service unavailable."));
@@ -268,7 +269,7 @@ describe("dashboard priority and status actions", () => {
     render(<DashboardPage />);
     await screen.findByRole("heading", { name: "Guest collapsed near Main Stage" });
     await user.click(screen.getByRole("button", { name: "Change status" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
     const reason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(reason, "Keep watch until exit is checked.");
     await pollNextSnapshot();

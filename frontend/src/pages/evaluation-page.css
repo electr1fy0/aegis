@@ -223,7 +223,7 @@
   font-size: 13px;
 }
 
-.evaluation-filter select {
+.evaluation-filter :is(select, .app-select) {
   min-height: 36px;
   padding: 6px 30px 6px 10px;
   border: 1px solid var(--border);

@@ -8,6 +8,7 @@ import {
 import { AppFrame } from "../components/app-frame";
 import "../styles.css";
 import "../components/app-frame.css";
+import "../experience.css";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -33,8 +34,9 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="dark style-nova">
+    <html lang="en" className="style-nova" suppressHydrationWarning>
       <head>
+        <script id="aegis-theme-init" dangerouslySetInnerHTML={{ __html: `(function(){var p="system";try{p=localStorage.getItem("aegis.theme")||"system"}catch(e){}var d=p==="dark"||(p!=="light"&&p!=="dark"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);document.documentElement.style.colorScheme=d?"dark":"light"})()` }} />
         <HeadContent />
       </head>
       <body>

@@ -1,3 +1,4 @@
+import { filterControl } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -158,7 +159,7 @@ describe("dashboard saved state", () => {
 
     const queue = await screen.findByRole("region", { name: "Incident queue" });
     await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("Guest"));
-    expect(screen.getByRole("combobox", { name: "Sort incidents" })).toHaveValue("latest_report");
+    expect(await filterControl("Sort incidents")).toHaveValue("latest_report");
     expect(within(queue).getByRole("button", { name: /Guest collapsed near Main Stage/ }).closest(".incident-row")).toHaveAttribute("aria-current", "true");
     expect(within(queue).getByText("1 new")).toBeInTheDocument();
     expect(screen.getByLabelText("Incidents matching queue filters")).toHaveProperty("scrollTop", 36);
@@ -424,7 +425,7 @@ describe("dashboard saved state", () => {
     }));
     renderDashboard();
 
-    expect(await screen.findByText("No incidents match this filter.")).toBeInTheDocument();
+    expect(await screen.findByText("No reports yet")).toBeInTheDocument();
     expect(screen.getByText("Select a provisional group")).toBeInTheDocument();
     expect(screen.queryByLabelText("Incidents matching queue filters")).not.toBeInTheDocument();
   });

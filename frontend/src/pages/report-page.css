@@ -1,10 +1,10 @@
 .report-page {
-  width: min(100%, 900px);
+  width: min(100%, 720px);
   margin-inline: auto;
 }
 
 .report-page .page-heading {
-  margin-bottom: 26px;
+  margin-bottom: 32px;
 }
 
 .report-page .page-heading-copy {
@@ -24,9 +24,9 @@
 
 .report-page .form-card {
   gap: 0;
-  padding: 24px;
+  padding: 32px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 20px;
   background: var(--card);
   box-shadow: none;
 }
@@ -38,7 +38,7 @@
 
 .report-page .report-form {
   display: grid;
-  gap: 21px;
+  gap: 28px;
 }
 
 .report-page .form-field {
@@ -211,3 +211,50 @@
 }
 
 .report-page .report-safety-scope { margin-top: 16px; color: var(--muted-foreground); font-size: 12px; line-height: 1.5; }
+
+.report-page .page-subtitle { max-width: 52ch; line-height: 1.6; }
+.report-page .report-description-field textarea { min-height: 156px; padding: 16px; resize: vertical; font-size: 15px; line-height: 1.65; border-radius: 12px; }
+.report-page .report-description-field { position: relative; }
+.report-page .report-character-count { position: absolute; top: 0; right: 0; margin: 0; text-align: right; font-size: 11px; opacity: 0; transition: opacity 120ms ease; }
+.report-page .report-description-field:focus-within .report-character-count,
+.report-page .report-character-count[data-near-limit="true"] { opacity: 1; }
+.report-page .form-grid { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.report-page .optional-label { color: var(--muted-foreground); font-size: 11px; font-weight: 400; margin-left: 6px; }
+.report-page .form-select, .report-page .map-picker-button { min-height: 44px; border-radius: 11px; font-size: 13px; }
+.report-page .map-picker-button { padding-inline: 15px; }
+.report-page .report-extra-details { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.report-page .report-extra-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 17px 0; font-size: 13px; color: var(--muted-foreground); cursor: pointer; list-style: none; }
+.report-page .report-extra-details > summary::-webkit-details-marker { display: none; }
+.report-page .report-extra-details > summary svg { transition: transform 120ms ease; }
+.report-page .report-extra-details[open] > summary svg { transform: rotate(180deg); }
+.report-page .report-extra-details > summary:hover { color: var(--foreground); }
+.report-page .report-extra-details > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; border-radius: 5px; }
+.report-page .report-extra-details-body { display: grid; gap: 24px; padding-bottom: 24px; }
+.report-page .report-extra-details .time-mode-fieldset { border: 0; padding-top: 0; }
+.report-page .time-mode-options { gap: 8px; }
+.report-page .time-mode-options label { justify-content: center; align-items: center; padding: 12px 10px; border-radius: 10px; background: var(--muted); }
+.report-page .time-mode-options label:has(input:checked) { background: var(--accent); box-shadow: inset 0 0 0 1px var(--border); }
+.report-page .time-mode-options input { margin: 0; }
+.report-page .submit-row { padding-top: 0; }
+.report-page .submit-row > button { min-height: 46px; padding-inline: 24px; border-radius: 12px; font-size: 14px; }
+.report-page .receipt-card { margin: 0 0 28px; padding: 0 0 28px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; scroll-margin-top: 136px; }
+.report-page .receipt-card:focus { outline: none; }
+.report-page .receipt-head { gap: 10px; font-size: 18px; font-weight: 550; }
+.report-page .receipt-check { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: var(--success-soft); }
+.report-page .receipt-details { margin-top: 4px; display: grid; gap: 10px; }
+.report-page .receipt-details > summary { color: var(--muted-foreground); cursor: pointer; font-size: 12px; }
+.report-page .receipt-details[open] > summary { margin-bottom: 14px; }
+.report-page .receipt-details > p + p { margin-top: 10px; }
+.report-page .draft-status { margin-top: 20px; font-size: 11px; }
+.report-page .report-safety-scope { max-width: 52ch; margin: 20px auto 0; text-align: center; font-size: 11px; line-height: 1.6; }
+@media (max-width: 560px) {
+  .report-page .form-card { padding: 22px 20px; border-radius: 16px; }
+  .report-page .form-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .report-page .map-picker-button { width: 100%; }
+  .report-page .time-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .report-page .time-mode-options strong { font-size: 12px; }
+  .report-page .time-mode-options label { padding-inline: 6px; gap: 6px; }
+}
+
+.report-page .report-context { min-height: 18px; }
+@media (max-width: 560px) { .report-page .report-context { min-height: 36px; } }

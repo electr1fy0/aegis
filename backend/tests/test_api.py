@@ -204,7 +204,11 @@ def test_health_current_event_empty_snapshot_and_lists(system: Any) -> None:
     }
     current = client.get("/api/events/current").json()
     assert current["event"]["exercise"] is True
-    assert len(current["zones"]) == 6
+    assert {zone["id"] for zone in current["zones"] if zone.get("selectable", True)} >= {
+        "a-block",
+        "technology-tower",
+        "vit-lake",
+    }
     initial = client.get("/api/snapshot").json()
     assert initial["counts"] == {"reports": 0, "incidents": 0, "review": 0, "conflicts": 0}
     assert initial["reports"] == [] and initial["incidents"] == [] and initial["audit"]
@@ -237,6 +241,19 @@ def test_ingest_preserves_raw_text_returns_typed_public_shape_and_duplicate(syst
     assert snapshot["counts"]["reports"] == 1
     assert snapshot["reports"][0]["text"] == raw
     assert [event["action"] for event in snapshot["audit"]].count("report.received") == 1
+
+
+def test_campus_locations_are_selectable_and_accepted(system: Any) -> None:
+    client, _, _, _ = system
+    zones = client.get("/api/events/current").json()["zones"]
+    assert not next(zone for zone in zones if zone["id"] == "hall")["selectable"]
+    assert len({zone["id"] for zone in zones}) == len(zones)
+    for zone_id in ("a-block", "technology-tower", "vit-lake"):
+        response = client.post(
+            "/api/reports", json=report_payload("Campus location report", zone_id, zone_id=zone_id)
+        )
+        assert response.status_code == 201
+        assert response.json()["report"]["zone_id"] == zone_id
 
 
 def test_ingest_idempotency_conflict_unknown_event_invalid_zone_and_validation(system: Any) -> None:
@@ -694,7 +711,7 @@ def test_demo_fixture_mismatch_and_bad_scenario_data_return_safe_errors(
     monkeypatch.undo()
     with pytest.raises(ValueError):
         _scenario("invalid")
-    assert len(_zones()) == 6
+    assert any(zone["id"] == "vit-lake" for zone in _zones())
 
 
 def test_evaluation_success_cache_and_unavailable(

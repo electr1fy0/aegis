@@ -1,3 +1,4 @@
+import { chooseOption, filterControl } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -458,7 +459,7 @@ describe("GroupingReviewForm", () => {
     );
 
     await user.type(screen.getByRole("textbox", { name: "Coordinator reason" }), "Move to target.");
-    fireEvent.change(screen.getByRole("combobox", { name: "Destination group" }), { target: { value: "" } });
+    expect(screen.getByRole("combobox", { name: "Destination group" })).toHaveValue("");
     await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Choose a destination group");
     expect(reviewGroupingMock).not.toHaveBeenCalled();
@@ -523,7 +524,7 @@ describe("GroupingReviewForm", () => {
     );
 
     if (mode === "move") {
-      await user.selectOptions(screen.getByRole("combobox", { name: "Destination group" }), target.id);
+      await chooseOption(user, screen.getByRole("combobox", { name: "Destination group" }), target.id);
     }
     await user.type(screen.getByRole("textbox", { name: "Coordinator reason" }), "Keep separate.");
     await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
@@ -634,8 +635,8 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("Exit A"));
-    expect(screen.getByRole("combobox", { name: "Filter by priority" })).toHaveValue("P1");
-    expect(screen.getByRole("combobox", { name: "Sort incidents" })).toHaveValue("newest_update");
+    expect(await filterControl("Filter by priority")).toHaveValue("P1");
+    expect(await filterControl("Sort incidents")).toHaveValue("newest_update");
     expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
     await waitFor(() => {
       const params = new URLSearchParams(window.location.search);
@@ -659,7 +660,7 @@ describe("DashboardPage", () => {
     expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("Guest");
     expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("combobox", { name: "Sort incidents" })).toHaveValue("oldest_unreviewed");
+    expect(await filterControl("Sort incidents")).toHaveValue("oldest_unreviewed");
     expect(screen.getByRole("button", { name: "Queue" })).toHaveAttribute("aria-pressed", "true");
     expect(new URLSearchParams(window.location.search).get("event")).toBe(eventFixture.id);
   });
@@ -733,9 +734,9 @@ describe("DashboardPage", () => {
     snapshot.incidents[1] = { ...snapshot.incidents[1]!, status: "resolved" };
     const { user } = await renderDashboard(snapshot);
     await user.type(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" }), "Guest");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by priority" }), "P0");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "open");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by zone" }), "stage");
+    await chooseOption(user, await filterControl("Filter by priority"), "P0");
+    await chooseOption(user, await filterControl("Filter by status"), "open");
+    await chooseOption(user, await filterControl("Filter by location"), "stage");
     await user.click(within(document.querySelector(".candidate-card")!).getByRole("button", { name: "Open group" }));
 
     expect(await screen.findByRole("heading", { name: "Exit A barrier reports conflict" })).toBeInTheDocument();
@@ -854,7 +855,7 @@ describe("DashboardPage", () => {
     await screen.findByRole("heading", { name: "Guest collapsed near Main Stage" });
 
     await user.click(screen.getByRole("button", { name: "Override priority" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Coordinator priority override" }), "P1");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Coordinator priority override" }), "P1");
     const reason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(reason, "Coordinator verified lower risk.");
 
@@ -918,7 +919,7 @@ describe("DashboardPage", () => {
     updateStatusMock.mockResolvedValueOnce(mutation);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Change status" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "acknowledged");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Workflow status" }), "acknowledged");
     await user.type(screen.getByRole("textbox", { name: "Reason" }), "Coordinator accepted the report.");
 
     const pollHandler = snapshotPollingCallback();
@@ -974,7 +975,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
     await screen.findByRole("heading", { name: "Incident queue" });
 
-    expect(screen.getByText("No incidents match this filter.")).toBeInTheDocument();
+    expect(screen.getByText("No reports yet")).toBeInTheDocument();
     expect(screen.getByText("Select a provisional group")).toBeInTheDocument();
     expect(screen.getByText("Coordinator decisions will appear here with their reasons.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Report a situation" })).toHaveAttribute("href", "/report");
@@ -1033,14 +1034,19 @@ describe("DashboardPage", () => {
     advanceReplayMock.mockResolvedValueOnce(advanced);
 
     await user.click(screen.getByText("Replay"));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Synthetic scenario" }), "busy");
-    await user.click(screen.getByRole("button", { name: "Start replay" }));
+    await screen.findByRole("menuitem", { name: "Start replay" });
+    await user.click(await screen.findByRole("menuitemradio", { name: "Busy replay" }));
+    if (!screen.queryByRole("menuitem", { name: "Start replay" })) await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Start replay" }));
     expect(await screen.findByText("Started the busy synthetic replay.")).toBeInTheDocument();
-    expect(screen.getByText(/Step 0 of 1 · busy/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+    expect(await screen.findByText(/Step 0 of 1 · busy/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Next report" }));
+    if (!screen.queryByRole("menuitem", { name: "Next report" })) await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Next report" }));
     expect(await screen.findByText("Next synthetic report added.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Replay complete" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+    expect(await screen.findByRole("menuitem", { name: "Replay complete" })).toHaveAttribute("aria-disabled", "true");
     expect(advanceReplayMock).toHaveBeenCalledOnce();
     expect(advanceReplayMock).toHaveBeenCalledWith("session-1");
   });
@@ -1056,20 +1062,25 @@ describe("DashboardPage", () => {
     advanceReplayMock.mockResolvedValueOnce(unchanged);
 
     await user.click(screen.getByText("Replay"));
-    await user.click(screen.getByRole("button", { name: "Start replay" }));
-    await user.click(await screen.findByRole("button", { name: "Next report" }));
+    await screen.findByRole("menuitem", { name: "Start replay" });
+    if (!screen.queryByRole("menuitem", { name: "Start replay" })) await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Start replay" }));
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Next report" }));
     expect(await screen.findByText("Replay is complete.")).toBeInTheDocument();
   });
 
   it("clears a replay notice after its announced duration", async () => {
-    await renderDashboard();
+    const { user } = await renderDashboard();
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+    await screen.findByRole("menuitem", { name: "Start replay" });
     vi.useFakeTimers();
     const started = boardSnapshot();
     started.replay = { session_id: "session-timer", event_id: eventFixture.id, cursor: 0, total: 1, scenario: "demo" };
     startReplayMock.mockResolvedValueOnce(started);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Start replay" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Start replay" }));
       await Promise.resolve();
     });
     expect(screen.getByText("Started the demo synthetic replay.")).toBeInTheDocument();
@@ -1082,7 +1093,8 @@ describe("DashboardPage", () => {
   it("keeps a readable error notice when replay requests fail", async () => {
     const { user } = await renderDashboard();
     startReplayMock.mockRejectedValueOnce("network unavailable");
-    await user.click(screen.getByRole("button", { name: "Start replay" }));
+    if (!screen.queryByRole("menuitem", { name: "Start replay" })) await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Start replay" }));
     expect(await screen.findByText("The coordinator action could not be saved.")).toBeInTheDocument();
 
     const activeReplay = boardSnapshot();
@@ -1093,9 +1105,11 @@ describe("DashboardPage", () => {
       if (typeof pollHandler === "function") pollHandler();
       await Promise.resolve();
     });
-    await screen.findByRole("button", { name: "Next report" });
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+    await screen.findByRole("menuitem", { name: "Next report" });
     advanceReplayMock.mockRejectedValueOnce(new Error("Replay transport failed."));
-    await user.click(screen.getByRole("button", { name: "Next report" }));
+    if (!screen.queryByRole("menuitem", { name: "Next report" })) await user.click(screen.getByRole("button", { name: "Replay" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Next report" }));
     expect(await screen.findByText("Replay transport failed.")).toBeInTheDocument();
   });
 
@@ -1446,7 +1460,7 @@ describe("DashboardPage", () => {
     const { user } = await renderDashboard(initial);
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
     await user.click(screen.getByRole("button", { name: "Change status" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
     await user.type(screen.getByRole("textbox", { name: "Reason" }), "Keep watch until facilities confirms.");
     updateStatusMock.mockResolvedValueOnce(next);
 

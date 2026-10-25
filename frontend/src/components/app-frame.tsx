@@ -1,3 +1,6 @@
+import { Button } from "./ui/button";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "./ui/dropdown-menu";
+import { MenuSelect } from "./ui/menu-select";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -21,7 +24,6 @@ const THEME_KEY = "aegis.theme";
 const navigation = [
   { to: "/dashboard", label: "Operations", icon: IconLayoutDashboard },
   { to: "/report", label: "New report", icon: IconFileReport },
-  { to: "/evaluation", label: "Evaluation", icon: IconChartBar },
 ] as const;
 
 function readThemePreference(): ThemePreference {
@@ -92,7 +94,7 @@ function AppFrameContent({ children }: AppFrameProps) {
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const apply = () => setDocumentTheme(themePreference, media?.matches ?? true);
+    const apply = () => setDocumentTheme(themePreference, media?.matches ?? false);
     apply();
     media?.addEventListener?.("change", apply);
     return () => media?.removeEventListener?.("change", apply);
@@ -122,11 +124,14 @@ function AppFrameContent({ children }: AppFrameProps) {
 
         <div className="event-heading">
           <label className="shell-event-label" htmlFor="shell-event-select">Exercise</label>
-          <select
+          <MenuSelect
             id="shell-event-select"
             className="shell-event-select"
             aria-label="Exercise"
-            value={stream.selectedEventId ?? ""}
+            displayValue={eventName}
+            title={eventName}
+            contentClassName="event-select-menu"
+            value={stream.events.length === 0 ? "" : stream.selectedEventId ?? ""}
             onChange={(event) => stream.selectEvent(event.target.value || undefined)}
             disabled={stream.events.length === 0}
           >
@@ -134,7 +139,7 @@ function AppFrameContent({ children }: AppFrameProps) {
             {stream.events.map((event) => (
               <option key={event.id} value={event.id}>{eventOptionLabel(event)}</option>
             ))}
-          </select>
+          </MenuSelect>
         </div>
 
         <nav className="main-nav" aria-label="Main navigation">
@@ -165,20 +170,20 @@ function AppFrameContent({ children }: AppFrameProps) {
             </div>
           </details>
           {limitedMatching && <span className="shell-matching-warning">Limited matching</span>}
-          <details className="shell-detail shell-utilities">
-            <summary aria-label="Settings and information">More</summary>
-            <div className="shell-detail-content">
-              <label className="theme-control">
-                <span>Theme</span>
-                <select aria-label="Theme" value={themePreference} onChange={(event) => chooseTheme(event.target.value)}>
-                  <option value="system">System</option>
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                </select>
-              </label>
-              <Link to="/about" activeProps={{ className: "is-active" }}>About Aegis</Link>
-            </div>
-          </details>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="sm" className="shell-more-trigger" />} aria-label="Settings and information">More</DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuRadioGroup value={themePreference} onValueChange={chooseTheme}>
+                <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                <DropdownMenuRadioItem value="system" closeOnClick>System</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark" closeOnClick>Dark</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="light" closeOnClick>Light</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link to="/evaluation" />}><IconChartBar size={16} />Evaluation</DropdownMenuItem>
+              <DropdownMenuItem render={<Link to="/about" activeProps={{ className: "is-active" }} />}>About Aegis</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

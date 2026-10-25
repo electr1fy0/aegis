@@ -1,3 +1,5 @@
+import campus from "../../../data/campus-map.json";
+import { chooseOption } from "./select-menu";
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
@@ -88,6 +90,9 @@ async function openLoadedForm() {
   const view = render(<ReportPage />);
   const description = await screen.findByRole("textbox", { name: "Report description" });
   await waitFor(() => expect(description).toBeEnabled());
+  const detailsToggle = screen.getByText("Add time or a specific spot");
+  if (!detailsToggle.closest("details")?.open) await user.click(detailsToggle);
+  await screen.findByRole("textbox", { name: "Specific spot" });
   return { ...view, user, description };
 }
 
@@ -137,6 +142,47 @@ describe("ReportPage", () => {
     }
   });
 
+  it("starts with the essentials and reveals the map and optional details on request", async () => {
+    getSnapshotMock.mockResolvedValueOnce(snapshotFixture);
+    const user = userEvent.setup();
+    render(<ReportPage />);
+    const description = await screen.findByRole("textbox", { name: "Report description" });
+    await waitFor(() => expect(description).toBeEnabled());
+    expect(screen.getByRole("combobox", { name: "Location" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Specific spot" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Earlier/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Campus location picker" })).not.toBeInTheDocument();
+    const mapButton = screen.getByRole("button", { name: "Choose on map" });
+    await user.click(mapButton);
+    expect(await screen.findByRole("dialog", { name: "Choose a location" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(mapButton).toHaveFocus());
+    await user.click(screen.getByText("Add time or a specific spot"));
+    expect(await screen.findByRole("textbox", { name: "Specific spot" })).toBeVisible();
+    await user.type(screen.getByRole("textbox", { name: "Specific spot" }), "North doorway");
+    await user.click(screen.getByText("Add time or a specific spot"));
+    await user.click(screen.getByText("Add time or a specific spot"));
+    expect(await screen.findByRole("textbox", { name: "Specific spot" })).toHaveValue("North doorway");
+  });
+
+  it("submits the location selected from the campus map and keeps the zone menu in sync", async () => {
+    const zones = campus.zones.map((zone) => ({ ...zone, x: 0, y: 0 }));
+    getSnapshotMock.mockResolvedValueOnce({ ...snapshotFixture, zones });
+    submitReportMock.mockResolvedValueOnce(receipt());
+    const user = userEvent.setup();
+    render(<ReportPage />);
+    const description = await screen.findByRole("textbox", { name: "Report description" });
+    await waitFor(() => expect(description).toBeEnabled());
+    await user.type(description, "A visitor needs assistance at Technology Tower.");
+    await user.click(screen.getByRole("button", { name: "Choose on map" }));
+    await user.click(await screen.findByRole("button", { name: "Select Technology Tower" }));
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("combobox", { name: "Location" })).toHaveTextContent("Technology Tower");
+    await user.click(screen.getByRole("button", { name: "Submit report" }));
+    await screen.findByRole("status", { name: "Submission receipt" });
+    expect(submitReportMock.mock.calls[0]?.[0].zone_id).toBe("technology-tower");
+  });
+
   it("loads event zones and submits exact text with event context and local time", async () => {
     const input = {
       text: "  A guest needs help near the main stage.  ",
@@ -161,8 +207,8 @@ describe("ReportPage", () => {
 
     expect(screen.getByText("Aegis Campus Safety Exercise")).toBeInTheDocument();
     await user.type(description, input.text);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Zone" }), "stage");
-    await user.type(screen.getByRole("textbox", { name: "Sublocation (optional)" }), "north rail");
+    await chooseOption(user, screen.getByRole("combobox", { name: "Location" }), "stage");
+    await user.type(screen.getByRole("textbox", { name: "Specific spot" }), "north rail");
     await user.click(screen.getByRole("radio", { name: /Earlier/ }));
     fireEvent.change(screen.getByLabelText("Earlier event time"), {
       target: { value: "2026-10-24T10:15" },
@@ -177,8 +223,8 @@ describe("ReportPage", () => {
     expect(receiptRegion).toHaveTextContent("P1 · pending analysis");
     expect(receiptRegion.querySelector("blockquote")?.textContent).toBe(input.text);
     expect(description).toHaveValue("");
-    expect(screen.getByRole("combobox", { name: "Zone" })).toHaveValue("");
-    expect(screen.getByRole("textbox", { name: "Sublocation (optional)" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Location" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Specific spot" })).toHaveValue("");
     expect(screen.getByRole("radio", { name: /Unknown/ })).toBeChecked();
   });
 
@@ -456,7 +502,8 @@ describe("ReportPage", () => {
       const first = await openLoadedForm();
       await first.user.type(first.description, "A visitor has a minor injury.");
       await first.user.click(screen.getByRole("button", { name: "Submit report" }));
-      await screen.findByRole("status", { name: "Submission receipt" });
+      const confirmation = await screen.findByRole("status", { name: "Submission receipt" });
+      await waitFor(() => expect(confirmation).toHaveFocus());
       expect(screen.getByText("Report receipt saved on this device.")).toBeInTheDocument();
       first.unmount();
 
@@ -574,6 +621,7 @@ describe("ReportPage", () => {
         "/dashboard?queue=review&event=event-demo&incident=incident-new",
       );
 
+      await user.click(within(receiptRegion).getByText("Receipt details"));
       const copyButtons = within(receiptRegion).getAllByRole("button", { name: "Copy full ID" });
       await user.click(copyButtons[0]!);
       expect(await within(receiptRegion).findByText("Full report id copied.")).toBeInTheDocument();
@@ -604,6 +652,7 @@ describe("ReportPage", () => {
         configurable: true,
         value: writeText ? { writeText } : undefined,
       });
+      await user.click(within(receiptRegion).getByText("Receipt details"));
       await user.click(within(receiptRegion).getAllByRole("button", { name: "Copy full ID" })[0]!);
       expect(await within(receiptRegion).findByText(message)).toBeInTheDocument();
     } finally {

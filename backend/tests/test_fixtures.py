@@ -38,8 +38,24 @@ class ScenarioFixtureTests(unittest.TestCase):
     def _write_payload(self, directory: Path, payload: object) -> None:
         (directory / "demo.json").write_text(json.dumps(payload), encoding="utf-8")
 
+    def test_campus_map_regions_cover_every_selectable_location_once(self) -> None:
+        path = Path(__file__).resolve().parents[2] / "data" / "campus-map.json"
+        campus = json.loads(path.read_text(encoding="utf-8"))
+        region_zone_ids = [zone_id for region in campus["regions"] for zone_id in region["zoneIds"]]
+        self.assertEqual(len(region_zone_ids), len(set(region_zone_ids)))
+        self.assertEqual(set(region_zone_ids), {zone["id"] for zone in fixtures.CAMPUS_ZONES})
+        for region in campus["regions"]:
+            self.assertGreaterEqual(len(region["points"]), 3)
+            for x, y in region["points"]:
+                self.assertTrue(0 <= x <= campus["width"])
+                self.assertTrue(0 <= y <= campus["height"])
+
     def test_zones_and_scenario_counts_match_the_contract(self) -> None:
-        self.assertEqual(fixtures.ZONES, EXPECTED_ZONES)
+        by_id = {zone["id"]: zone for zone in fixtures.ZONES}
+        self.assertTrue({zone["id"] for zone in EXPECTED_ZONES} <= by_id.keys())
+        self.assertTrue({"a-block", "technology-tower", "vit-lake"} <= by_id.keys())
+        self.assertEqual(len(by_id), len(fixtures.ZONES))
+        self.assertFalse(by_id["hall"]["selectable"])
         for name, expected_count in (("demo", 24), ("busy", 60), ("edge", 16)):
             with self.subTest(name=name):
                 reports = fixtures.get_scenario(name)

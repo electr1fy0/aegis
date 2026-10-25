@@ -67,7 +67,7 @@
 }
 
 .shell-event-select:focus-visible,
-.theme-control select:focus-visible,
+.theme-control :is(select, .app-select):focus-visible,
 .nav-link:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -167,7 +167,7 @@
   white-space: nowrap;
 }
 
-.theme-control select {
+.theme-control :is(select, .app-select) {
   height: 34px;
   padding: 4px 25px 4px 8px;
   border: 1px solid var(--border);
@@ -278,7 +278,7 @@
     justify-self: end;
   }
 
-  .theme-control select {
+  .theme-control :is(select, .app-select) {
     max-width: 100px;
   }
 
@@ -351,3 +351,5 @@
   .main-nav { grid-row: 3; }
   .topbar { grid-template-rows: auto auto auto; }
 }
+
+.shell-more-trigger { color: var(--muted-foreground); font-size: 12px; font-weight: 400; }

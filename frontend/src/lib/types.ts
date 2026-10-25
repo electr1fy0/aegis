@@ -13,6 +13,7 @@ export interface EventInfo {
 }
 
 export interface Zone {
+  selectable?: boolean;
   id: string;
   label: string;
   x: number;
