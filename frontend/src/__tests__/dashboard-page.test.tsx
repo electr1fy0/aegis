@@ -6,14 +6,18 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import {
+  addIncidentNote,
   advanceReplay,
   ApiError,
   getSnapshot,
+  resetPriority,
   reviewConflict,
   reviewGrouping,
   startReplay,
+  updateIncidentTitle,
   updatePriority,
   updateStatus,
+  undoDecision,
 } from "../lib/api";
 import type { Snapshot } from "../lib/types";
 import { formattedTime } from "../lib/format";
@@ -45,20 +49,28 @@ vi.mock("../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/api")>();
   return {
     ...actual,
+    addIncidentNote: vi.fn(),
     advanceReplay: vi.fn(),
     getSnapshot: vi.fn(),
+    resetPriority: vi.fn(),
     reviewConflict: vi.fn(),
     reviewGrouping: vi.fn(),
     startReplay: vi.fn(),
+    updateIncidentTitle: vi.fn(),
     updatePriority: vi.fn(),
     updateStatus: vi.fn(),
+    undoDecision: vi.fn(),
   };
 });
 
+const addIncidentNoteMock = vi.mocked(addIncidentNote);
 const getSnapshotMock = vi.mocked(getSnapshot);
+const resetPriorityMock = vi.mocked(resetPriority);
 const reviewGroupingMock = vi.mocked(reviewGrouping);
 const updatePriorityMock = vi.mocked(updatePriority);
 const updateStatusMock = vi.mocked(updateStatus);
+const updateIncidentTitleMock = vi.mocked(updateIncidentTitle);
+const undoDecisionMock = vi.mocked(undoDecision);
 const reviewConflictMock = vi.mocked(reviewConflict);
 const startReplayMock = vi.mocked(startReplay);
 const advanceReplayMock = vi.mocked(advanceReplay);
@@ -168,9 +180,9 @@ function boardSnapshot(sourceVersion = 1, targetVersion = 2): Snapshot {
     reports: [reportOne, reportTwo, reportThree, reportFour, reportFive],
     audit: [
       auditFixture,
-      { ...auditFixture, id: "audit-002", seq: 2, action: "priority.changed", reason: "Verified lower risk." },
-      { ...auditFixture, id: "audit-003", seq: 3, action: "status.changed", reason: "Coordinator acknowledged." },
-      { ...auditFixture, id: "audit-004", seq: 4, action: "conflict.reviewed", reason: "Exit inspected." },
+      { ...auditFixture, id: "audit-002", seq: 2, entity_id: "incident-001", action: "priority.changed", reason: "Verified lower risk." },
+      { ...auditFixture, id: "audit-003", seq: 3, entity_id: reportTwo.id, action: "status.changed", reason: "Coordinator acknowledged." },
+      { ...auditFixture, id: "audit-004", seq: 4, entity_id: conflictFixture.id, action: "conflict.reviewed", reason: "Exit inspected." },
     ],
     counts: { reports: 5, incidents: 4, review: 2, conflicts: 1 },
   });
@@ -178,9 +190,19 @@ function boardSnapshot(sourceVersion = 1, targetVersion = 2): Snapshot {
 
 let intervalSpy: MockInstance<typeof window.setInterval>;
 let heldIntervalId: ReturnType<typeof window.setInterval> = null!;
+let dashboardStorage: Map<string, string>;
 
 function snapshotPollingCallback(): TimerHandler | undefined {
   return intervalSpy.mock.calls.find((call) => call[1] === 1_000)?.[0];
+}
+
+async function pollNextSnapshot() {
+  const callback = snapshotPollingCallback();
+  expect(typeof callback).toBe("function");
+  await act(async () => {
+    if (typeof callback === "function") callback();
+    await Promise.resolve();
+  });
 }
 
 async function renderDashboard(snapshot = boardSnapshot()) {
@@ -193,13 +215,30 @@ async function renderDashboard(snapshot = boardSnapshot()) {
 }
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/dashboard");
+  dashboardStorage = new Map();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      get length() { return dashboardStorage.size; },
+      clear: () => dashboardStorage.clear(),
+      getItem: (key: string) => dashboardStorage.get(key) ?? null,
+      key: (index: number) => [...dashboardStorage.keys()][index] ?? null,
+      removeItem: (key: string) => dashboardStorage.delete(key),
+      setItem: (key: string, value: string) => dashboardStorage.set(key, String(value)),
+    } satisfies Storage,
+  });
   getSnapshotMock.mockReset();
+  addIncidentNoteMock.mockReset();
+  resetPriorityMock.mockReset();
   reviewGroupingMock.mockReset();
   updatePriorityMock.mockReset();
   updateStatusMock.mockReset();
   reviewConflictMock.mockReset();
   startReplayMock.mockReset();
   advanceReplayMock.mockReset();
+  updateIncidentTitleMock.mockReset();
+  undoDecisionMock.mockReset();
   intervalSpy = vi.spyOn(window, "setInterval").mockImplementation(() => heldIntervalId);
 });
 
@@ -344,7 +383,7 @@ describe("GroupingReviewForm", () => {
       reason: "Reviewed both reports.",
       expected_versions: { "incident-001": 1 },
     });
-    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"));
+    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"), false);
   });
 
   it("keeps the version captured when the form opened and preserves the reason on 409", async () => {
@@ -490,7 +529,7 @@ describe("GroupingReviewForm", () => {
     await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
     await waitFor(() => expect(reviewGroupingMock).toHaveBeenCalledOnce());
     expect(reviewGroupingMock).toHaveBeenCalledWith(expected);
-    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"));
+    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"), false);
   });
 
   it("rebases a stale grouping form only after explicit coordinator action", async () => {
@@ -531,7 +570,7 @@ describe("GroupingReviewForm", () => {
     await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
     await waitFor(() => expect(reviewGroupingMock).toHaveBeenCalledTimes(2));
     expect(reviewGroupingMock.mock.calls[1]?.[0].expected_versions).toEqual({ "incident-001": 4 });
-    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"));
+    expect(onSaved).toHaveBeenCalledWith(snapshotFixture, expect.stringContaining("decision saved"), false);
   });
 
   it("falls back to the source version when a stale selected group is missing", async () => {
@@ -566,19 +605,63 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Reports received").closest(".summary-card")).toHaveTextContent("5");
     expect(screen.getByText("Provisional groups").closest(".summary-card")).toHaveTextContent("4");
     expect(screen.getByText("Unresolved conflicts").closest(".summary-card")).toHaveTextContent("1");
-    expect(screen.getByText("Ranking signals · not probabilities")).toBeInTheDocument();
+    expect(screen.getByText(/Ranking signals · not probabilities/)).toBeInTheDocument();
     expect(screen.getByText("Compatible medical reports")).toBeInTheDocument();
     const unlocatedTray = screen.getByText("Unlocated reports").closest(".unlocated-tray");
     expect(unlocatedTray?.lastElementChild).toHaveTextContent("1");
 
     const queue = screen.getByRole("region", { name: "Incident queue" });
-    const visibleTitles = Array.from(queue.querySelectorAll(".incident-row-title")).map((node) => node.textContent);
+    const visibleTitles = Array.from(queue.querySelectorAll(".incident-row-title")).map((node) => node.childNodes[0]?.textContent);
     expect(visibleTitles.slice(0, 3)).toEqual([
       "Guest collapsed near Main Stage",
       "Exit A barrier reports conflict",
       "Unlocated alarm report",
     ]);
     expect(visibleTitles).not.toContain("Previously resolved facility issue");
+    expect(screen.getByText(/Counts follow the current search, priority, status, and zone filters across all queue tabs/)).toBeInTheDocument();
+  });
+
+  it("restores a saved dashboard view while preserving the event URL parameter", async () => {
+    window.history.replaceState({}, "", `/dashboard?event=${eventFixture.id}`);
+    dashboardStorage.set(`aegis.dashboard.view.v1:${eventFixture.id}`, JSON.stringify({
+      incidentId: "incident-002",
+      criteria: { query: "Exit A", filter: "all", priority: "P1", status: "all", zone: "all", sort: "newest_update" },
+      view: "map",
+      queueScroll: 0,
+    }));
+    getSnapshotMock.mockResolvedValueOnce(boardSnapshot());
+    render(<DashboardPage />);
+
+    expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("Exit A"));
+    expect(screen.getByRole("combobox", { name: "Filter by priority" })).toHaveValue("P1");
+    expect(screen.getByRole("combobox", { name: "Sort incidents" })).toHaveValue("newest_update");
+    expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("event")).toBe(eventFixture.id);
+      expect(params.get("q")).toBe("Exit A");
+      expect(params.get("priority")).toBe("P1");
+      expect(params.get("sort")).toBe("newest_update");
+      expect(params.get("view")).toBe("map");
+    });
+  });
+
+  it("gives explicit dashboard URL filters precedence over a saved view", async () => {
+    window.history.replaceState({}, "", `/dashboard?event=${eventFixture.id}&q=Guest&queue=review&sort=oldest_unreviewed`);
+    dashboardStorage.set(`aegis.dashboard.view.v1:${eventFixture.id}`, JSON.stringify({
+      criteria: { query: "Exit A", filter: "all", priority: "P1", status: "all", zone: "all", sort: "newest_update" },
+      view: "map",
+    }));
+    getSnapshotMock.mockResolvedValueOnce(boardSnapshot());
+    render(<DashboardPage />);
+
+    expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("Guest");
+    expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("combobox", { name: "Sort incidents" })).toHaveValue("oldest_unreviewed");
+    expect(screen.getByRole("button", { name: "Queue" })).toHaveAttribute("aria-pressed", "true");
+    expect(new URLSearchParams(window.location.search).get("event")).toBe(eventFixture.id);
   });
 
   it("changes the inspector from queue selection and keyboard map selection", async () => {
@@ -606,6 +689,61 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: "Exit A barrier reports conflict" })).toBeInTheDocument();
   });
 
+  it("closes the inspector drawer on Escape when the keyboard target is not an input", async () => {
+    const { container, user } = await renderDashboard();
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    expect(container.querySelector(".workspace-grid")).toHaveClass("is-inspector-open");
+    fireEvent.keyDown(container.querySelector(".dashboard-page")!, { key: "Escape" });
+    expect(container.querySelector(".workspace-grid")).toHaveClass("is-inspector-closed");
+  });
+
+  it("focuses search with slash and ignores modified slash shortcuts", async () => {
+    const { container } = await renderDashboard();
+    const page = container.querySelector(".dashboard-page")!;
+    const search = screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" });
+    fireEvent.keyDown(page, { key: "/" });
+    expect(document.activeElement).toBe(search);
+    search.blur();
+    fireEvent.keyDown(page, { key: "/", ctrlKey: true });
+    expect(document.activeElement).not.toBe(search);
+  });
+
+  it("shows concise review categories and keeps every review reason available", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[0] = {
+      ...snapshot.incidents[0]!,
+      review_required: true,
+      review_reasons: ["Conflicting updates need review.", "Conflicting reports require another check.", "The location is unknown."],
+    };
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    expect(screen.getByText("Conflicting accounts · Location needs checking")).toBeInTheDocument();
+    const reasonDetails = screen.getByText("Show all review reasons").closest("details")!;
+    expect(reasonDetails).not.toHaveAttribute("open");
+    await user.click(screen.getByText("Show all review reasons"));
+    expect(reasonDetails).toHaveTextContent("Conflicting reports require another check.");
+  });
+
+  it("opens a related resolved group by broadening the filters that hid it", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[0] = {
+      ...snapshot.incidents[0]!,
+      evidence: [{ ...evidenceFixture, report_id: reportOne.id, candidate_report_id: reportThree.id, total_score: 0.77, reasons: ["Same exit reports"], missing_fields: [] }],
+    };
+    snapshot.incidents[1] = { ...snapshot.incidents[1]!, status: "resolved" };
+    const { user } = await renderDashboard(snapshot);
+    await user.type(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" }), "Guest");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by priority" }), "P0");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "open");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by zone" }), "stage");
+    await user.click(within(document.querySelector(".candidate-card")!).getByRole("button", { name: "Open group" }));
+
+    expect(await screen.findByRole("heading", { name: "Exit A barrier reports conflict" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("searchbox", { name: "Search incidents by title, ID, report text, or location" })).toHaveValue("");
+    expect(screen.getByText("Queue filters were broadened to show this related group.")).toBeInTheDocument();
+  });
+
   it("toggles source report selection and confirms only that selected report", async () => {
     const { user } = await renderDashboard();
     const reportCheckbox = screen.getByRole("checkbox", { name: "Select report report-101 for a coordinator action" });
@@ -626,6 +764,7 @@ describe("DashboardPage", () => {
 
   it("toggles each grouping action form and lets the coordinator cancel", async () => {
     const { user } = await renderDashboard();
+    await user.click(screen.getByRole("checkbox", { name: "Select report report-101 for a coordinator action" }));
     const groupingActions: Array<[string, string]> = [
       ["Confirm grouping", "Confirm the selected report membership."],
       ["Reject pairing", "Keep the selected report separate from this group."],
@@ -832,7 +971,7 @@ describe("DashboardPage", () => {
     getSnapshotMock.mockResolvedValueOnce(null as unknown as Snapshot);
     render(<DashboardPage />);
 
-    expect(await screen.findByText("The backend has not returned a current event snapshot.")).toBeInTheDocument();
+    expect(await screen.findByText("The exercise snapshot could not be read. Check the backend and retry.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry connection" })).toBeEnabled();
   });
 
@@ -862,10 +1001,11 @@ describe("DashboardPage", () => {
     await screen.findByRole("heading", { name: "Incident queue" });
 
     const queue = screen.getByRole("region", { name: "Incident queue" });
-    const visibleTitles = Array.from(queue.querySelectorAll(".incident-row-title")).map((node) => node.textContent);
+    const visibleTitles = Array.from(queue.querySelectorAll(".incident-row-title")).map((node) => node.childNodes[0]?.textContent);
     expect(visibleTitles).toEqual(["Earlier-created incident", "Later-created incident"]);
     expect(queue).toHaveTextContent("Unknown zone");
     const map = screen.getByRole("region", { name: "Campus schematic" });
+    expect(map).toHaveTextContent("Active groups matching queue filters with known zones.");
     expect(within(map).queryByRole("button", { name: /Later-created incident/ })).not.toBeInTheDocument();
   });
 
@@ -877,19 +1017,19 @@ describe("DashboardPage", () => {
     const advanced = boardSnapshot();
     advanced.replay = { ...replay, cursor: 1 };
     startReplayMock.mockResolvedValueOnce(started);
-    advanceReplayMock.mockResolvedValueOnce(advanced).mockResolvedValueOnce(advanced);
+    advanceReplayMock.mockResolvedValueOnce(advanced);
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Replay scenario" }), "busy");
+    await user.click(screen.getByText("Replay"));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Synthetic scenario" }), "busy");
     await user.click(screen.getByRole("button", { name: "Start replay" }));
     expect(await screen.findByText("Started the busy synthetic replay.")).toBeInTheDocument();
     expect(screen.getByText(/Replay step 0 of 1 · busy scenario/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Next report" }));
     expect(await screen.findByText("Next synthetic report added.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Next report" }));
-    expect(await screen.findByText("Replay is complete.")).toBeInTheDocument();
-    expect(advanceReplayMock).toHaveBeenNthCalledWith(1, "session-1");
-    expect(advanceReplayMock).toHaveBeenNthCalledWith(2, "session-1");
+    expect(screen.getByRole("button", { name: "Replay complete" })).toBeDisabled();
+    expect(advanceReplayMock).toHaveBeenCalledOnce();
+    expect(advanceReplayMock).toHaveBeenCalledWith("session-1");
   });
 
   it("clears a replay notice after its announced duration", async () => {
@@ -940,6 +1080,88 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "View all 4" })).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("links current audit entities to the owning incident and preserves the event", async () => {
+    const { user } = await renderDashboard();
+    window.history.replaceState({}, "", `/dashboard?event=${eventFixture.id}&queue=review`);
+    await user.click(screen.getByRole("button", { name: "View all 4" }));
+
+    const audit = screen.getByRole("region", { name: "Coordinator audit" });
+    expect(within(audit).getAllByRole("link", { name: "Open INC-001" })).toHaveLength(2);
+    expect(within(audit).getByRole("link", { name: "Open INC-002" })).toHaveAttribute("href", `/dashboard?event=${eventFixture.id}&queue=review&incident=incident-002`);
+    const historic = within(audit).getByText(/coordinator · report-001/).closest(".audit-entry");
+    expect(within(historic as HTMLElement).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(audit).getAllByRole("link", { name: "Open INC-001" })[0]).toHaveAttribute("href", `/dashboard?event=${eventFixture.id}&queue=review&incident=incident-001`);
+  });
+
+  it("includes relevant report and conflict decisions in each incident timeline", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.audit.push(
+      { ...auditFixture, id: "audit-report-analyzed", seq: 5, entity_id: reportOne.id, action: "report.analyzed", actor: "analysis-worker" },
+      { ...auditFixture, id: "audit-coordinator-no-reason", seq: 6, entity_id: "incident-001", action: "status.changed", reason: null },
+      { ...auditFixture, id: "audit-conflict-no-reason", seq: 7, entity_id: conflictFixture.id, action: "conflict.reviewed", reason: null },
+    );
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    const sourceTimeline = screen.getByRole("region", { name: "Incident timeline" });
+    await user.click(within(sourceTimeline).getByRole("button", { name: "View all 8" }));
+    expect(within(sourceTimeline).getByText("Report decision")).toBeInTheDocument();
+    expect(within(sourceTimeline).getByText("Report lifecycle")).toBeInTheDocument();
+    const statusChangedEntries = within(sourceTimeline).getAllByText(/coordinator · Status Changed/).map((detail) => detail.closest(".timeline-entry"));
+    expect(statusChangedEntries).toHaveLength(2);
+    expect(statusChangedEntries.map((entry) => entry?.className)).toEqual(expect.arrayContaining(["timeline-entry is-report-decision", "timeline-entry is-coordinator-decision"]));
+
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    const targetTimeline = screen.getByRole("region", { name: "Incident timeline" });
+    await user.click(within(targetTimeline).getByRole("button", { name: "View all 6" }));
+    expect(within(targetTimeline).getByText("Conflict review")).toBeInTheDocument();
+    expect(within(targetTimeline).getByText(/exit access · coordinator · Conflict Reviewed/)).toBeInTheDocument();
+  });
+
+  it("shows an empty timeline for a group without current reports or decisions", async () => {
+    const { user } = await renderDashboard();
+    const queue = screen.getByRole("region", { name: "Incident queue" });
+    await user.click(within(queue).getByRole("button", { name: "All" }));
+    await user.click(within(queue).getByRole("button", { name: /Previously resolved facility issue/ }));
+
+    expect(screen.getByRole("region", { name: "Incident timeline" })).toHaveTextContent("No report or coordinator events have been recorded.");
+  });
+
+  it("links evidence phrases to their exact source report and scopes conflict highlights per report", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.reports[0] = {
+      ...snapshot.reports[0]!,
+      text: "A guest is not responding near Main Stage.",
+      claims: [{ field: "reported_condition", value: "unresponsive", span: "is not responding" }],
+    };
+    snapshot.incidents[0] = {
+      ...snapshot.incidents[0]!,
+      priority_reason: "P0 rule DANGER: source phrase “is not responding” in report report-101; \"near Main Stage\" in report report-101 also matches.",
+    };
+    snapshot.reports[2] = { ...snapshot.reports[2]!, text: "Exit A is blocked." };
+    snapshot.reports[3] = { ...snapshot.reports[3]!, text: "Exit A is clear now." };
+    const { user } = await renderDashboard(snapshot);
+
+    const prioritySource = screen.getAllByRole("button", { name: "Show priority source phrase from RPT-101" })[0]!;
+    expect(screen.getByText("“near Main Stage” · RPT-101")).toBeInTheDocument();
+    await user.click(prioritySource);
+    const sourceDetails = screen.getByText("Source reports").closest("details")!;
+    expect(sourceDetails).toHaveAttribute("open");
+    const stageReport = document.getElementById("source-report-report-101")!;
+    expect(within(stageReport).getByText("is not responding", { selector: "mark" })).toBeInTheDocument();
+
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    const blockedReport = document.getElementById("source-report-report-201")!;
+    const clearReport = document.getElementById("source-report-report-202")!;
+    expect(within(blockedReport).getByText("Exit A is blocked", { selector: "mark" })).toBeInTheDocument();
+    expect(within(blockedReport).queryByText("Exit A is clear now", { selector: "mark" })).not.toBeInTheDocument();
+    expect(within(clearReport).getByText("Exit A is clear now", { selector: "mark" })).toBeInTheDocument();
+    expect(within(clearReport).queryByText("Exit A is blocked", { selector: "mark" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show source report report-201 for exit access" }));
+    expect(sourceDetails).toHaveAttribute("open");
+    await waitFor(() => expect(document.activeElement).toBe(blockedReport));
+  });
+
   it("does nothing when selected queue groups disappear before the merge action", async () => {
     const initial = boardSnapshot();
     const remaining = boardSnapshot();
@@ -968,18 +1190,24 @@ describe("DashboardPage", () => {
       ...snapshot.reports[0]!,
       reported_at: null,
       received_at: "2026-10-24T20:45:00Z",
+      sublocation: "North concourse",
       analysis_status: "pending",
     };
     snapshot.incidents[0] = {
       ...snapshot.incidents[0]!,
-      evidence: [{ ...evidenceFixture, reasons: [], missing_fields: ["sublocation"] }],
+      evidence: [{ ...evidenceFixture, created_at: "2026-10-24T20:40:00Z", reasons: [], missing_fields: ["sublocation"] }],
     };
     await renderDashboard(snapshot);
 
     expect(screen.getByText("Analysis pending")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry pending analysis" })).toBeInTheDocument();
     expect(screen.getByText("Missing context: sublocation")).toBeInTheDocument();
-    const reportArticle = screen.getByText("report-101").closest(".source-report");
-    expect(reportArticle).toHaveTextContent(formattedTime("2026-10-24T20:45:00Z"));
+    expect(screen.getByText("Text similarity")).toBeInTheDocument();
+    const evidenceCard = screen.getByText("Text similarity").closest(".evidence-card") as HTMLElement;
+    expect(within(evidenceCard).getByText(/Historical comparison/)).toBeInTheDocument();
+    expect(screen.getByText("North concourse")).toBeInTheDocument();
+    const reportArticle = screen.getByText("RPT-101").closest(".source-report");
+    expect(reportArticle).toHaveTextContent(formattedTime("2026-10-24T20:45:00Z", snapshot.event.timezone));
   });
 
   it("shows an evidence card without notes when no reasons or fields were produced", async () => {
@@ -990,7 +1218,7 @@ describe("DashboardPage", () => {
     };
     await renderDashboard(snapshot);
 
-    expect(screen.getByText("report-002 ↔ report-001")).toBeInTheDocument();
+    expect(screen.getByText("RPT-002 ↔ RPT-001")).toBeInTheDocument();
     expect(screen.queryByText("Missing context:")).not.toBeInTheDocument();
     expect(document.querySelector(".evidence-notes")).toBeNull();
   });
@@ -1020,4 +1248,251 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("textbox", { name: "Reason for resolution" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Resolve conflict" })).toBeInTheDocument();
   });
+
+  it("keeps a title draft through a version conflict and rebases only when requested", async () => {
+    const initial = boardSnapshot();
+    const latest = boardSnapshot(2, 3);
+    latest.incidents[0] = {
+      ...latest.incidents[0]!,
+      title: "Guest condition checked by supervisor",
+      priority: "P1",
+      status: "monitoring",
+      report_ids: [...latest.incidents[0]!.report_ids, reportFive.id],
+      evidence: [{ ...evidenceFixture, total_score: null }],
+    };
+    const { user } = await renderDashboard(initial);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    await user.click(screen.getByRole("button", { name: "Cancel title edit" }));
+    expect(screen.queryByRole("textbox", { name: "Incident title" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    const form = screen.getByRole("button", { name: "Save title" }).closest("form")!;
+    fireEvent.submit(form);
+    expect(await screen.findByRole("alert")).toHaveTextContent("title and reason with at least 3 characters");
+    await user.clear(within(form).getByRole("textbox", { name: "Incident title" }));
+    await user.type(within(form).getByRole("textbox", { name: "Incident title" }), "Updated guest condition");
+    await user.type(within(form).getByRole("textbox", { name: "Reason for title change" }), "Supervisor confirmed the description.");
+
+    updateIncidentTitleMock.mockRejectedValueOnce(new ApiError("Stale title version.", 409, "stale_version"));
+    await user.click(within(form).getByRole("button", { name: "Save title" }));
+    expect(await screen.findByText(/older incident version/)).toBeInTheDocument();
+    expect(within(form).getByRole("textbox", { name: "Reason for title change" })).toHaveValue("Supervisor confirmed the description.");
+
+    getSnapshotMock.mockResolvedValueOnce(latest);
+    await pollNextSnapshot();
+    expect(await screen.findByText(/Membership changed: Added RPT-301/)).toBeInTheDocument();
+    expect(screen.getByText(/Pairwise grouping evidence changed in the current snapshot/)).toBeInTheDocument();
+    expect(screen.getByText(/Priority changed from P0 to P1/)).toBeInTheDocument();
+    expect(screen.getByText(/Status changed from Open to Monitoring/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use latest version and keep reason" }));
+
+    updateIncidentTitleMock.mockResolvedValueOnce(latest);
+    await user.click(within(form).getByRole("button", { name: "Save title" }));
+    await waitFor(() => expect(updateIncidentTitleMock).toHaveBeenLastCalledWith("incident-001", {
+      title: "Updated guest condition",
+      reason: "Supervisor confirmed the description.",
+      expected_version: 2,
+    }));
+    expect(await screen.findByText("Incident title updated with its reason.")).toBeInTheDocument();
+  });
+
+  it("saves coordinator notes with the current version and clears drafts on incident change", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[0] = {
+      ...snapshot.incidents[0]!,
+      notes: [{ id: "note-old", text: "Call placed to the venue desk.", actor: "coordinator", created_at: "2026-10-24T20:00:00Z" }],
+    };
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    expect(within(screen.getByRole("region", { name: "Incident inspector" })).getByText("Call placed to the venue desk.")).toBeInTheDocument();
+    const sourceNote = screen.getByRole("textbox", { name: "Add a coordinator note" });
+    await user.type(sourceNote, "Draft for the stage group");
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    const targetNote = screen.getByRole("textbox", { name: "Add a coordinator note" });
+    expect(targetNote).toHaveValue("");
+    fireEvent.submit(targetNote.closest("form")!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write a note before saving.");
+    await user.type(targetNote, "Exit checked with facilities.");
+
+    addIncidentNoteMock.mockRejectedValueOnce(new Error("Notes service unavailable."));
+    await user.click(screen.getByRole("button", { name: "Save note" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Notes service unavailable.");
+    expect(addIncidentNoteMock).toHaveBeenCalledWith("incident-002", { text: "Exit checked with facilities.", expected_version: 2 });
+
+    const saved = boardSnapshot();
+    addIncidentNoteMock.mockResolvedValueOnce(saved);
+    await user.click(screen.getByRole("button", { name: "Save note" }));
+    expect(await screen.findByText("Coordinator note saved.")).toBeInTheDocument();
+  });
+
+  it("returns an equal-valued priority override to policy", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[0] = { ...snapshot.incidents[0]!, override_reason: "Supervisor reviewed this priority." };
+    const latest = boardSnapshot(2, 2);
+    latest.incidents[0] = {
+      ...latest.incidents[0]!,
+      priority: "P1",
+      override_reason: "Updated priority.",
+      report_ids: [reportOne.id],
+      evidence: [],
+    };
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+
+    await user.click(screen.getByRole("button", { name: "Reset to suggested priority" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Reset to suggested priority" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reset to suggested priority" }));
+    const resetField = screen.getByRole("textbox", { name: "Reason for returning to P0" });
+    await user.click(screen.getByRole("button", { name: "Reset priority" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("at least 3 characters");
+    await user.type(resetField, "Confirmed by coordinator.");
+    resetPriorityMock.mockRejectedValueOnce(new ApiError("Stale priority version.", 409, "stale_version"));
+    await user.click(screen.getByRole("button", { name: "Reset priority" }));
+    expect(await screen.findByText(/older incident version/)).toBeInTheDocument();
+    getSnapshotMock.mockResolvedValueOnce(latest);
+    await pollNextSnapshot();
+    expect(await screen.findByText(/Priority changed from P0 to P1/)).toBeInTheDocument();
+    expect(screen.getByText(/Membership changed: removed RPT-102/)).toBeInTheDocument();
+    expect(screen.getByText(/Pairwise grouping evidence changed in the current snapshot/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use latest version and keep reason" }));
+
+    const resetResult = boardSnapshot(3, 2);
+    resetResult.incidents[0] = { ...resetResult.incidents[0]!, override_reason: null };
+    resetPriorityMock.mockResolvedValueOnce(resetResult);
+    await user.click(screen.getByRole("button", { name: "Reset priority" }));
+    await waitFor(() => expect(resetPriorityMock).toHaveBeenLastCalledWith("incident-001", { reason: "Confirmed by coordinator.", expected_version: 2 }));
+    expect(await screen.findByText("Priority returned to the policy suggestion.")).toBeInTheDocument();
+  });
+
+  it("saves a priority override and advances to the next matching review item", async () => {
+    const initial = boardSnapshot();
+    initial.incidents = initial.incidents.slice(0, 2);
+    const next = boardSnapshot(2, 2);
+    next.incidents = next.incidents.slice(0, 2);
+    const { user } = await renderDashboard(initial);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Override priority" }));
+    await user.type(screen.getByRole("textbox", { name: "Reason" }), "Reviewed with the incident lead.");
+    updatePriorityMock.mockResolvedValueOnce(next);
+
+    await user.click(screen.getByRole("button", { name: "Save & next review" }));
+
+    await waitFor(() => expect(updatePriorityMock).toHaveBeenCalledWith("incident-001", {
+      priority: "P0",
+      reason: "Reviewed with the incident lead.",
+      expected_version: 1,
+    }));
+    expect(await screen.findByRole("button", { name: "Copy full incident ID incident-002" })).toBeInTheDocument();
+  });
+
+  it("saves a status with next-review and explains when no matching review item remains", async () => {
+    const initial = boardSnapshot();
+    initial.incidents = initial.incidents.slice(0, 2);
+    initial.incidents[1] = { ...initial.incidents[1]!, review_required: false, review_reasons: [] };
+    const next = boardSnapshot(2, 2);
+    next.incidents = next.incidents.slice(0, 2);
+    next.incidents[1] = { ...next.incidents[1]!, review_required: false, review_reasons: [] };
+    const { user } = await renderDashboard(initial);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Change status" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Workflow status" }), "monitoring");
+    await user.type(screen.getByRole("textbox", { name: "Reason" }), "Keep watch until facilities confirms.");
+    updateStatusMock.mockResolvedValueOnce(next);
+
+    await user.click(screen.getByRole("button", { name: "Save & next review" }));
+
+    await waitFor(() => expect(updateStatusMock).toHaveBeenCalledWith("incident-001", {
+      status: "monitoring",
+      reason: "Keep watch until facilities confirms.",
+      expected_version: 1,
+    }));
+    expect(await screen.findByText("No other review item matches the current filters.")).toBeInTheDocument();
+  });
+
+  it("saves a grouping review with next-review and selects its next candidate", async () => {
+    const initial = boardSnapshot();
+    initial.incidents = initial.incidents.slice(0, 2);
+    const next = boardSnapshot(2, 2);
+    next.incidents = next.incidents.slice(0, 2);
+    const { user } = await renderDashboard(initial);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Confirm grouping" }));
+    await user.type(screen.getByRole("textbox", { name: "Coordinator reason" }), "Reports describe the same incident.");
+    reviewGroupingMock.mockResolvedValueOnce(next);
+
+    await user.click(screen.getByRole("button", { name: "Save & next review" }));
+
+    await waitFor(() => expect(reviewGroupingMock).toHaveBeenCalledOnce());
+    expect(await screen.findByRole("button", { name: "Copy full incident ID incident-002" })).toBeInTheDocument();
+  });
+
+  it("saves a grouping review and keeps selection when no other item matches", async () => {
+    const initial = boardSnapshot();
+    initial.incidents = initial.incidents.slice(0, 2);
+    const next = boardSnapshot(2, 2);
+    next.incidents = next.incidents.slice(0, 2);
+    next.incidents[1] = { ...next.incidents[1]!, review_required: false, review_reasons: [] };
+    const { user } = await renderDashboard(initial);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Confirm grouping" }));
+    await user.type(screen.getByRole("textbox", { name: "Coordinator reason" }), "Reports describe the same incident.");
+    reviewGroupingMock.mockResolvedValueOnce(next);
+
+    await user.click(screen.getByRole("button", { name: "Save & next review" }));
+
+    await waitFor(() => expect(reviewGroupingMock).toHaveBeenCalledOnce());
+    expect(await screen.findByText(/Confirm decision saved to the audit trail. No other review item matches/)).toBeInTheDocument();
+  });
+
+  it("requires a reason before undoing an eligible action and records the explanation", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.undoable_actions = [{ audit_id: "audit-undo-1", incident_id: "incident-001", action: "priority.changed", expected_version: 1 }];
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Undo last Priority Changed" }));
+    const reasonField = screen.getByRole("textbox", { name: "Reason" });
+    expect(reasonField).toBeRequired();
+    fireEvent.change(reasonField, { target: { value: "  " } });
+    fireEvent.submit(screen.getByRole("button", { name: "Save undo" }).closest("form")!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("at least 3 characters");
+    await user.clear(reasonField);
+    await user.type(reasonField, "Undo after supervisor review.");
+    const undone = boardSnapshot(2, 2);
+    undoDecisionMock.mockResolvedValueOnce(undone);
+    await user.click(screen.getByRole("button", { name: "Save undo" }));
+    await waitFor(() => expect(undoDecisionMock).toHaveBeenCalledWith("audit-undo-1", { reason: "Undo after supervisor review.", expected_version: 1 }));
+    expect(await screen.findByText("The last eligible decision was undone.")).toBeInTheDocument();
+  });
+
+  it("rebases an undo after a stale version, keeps the reason on failure, and can be canceled", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.undoable_actions = [{ audit_id: "audit-undo-1", incident_id: "incident-001", action: "priority.changed", expected_version: 1 }];
+    const latest = boardSnapshot(3, 2);
+    latest.undoable_actions = snapshot.undoable_actions;
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Undo last Priority Changed" }));
+    const reason = screen.getByRole("textbox", { name: "Reason" });
+    await user.type(reason, "Supervisor confirmed this can be reversed.");
+
+    undoDecisionMock.mockRejectedValueOnce(new ApiError("Stale undo version.", 409, "stale_version"));
+    await user.click(screen.getByRole("button", { name: "Save undo" }));
+    expect(await screen.findByText(/older incident version/)).toBeInTheDocument();
+    expect(reason).toHaveValue("Supervisor confirmed this can be reversed.");
+
+    getSnapshotMock.mockResolvedValueOnce(latest);
+    await pollNextSnapshot();
+    await user.click(screen.getByRole("button", { name: "Use latest version and keep reason" }));
+    undoDecisionMock.mockRejectedValueOnce(new Error("Undo service unavailable."));
+    await user.click(screen.getByRole("button", { name: "Save undo" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Undo service unavailable.");
+    expect(reason).toHaveValue("Supervisor confirmed this can be reversed.");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Undo last Priority Changed" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo last Priority Changed" }));
+    expect(screen.getByRole("textbox", { name: "Reason" })).toHaveValue("Supervisor confirmed this can be reversed.");
+  });
+
 });

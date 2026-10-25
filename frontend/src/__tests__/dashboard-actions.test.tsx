@@ -140,6 +140,7 @@ async function pollNextSnapshot() {
 }
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/dashboard");
   getSnapshotMock.mockReset();
   reviewConflictMock.mockReset();
   updatePriorityMock.mockReset();
