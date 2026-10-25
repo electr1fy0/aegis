@@ -162,7 +162,7 @@ describe("ReportPage", () => {
     expect(screen.getByText("Aegis Campus Safety Exercise")).toBeInTheDocument();
     await user.type(description, input.text);
     await user.selectOptions(screen.getByRole("combobox", { name: "Zone" }), "stage");
-    await user.type(screen.getByRole("textbox", { name: "Sublocation" }), "north rail");
+    await user.type(screen.getByRole("textbox", { name: "Sublocation (optional)" }), "north rail");
     await user.click(screen.getByRole("radio", { name: /Earlier/ }));
     fireEvent.change(screen.getByLabelText("Earlier event time"), {
       target: { value: "2026-10-24T10:15" },
@@ -178,7 +178,7 @@ describe("ReportPage", () => {
     expect(receiptRegion.querySelector("blockquote")?.textContent).toBe(input.text);
     expect(description).toHaveValue("");
     expect(screen.getByRole("combobox", { name: "Zone" })).toHaveValue("");
-    expect(screen.getByRole("textbox", { name: "Sublocation" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Sublocation (optional)" })).toHaveValue("");
     expect(screen.getByRole("radio", { name: /Unknown/ })).toBeChecked();
   });
 

@@ -197,7 +197,7 @@ h3 { font-size: 13px; font-weight: 620; }
 .summary-card:hover { background: var(--surface-raised); }
 .summary-card:focus-visible { outline-offset: -3px; }
 
-.dashboard-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.dashboard-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 0 12px; }
 .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; }
 .toolbar-caption { display: inline-flex; align-items: center; gap: 7px; color: var(--muted-foreground); font-size: 11px; }
 .toolbar-caption svg { width: 14px; height: 14px; color: var(--primary); }
@@ -706,3 +706,14 @@ h3 { font-size: 13px; font-weight: 620; }
   .print-brief section { break-inside: avoid; }
   .print-brief blockquote { margin: 3mm 0; padding-left: 4mm; border-left: 2px solid #888; }
 }
+
+.counts-help { margin: 0 0 14px; color: var(--muted-foreground); font-size: 12px; }
+.counts-help summary { width: fit-content; cursor: pointer; }
+.counts-help p { margin-top: 6px; }
+.replay-progress { padding: 6px 8px; color: var(--muted-foreground); font-size: 12px; }
+.audit-section > summary, .incident-timeline > summary { padding: 14px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.incident-timeline > summary { padding-inline: 0; }
+.incident-technical-details { position: relative; color: var(--muted-foreground); font-size: 12px; }
+.incident-technical-details summary { cursor: pointer; }
+.incident-technical-details span { display: block; overflow-wrap: anywhere; }
+.incident-technical-details[open] { max-width: 180px; }

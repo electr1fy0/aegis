@@ -864,7 +864,7 @@ describe("DashboardPage", () => {
       if (typeof pollHandler === "function") pollHandler();
       await Promise.resolve();
     });
-    await screen.findByText("v8");
+    await screen.findByText("Version 8");
     await user.click(screen.getByRole("button", { name: "Save priority" }));
 
     await waitFor(() => expect(updatePriorityMock).toHaveBeenCalledOnce());
@@ -894,7 +894,7 @@ describe("DashboardPage", () => {
       if (typeof pollHandler === "function") pollHandler();
       await Promise.resolve();
     });
-    await screen.findByText("v9");
+    await screen.findByText("Version 9");
     await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
 
     await waitFor(() => expect(reviewGroupingMock).toHaveBeenCalledOnce());
@@ -928,10 +928,10 @@ describe("DashboardPage", () => {
     });
     await user.click(screen.getByRole("button", { name: "Save status" }));
     await waitFor(() => expect(updateStatusMock).toHaveBeenCalledOnce());
-    await screen.findByText("v11");
+    await screen.findByText("Version 11");
 
     await act(async () => resolvePoll(stalePoll));
-    expect(screen.getByText("v11")).toBeInTheDocument();
+    expect(screen.getByText("Version 11")).toBeInTheDocument();
   });
 
   it("shows a loading state, a failed connection and then retries successfully", async () => {
@@ -1036,7 +1036,7 @@ describe("DashboardPage", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Synthetic scenario" }), "busy");
     await user.click(screen.getByRole("button", { name: "Start replay" }));
     expect(await screen.findByText("Started the busy synthetic replay.")).toBeInTheDocument();
-    expect(screen.getByText(/Replay step 0 of 1 · busy scenario/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 0 of 1 · busy/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Next report" }));
     expect(await screen.findByText("Next synthetic report added.")).toBeInTheDocument();
@@ -1101,6 +1101,9 @@ describe("DashboardPage", () => {
 
   it("expands and collapses the audit history", async () => {
     const { user } = await renderDashboard();
+    const disclosure = screen.getByText("Coordinator audit · 4").closest("details")!;
+    expect(disclosure).not.toHaveAttribute("open");
+    await user.click(screen.getByText("Coordinator audit · 4"));
     const toggle = screen.getByRole("button", { name: "View all 4" });
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -1112,6 +1115,7 @@ describe("DashboardPage", () => {
   it("links current audit entities to the owning incident and preserves the event", async () => {
     const { user } = await renderDashboard();
     window.history.replaceState({}, "", `/dashboard?event=${eventFixture.id}&queue=review`);
+    await user.click(screen.getByText("Coordinator audit · 4"));
     await user.click(screen.getByRole("button", { name: "View all 4" }));
 
     const audit = screen.getByRole("region", { name: "Coordinator audit" });
@@ -1131,6 +1135,7 @@ describe("DashboardPage", () => {
     );
     const { user } = await renderDashboard(snapshot);
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByText(/^Incident timeline ·/));
     const sourceTimeline = screen.getByRole("region", { name: "Incident timeline" });
     await user.click(within(sourceTimeline).getByRole("button", { name: "View all 8" }));
     expect(within(sourceTimeline).getByText("Report decision")).toBeInTheDocument();
@@ -1140,6 +1145,7 @@ describe("DashboardPage", () => {
     expect(statusChangedEntries.map((entry) => entry?.className)).toEqual(expect.arrayContaining(["timeline-entry is-report-decision", "timeline-entry is-coordinator-decision"]));
 
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    await user.click(screen.getByText(/^Incident timeline ·/));
     const targetTimeline = screen.getByRole("region", { name: "Incident timeline" });
     await user.click(within(targetTimeline).getByRole("button", { name: "View all 6" }));
     expect(within(targetTimeline).getAllByText("Conflict review")).toHaveLength(2);
@@ -1153,6 +1159,7 @@ describe("DashboardPage", () => {
     await user.click(within(queue).getByRole("button", { name: "All" }));
     await user.click(within(queue).getByRole("button", { name: /Previously resolved facility issue/ }));
 
+    await user.click(screen.getByText(/^Incident timeline ·/));
     expect(screen.getByRole("region", { name: "Incident timeline" })).toHaveTextContent("No report or coordinator events have been recorded.");
   });
 
@@ -1344,9 +1351,12 @@ describe("DashboardPage", () => {
     const { user } = await renderDashboard(snapshot);
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
     expect(within(screen.getByRole("region", { name: "Incident inspector" })).getByText("Call placed to the venue desk.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Add a coordinator note" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add note" }));
     const sourceNote = screen.getByRole("textbox", { name: "Add a coordinator note" });
     await user.type(sourceNote, "Draft for the stage group");
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
+    await user.click(screen.getByRole("button", { name: "Add note" }));
     const targetNote = screen.getByRole("textbox", { name: "Add a coordinator note" });
     expect(targetNote).toHaveValue("");
     fireEvent.submit(targetNote.closest("form")!);
@@ -1362,6 +1372,7 @@ describe("DashboardPage", () => {
     addIncidentNoteMock.mockResolvedValueOnce(saved);
     await user.click(screen.getByRole("button", { name: "Save note" }));
     expect(await screen.findByText("Coordinator note saved.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Add a coordinator note" })).not.toBeInTheDocument();
   });
 
   it("returns an equal-valued priority override to policy", async () => {

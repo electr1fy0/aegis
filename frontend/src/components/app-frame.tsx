@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import {
   IconChartBar,
   IconFileReport,
-  IconInfoCircle,
   IconLayoutDashboard,
   IconShieldCheck,
 } from "@tabler/icons-react";
@@ -23,7 +22,6 @@ const navigation = [
   { to: "/dashboard", label: "Operations", icon: IconLayoutDashboard },
   { to: "/report", label: "New report", icon: IconFileReport },
   { to: "/evaluation", label: "Evaluation", icon: IconChartBar },
-  { to: "/about", label: "About", icon: IconInfoCircle },
 ] as const;
 
 function readThemePreference(): ThemePreference {
@@ -91,13 +89,6 @@ function AppFrameContent({ children }: AppFrameProps) {
     ?? stream.snapshot?.event;
   const eventName = selectedEvent?.name ?? (stream.loading ? "Loading current exercise" : "Exercise unavailable");
   const engineText = stream.snapshot ? engineLabel(stream.snapshot.health) : "Checking model status";
-  const engineState = stream.error
-    ? "offline"
-    : stream.snapshot?.health.model_ready
-      ? "ready"
-      : stream.snapshot
-        ? "degraded"
-        : "offline";
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -111,6 +102,9 @@ function AppFrameContent({ children }: AppFrameProps) {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const stale = stream.lastUpdated !== null && now - stream.lastUpdated > 30_000;
+  const limitedMatching = /fallback|degraded|unavailable/i.test(engineText);
 
   const chooseTheme = (value: string) => {
     if (value !== "system" && value !== "dark" && value !== "light") return;
@@ -159,24 +153,32 @@ function AppFrameContent({ children }: AppFrameProps) {
         </nav>
 
         <div className="shell-status-group">
-          <div className={`shell-freshness${stream.reconnecting ? " is-reconnecting" : ""}`}>
-            <span className="shell-freshness-dot" />
-            <span>{stream.reconnecting
-              ? `Reconnecting. Last update ${freshnessLabel(stream.lastUpdated, now).replace("Updated ", "")}`
-              : freshnessLabel(stream.lastUpdated, now)}</span>
-          </div>
-          <div className="topbar-status" aria-live="polite">
-            <span className={`engine-dot engine-dot-${engineState}`} />
-            <span className="engine-label" title={engineText}>{engineText}</span>
-          </div>
-          <label className="theme-control">
-            <span>Theme</span>
-            <select aria-label="Theme" value={themePreference} onChange={(event) => chooseTheme(event.target.value)}>
-              <option value="system">System</option>
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
-          </label>
+          <details className="shell-detail shell-live-detail">
+            <summary className={`shell-freshness${stream.error || stream.reconnecting || stale ? " is-reconnecting" : ""}`}>
+              <span className="shell-freshness-dot" aria-hidden="true" />
+              {stream.reconnecting ? "Reconnecting" : stream.error ? "Offline" : stale ? "Updates delayed" : stream.lastUpdated === null ? "Connecting" : "Live"}
+            </summary>
+            <div className="shell-detail-content">
+              <span>{freshnessLabel(stream.lastUpdated, now)}</span>
+              <span>{engineText}</span>
+              {stream.snapshot?.health.model_revision && <span>{stream.snapshot.health.model_revision}</span>}
+            </div>
+          </details>
+          {limitedMatching && <span className="shell-matching-warning">Limited matching</span>}
+          <details className="shell-detail shell-utilities">
+            <summary aria-label="Settings and information">More</summary>
+            <div className="shell-detail-content">
+              <label className="theme-control">
+                <span>Theme</span>
+                <select aria-label="Theme" value={themePreference} onChange={(event) => chooseTheme(event.target.value)}>
+                  <option value="system">System</option>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <Link to="/about" activeProps={{ className: "is-active" }}>About Aegis</Link>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -186,6 +188,9 @@ function AppFrameContent({ children }: AppFrameProps) {
         </div>
       )}
 
+      {stale && !stream.reconnecting && (
+        <div className="shell-connection-notice" role="status">Live updates are delayed. The last successful snapshot is still shown.</div>
+      )}
       <main className="page-shell">{children}</main>
     </div>
   );

@@ -204,7 +204,7 @@ describe("dashboard priority and status actions", () => {
     expect(reason).toHaveValue("Reviewed with the operations lead.");
     expect(screen.getByRole("button", { name: "Use latest version and keep reason" })).toBeDisabled();
     await pollNextSnapshot();
-    await screen.findByText("v8");
+    await screen.findByText("Version 8");
     await user.click(screen.getByRole("button", { name: "Use latest version and keep reason" }));
     expect(reason).toHaveValue("Reviewed with the operations lead.");
     expect(screen.queryByRole("status", { name: /newer snapshot/i })).not.toBeInTheDocument();
@@ -272,7 +272,7 @@ describe("dashboard priority and status actions", () => {
     const reason = screen.getByRole("textbox", { name: "Reason" });
     await user.type(reason, "Keep watch until exit is checked.");
     await pollNextSnapshot();
-    await screen.findByText("v7");
+    await screen.findByText("Version 7");
     await user.click(screen.getByRole("button", { name: "Save status" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("older incident version");
@@ -355,7 +355,7 @@ describe("conflict review actions", () => {
     await user.clear(reason);
     await user.type(reason, "Facilities verified the updated exit status.");
     await pollNextSnapshot();
-    await screen.findByText("v9");
+    await screen.findByText("Version 9");
     await user.click(screen.getByRole("button", { name: "Save conflict review" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("older incident version");
     expect(reason).toHaveValue("Facilities verified the updated exit status.");

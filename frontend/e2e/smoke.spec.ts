@@ -15,11 +15,11 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   await page.locator(".replay-menu > summary").click();
   await page.getByLabel("Synthetic scenario").selectOption("demo");
   await page.getByRole("button", { name: "Start replay" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Replay step 0 of 24" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Step 0 of 24" })).toBeVisible();
 
   for (let step = 1; step <= 24; step += 1) {
     await page.getByRole("button", { name: "Next report" }).click();
-    await expect(page.getByRole("status").filter({ hasText: `Replay step ${step} of 24` })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: `Step ${step} of 24` })).toBeVisible();
   }
 
   const reportsCount = page.locator(".summary-card").filter({ hasText: "Reports received" }).locator(".summary-value");
@@ -71,6 +71,7 @@ test("demo replay, human review, report intake, and measured evaluation", async 
   await page.getByRole("textbox", { name: "Coordinator reason" }).fill(confirmationReason);
   await page.getByRole("button", { name: "Save coordinator decision" }).click();
 
+  await page.locator(".audit-section > summary").click();
   const audit = page.getByRole("region", { name: "Coordinator audit" });
   await expect(audit.getByText(confirmationReason, { exact: true })).toBeVisible();
 
@@ -99,7 +100,7 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   await page.goto(`/report?event=${eventId}`);
   await page.getByRole("textbox", { name: "Report description" }).fill(text);
   await page.getByLabel("Zone", { exact: true }).selectOption("hall");
-  await page.getByLabel("Sublocation", { exact: true }).fill("inner doorway");
+  await page.getByLabel("Sublocation (optional)", { exact: true }).fill("inner doorway");
   await page.getByRole("radio", { name: /Just observed/ }).check();
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Report description" })).toHaveValue(text);
@@ -121,6 +122,7 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   await page.getByRole("button", { name: "Save title", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exhibition hall observation", exact: true })).toBeVisible();
   const note = "=This is a source-preserving synthetic coordinator note";
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
   await page.getByRole("textbox", { name: "Add a coordinator note" }).fill(note);
   await page.getByRole("button", { name: "Save note", exact: true }).click();
   await expect(page.locator(".notes-list")).toContainText(note);
@@ -151,6 +153,7 @@ test("draft recovery, linked receipts, audited edits, undo, history, and export"
   await page.goto(`/dashboard?event=${nextId}`);
   await page.getByLabel("Exercise", { exact: true }).selectOption(eventId);
   await expect(page.locator(".incident-row-main").filter({ hasText: "Exhibition hall observation" })).toBeVisible();
+  await page.getByLabel("Settings and information").click();
   await page.getByLabel("Theme", { exact: true }).selectOption("light");
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.setViewportSize({ width: 390, height: 844 });

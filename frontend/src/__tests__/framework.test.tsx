@@ -287,7 +287,7 @@ describe("application frame, static overview, and route wiring", () => {
     expect(await screen.findByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
     expect(screen.getByText("Semantic matching · all-MiniLM-L6-v2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "About" })).toHaveClass("is-active");
+    expect(screen.getByRole("link", { name: "About Aegis", hidden: true })).toHaveClass("is-active");
     expect(screen.getAllByRole("listitem")).toHaveLength(8);
     expect(screen.getByRole("link", { name: "View evaluation results" })).toHaveAttribute("href", "/evaluation");
     expect(getSnapshotMock).toHaveBeenCalledOnce();
@@ -326,6 +326,7 @@ describe("application frame, static overview, and route wiring", () => {
 
     expect(await screen.findByText(/^Updated \d+s ago$/)).toBeInTheDocument();
     expect(screen.getByLabelText("Exercise")).toHaveValue(eventFixture.id);
+    fireEvent.click(screen.getByLabelText("Settings and information"));
     const theme = screen.getByLabelText("Theme");
     expect(theme).toHaveValue("system");
     expect(document.documentElement).not.toHaveClass("dark");
@@ -366,6 +367,7 @@ describe("application frame, static overview, and route wiring", () => {
     const view = render(<RouterProvider router={router} />);
 
     try {
+      fireEvent.click(await screen.findByLabelText("Settings and information"));
       const theme = await screen.findByLabelText("Theme");
       expect(theme).toHaveValue(preference);
       if (preference === "dark") expect(document.documentElement).toHaveClass("dark");
@@ -391,6 +393,7 @@ describe("application frame, static overview, and route wiring", () => {
     const view = render(<RouterProvider router={router} />);
 
     try {
+      fireEvent.click(await screen.findByLabelText("Settings and information"));
       const theme = await screen.findByLabelText("Theme");
       expect(theme).toHaveValue("system");
       fireEvent.change(theme, { target: { value: "dark" } });
@@ -471,11 +474,15 @@ describe("application frame, static overview, and route wiring", () => {
     getSnapshotMock.mockResolvedValue(snapshotFixture);
     const router = makeRouter("/freshness");
     render(<RouterProvider router={router} />);
-    expect(await screen.findByText("Updated 0s ago")).toBeInTheDocument();
+    expect(await screen.findByText("Live")).toBeVisible();
+    expect(screen.getByText("Updated 0s ago")).not.toBeVisible();
+    fireEvent.click(screen.getByText("Live"));
+    expect(screen.getByText("Updated 0s ago")).toBeVisible();
 
     now += 60_000;
     act(() => freshnessTick?.());
-    expect(screen.getByText("Updated 1m ago")).toBeInTheDocument();
+    expect(screen.getByText("Updated 1m ago")).toBeVisible();
+    expect(screen.getByText("Updates delayed")).toBeVisible();
     now += 3_540_000;
     act(() => freshnessTick?.());
     expect(screen.getByText("Updated 1h ago")).toBeInTheDocument();
@@ -492,7 +499,7 @@ describe("application frame, static overview, and route wiring", () => {
       "Live updates are reconnecting. The last successful snapshot is still shown.",
     );
     expect(document.querySelector(".shell-freshness")).toHaveClass("is-reconnecting");
-    expect(screen.getByText(/^Reconnecting\. Last update \d+s ago$/)).toBeInTheDocument();
+    expect(screen.getByText("Reconnecting")).toBeVisible();
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
   });
 
@@ -529,16 +536,16 @@ describe("application frame, static overview, and route wiring", () => {
       health: { ...healthFixture, model_ready: false },
     });
     const router = makeRouter("/about");
-    const { container } = render(<RouterProvider router={router} />);
+    render(<RouterProvider router={router} />);
     expect(await screen.findByText("Semantic matching · unavailable")).toBeInTheDocument();
-    expect(container.querySelector(".engine-dot-degraded")).toBeInTheDocument();
+    expect(screen.getByText("Limited matching")).toBeVisible();
   });
 
   it("keeps the frame visible when the snapshot request fails", async () => {
     getSnapshotMock.mockRejectedValueOnce(new Error("Backend is offline"));
     const router = makeRouter("/about");
-    const { container } = render(<RouterProvider router={router} />);
-    await waitFor(() => expect(container.querySelector(".engine-dot-offline")).toBeInTheDocument());
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByText("Offline")).toBeVisible();
     expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "About Aegis" })).toBeInTheDocument();
   });

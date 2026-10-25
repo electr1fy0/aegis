@@ -317,14 +317,14 @@ describe("dashboard saved state", () => {
     expect(screen.getByText("The backend has not returned a current event snapshot.")).toBeInTheDocument();
   });
 
-  it("uses the engine name in the matcher tooltip when the model revision is undefined", async () => {
+  it("keeps technical matcher metadata out of the dashboard toolbar", async () => {
     const health = { ...snapshotFixture.health, model_revision: undefined } as unknown as Snapshot["health"];
     const snapshot = makeSnapshot({ health });
     snapshotHookOverride.state = snapshotState(snapshot);
     const { container } = render(<DashboardPage />);
 
     await screen.findByRole("heading", { name: "Incident queue" });
-    expect(container.querySelector(".matcher-label")).toHaveAttribute("title", snapshot.health.engine);
+    expect(container.querySelector(".matcher-label")).not.toBeInTheDocument();
   });
 
   it("keeps the report section closed when the selected incident has no unread reports", async () => {

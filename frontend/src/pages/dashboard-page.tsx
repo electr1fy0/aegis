@@ -45,7 +45,6 @@ import {
 } from "../lib/api";
 import {
   displayStatus,
-  engineLabel,
   evidenceScore,
   formatAge,
   formattedTime,
@@ -582,7 +581,6 @@ export function DashboardPage() {
     : [];
   const scopedReviewCount = scopedIncidents.filter((incident) => incident.review_required || incident.priority === "UNASSESSED").length;
   const scopedConflictCount = scopedIncidents.reduce((count, incident) => count + incident.conflicts.filter((conflict) => conflict.status === "unresolved").length, 0);
-  const providerStatus = provider as typeof provider & { lastUpdated?: number | null; reconnecting?: boolean };
   const selectedUnreadIds = selectedIncident ? unreadReportIds(selectedIncident, readReports[readKey(snapshot.event.id, selectedIncident.id)] ?? []) : [];
 
   return (
@@ -590,7 +588,6 @@ export function DashboardPage() {
       <div className="page-heading">
         <div className="page-heading-copy">
           <h1>Situation overview</h1>
-          <p className="page-subtitle">Provisional groups from the current exercise, ready for human review.</p>
         </div>
         <div className="heading-actions">
           <Button render={<Link to="/report" />} nativeButton={false}><IconMessageCircle />Report a situation</Button>
@@ -608,18 +605,12 @@ export function DashboardPage() {
       />
 
       <div className="dashboard-toolbar">
-        <div className="toolbar-left">
-          <span className={`toolbar-caption visually-hidden${providerStatus.reconnecting ? " is-stale" : ""}`}><IconActivity />
-            {providerStatus.reconnecting ? "Reconnecting" : providerStatus.lastUpdated ? `Updated ${formatAge(new Date(providerStatus.lastUpdated).toISOString())}` : "Live snapshot"}
-          </span>
-          <span className="policy-version">Policy {snapshot.event.policy_version}</span>
-          <span className="matcher-label visually-hidden" title={snapshot.health.model_revision ?? snapshot.health.engine}>{engineLabel(snapshot.health)}</span>
-        </div>
         <div className="toolbar-right">
           <details className="toolbar-menu replay-menu">
             <summary><IconPlayerPlay />Replay</summary>
             <div className="toolbar-menu-content">
               <label htmlFor="replay-scenario">Synthetic scenario</label>
+              {activeReplay && <p className="replay-progress" role="status">Step {activeReplay.cursor} of {activeReplay.total} · {activeReplay.scenario}</p>}
               <NativeSelect id="replay-scenario" className="toolbar-select" value={scenario} onChange={(event) => setScenario(event.target.value as ReplayScenario)}>
                 <option value="demo">Demo replay</option><option value="busy">Busy replay</option><option value="edge">Edge cases replay</option>
               </NativeSelect>
@@ -709,11 +700,6 @@ export function DashboardPage() {
 
       <AuditTimeline snapshot={snapshot} />
 
-      {activeReplay && (
-        <p className="action-note replay-note" role="status">
-          Replay step {activeReplay.cursor} of {activeReplay.total} · {activeReplay.scenario} scenario. Every step uses normal report ingestion.
-        </p>
-      )}
       {notice && <div className={`toast-message is-${notice.kind}`} role="status">{notice.message}</div>}
       <PrintBrief snapshot={snapshot} />
     </div>
@@ -731,13 +717,13 @@ interface SummaryStripProps {
 function SummaryStrip({ reports, groups, review, conflicts, onSelect }: SummaryStripProps) {
   return (
     <div className="summary-strip">
-      <div className="summary-grid" role="group" aria-label="Exercise counts" aria-describedby="summary-scope-note">
+      <div className="summary-grid" role="group" aria-label="Exercise counts">
         <SummaryCard value={reports} label="Reports received" onClick={() => onSelect("all")} />
         <SummaryCard value={groups} label="Provisional groups" onClick={() => onSelect("active")} />
         <SummaryCard value={review} label="Awaiting review" tone="warning" onClick={() => onSelect("review")} />
         <SummaryCard value={conflicts} label="Unresolved conflicts" tone="alert" onClick={() => onSelect("conflicts")} />
       </div>
-      <p className="summary-scope-note" id="summary-scope-note">Counts follow the current search, priority, status, and zone filters across all queue tabs.</p>
+      <details className="counts-help"><summary>About these counts</summary><p>Counts follow the current search, priority, status, and zone filters across all queue tabs.</p></details>
     </div>
   );
 }
@@ -874,7 +860,7 @@ function IncidentQueue({
                       <span>{zoneLabel(incident.zone_id, zones)}</span>
                       <span>{reportList.length} report{reportList.length === 1 ? "" : "s"}</span>
                       <span className={`mini-pill priority-pill-${incident.priority}`}>{incident.priority === "UNASSESSED" ? "Unassessed" : incident.priority}</span>
-                      <span className="mini-pill">{displayStatus(incident.status)}</span>
+                      {incident.status !== "open" && <span className="mini-pill">{displayStatus(incident.status)}</span>}
                       {reasonCount > 0 && <span className="mini-pill is-review">{reviewReasonLabel(incident.review_reasons[0]!)}</span>}
                       {unresolved && <span className="mini-pill is-conflict">Conflict</span>}
                       {newCount > 0 && <span className="mini-pill is-new">{newCount} new</span>}
@@ -1115,7 +1101,7 @@ function IncidentInspector({
     <section className="workspace-panel inspector-panel" aria-labelledby="inspector-heading">
       <div className="panel-header">
         <h2 className="panel-title" id="inspector-heading">Incident inspector</h2>
-        <div className="inspector-head-actions"><button type="button" className="copy-id" aria-label={`Copy full incident ID ${incident.id}`} onClick={() => void copyValue(incident.id).then((copied) => onNotice({ kind: copied ? "success" : "error", message: copied ? "Full incident ID copied." : "Clipboard access is unavailable." }))}><IconCopy size={14} />{shortDisplayId(incident.display_id, incident.id, "INC")}</button><span className="panel-meta mono">v{incident.version}</span><Button className="inspector-close-button" size="xs" variant="ghost" onClick={onClose}><IconX />Close</Button></div>
+        <div className="inspector-head-actions"><button type="button" className="copy-id" aria-label={`Copy full incident ID ${incident.id}`} onClick={() => void copyValue(incident.id).then((copied) => onNotice({ kind: copied ? "success" : "error", message: copied ? "Full incident ID copied." : "Clipboard access is unavailable." }))}><IconCopy size={14} />{shortDisplayId(incident.display_id, incident.id, "INC")}</button><details className="incident-technical-details"><summary>Details</summary><span>Version {incident.version}</span><span>{incident.id}</span></details><Button className="inspector-close-button" size="xs" variant="ghost" onClick={onClose}><IconX />Close</Button></div>
       </div>
       <div
         className="inspector-content"
@@ -1155,13 +1141,12 @@ function IncidentInspector({
         <RelatedGroups snapshot={snapshot} incident={incident} onSelect={onSelectIncident} />
 
         <details className="inspector-disclosure report-disclosure" open={reportSectionOpen} onToggle={(event) => setReportSectionOpen(event.currentTarget.open)}>
-          <summary><span><h3>Source reports</h3><span className="panel-meta">Original text is preserved · Times in {snapshot.event.timezone} · {newReportIds.length} new since viewed</span></span><span className="disclosure-state" /></summary>
+          <summary><span><h3>Source reports</h3><span className="panel-meta">Times in {snapshot.event.timezone}{newReportIds.length > 0 ? ` · ${newReportIds.length} new` : ""}</span></span><span className="disclosure-state" /></summary>
           <div className="report-stack">
             {sourceReports.map((report) => (
               <article id={`source-report-${report.id}`} tabIndex={-1} key={report.id} className={`source-report${newReportIds.includes(report.id) ? " is-new" : ""}`}>
                 <div className="source-report-head">
                   <span className="source-report-id">{shortDisplayId(report.display_id, report.id, "RPT")}</span>
-                  {report.display_id && <span className="historical-label">{report.id}</span>}
                   <button type="button" className="copy-icon-button" aria-label={`Copy full report ID ${report.id}`} onClick={() => void copyValue(report.id).then((copied) => onNotice({ kind: copied ? "success" : "error", message: copied ? "Full report ID copied." : "Clipboard access is unavailable." }))}><IconCopy size={13} /></button>
                   {newReportIds.includes(report.id) && <span className="mini-pill is-new">New</span>}
                   <label className="visually-hidden" htmlFor={`report-select-${report.id}`}>Select report {report.id} for a coordinator action</label>
@@ -1341,6 +1326,7 @@ function TitleForm({ incident, onCancel, onSaved }: { incident: Incident; onCanc
 
 function NotesPanel({ incident, timeZone, onSaved, onNotice }: { incident: Incident; timeZone: string; onSaved: (snapshot: Snapshot) => void; onNotice: (notice: Notice) => void }) {
   const [text, setText] = useState("");
+  const [composing, setComposing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1351,6 +1337,7 @@ function NotesPanel({ incident, timeZone, onSaved, onNotice }: { incident: Incid
     try {
       onSaved(await addIncidentNote(incident.id, { text: text.trim(), expected_version: incident.version }));
       setText("");
+      setComposing(false);
       onNotice({ kind: "success", message: "Coordinator note saved." });
     } catch (caught) {
       setError(errorText(caught));
@@ -1360,14 +1347,15 @@ function NotesPanel({ incident, timeZone, onSaved, onNotice }: { incident: Incid
     }
   };
   return <section className="inspector-section notes-section" aria-labelledby="notes-heading">
-    <div className="inspector-section-heading"><h3 id="notes-heading">Coordinator notes</h3><span className="panel-meta">Standalone notes · {incident.notes?.length ?? 0}</span></div>
+    <div className="inspector-section-heading"><h3 id="notes-heading">Coordinator notes</h3><span className="panel-meta">{incident.notes?.length ?? 0} notes</span></div>
     {(incident.notes?.length ?? 0) > 0 && <ol className="notes-list">{incident.notes!.map((note) => <li key={note.id}><p>{note.text}</p><span>{note.actor} · {formattedTime(note.created_at, timeZone)}</span></li>)}</ol>}
-    <form className="note-form" onSubmit={(event) => void submit(event)}>
+    {!composing && <Button size="xs" variant="ghost" onClick={() => setComposing(true)}>Add note</Button>}
+    {composing && <form className="note-form" onSubmit={(event) => void submit(event)}>
       <label className="visually-hidden" htmlFor={`incident-note-${incident.id}`}>Add a coordinator note</label>
-      <Textarea id={`incident-note-${incident.id}`} value={text} maxLength={1000} placeholder="Add a note without changing the incident title or status." onChange={(event) => setText(event.target.value)} />
+      <Textarea id={`incident-note-${incident.id}`} value={text} maxLength={1000} placeholder="Add a coordinator note" onChange={(event) => setText(event.target.value)} />
       {error && <span className="form-error" role="alert">{error}</span>}
-      <div className="form-actions"><Button size="xs" type="submit" disabled={pending || !text.trim()}>{pending ? "Saving…" : "Save note"}</Button></div>
-    </form>
+      <div className="form-actions"><Button size="xs" type="button" variant="ghost" disabled={pending} onClick={() => setComposing(false)}>Cancel</Button><Button size="xs" type="submit" disabled={pending || !text.trim()}>{pending ? "Saving…" : "Save note"}</Button></div>
+    </form>}
   </section>;
 }
 
@@ -1412,10 +1400,10 @@ function IncidentTimeline({ incident, reports, snapshot }: { incident: Incident;
     })),
   ].sort((left, right) => right.sortTime - left.sortTime || right.id.localeCompare(left.id));
   const visible = expanded ? entries : entries.slice(0, 4);
-  return <section className="inspector-section incident-timeline" aria-labelledby="incident-timeline-heading">
+  return <details className="inspector-section incident-timeline"><summary>Incident timeline · {entries.length}</summary><section aria-labelledby="incident-timeline-heading">
     <div className="inspector-section-heading"><h3 id="incident-timeline-heading">Incident timeline</h3>{entries.length > 4 && <button type="button" className="audit-toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "Show recent" : `View all ${entries.length}`}</button>}</div>
     {entries.length === 0 ? <p className="action-note">No report or coordinator events have been recorded.</p> : <ol>{visible.map((entry) => <li key={entry.id} className={`timeline-entry is-${entry.kind.toLocaleLowerCase().replaceAll(" ", "-")}`}><span className="timeline-kind">{entry.kind}</span><time dateTime={entry.time}>{formattedTime(entry.time, snapshot.event.timezone)}</time><p>{entry.detail}</p></li>)}</ol>}
-  </section>;
+  </section></details>;
 }
 
 function ResetPriorityButton({ incident, onSaved, onNotice }: { incident: Incident; onSaved: (snapshot: Snapshot) => void; onNotice: (notice: Notice) => void }) {
@@ -1884,7 +1872,7 @@ function AuditTimeline({ snapshot }: AuditTimelineProps) {
   const audit = latestAuditFirst(snapshot.audit);
   const visible = expanded ? audit : audit.slice(0, 3);
   return (
-    <section className="audit-section" aria-labelledby="audit-heading">
+    <details className="audit-section"><summary>Coordinator audit · {audit.length}</summary><section aria-labelledby="audit-heading">
       <div className="panel-header">
         <h2 className="panel-title" id="audit-heading"><IconHistory />Coordinator audit</h2>
         <button className="audit-toggle" type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
@@ -1906,7 +1894,7 @@ function AuditTimeline({ snapshot }: AuditTimelineProps) {
           })}
         </div>
       )}
-    </section>
+    </section></details>
   );
 }
 

@@ -532,7 +532,7 @@ describe("dashboard interaction regressions", () => {
     expect(within(queue).getByText("Second Main Stage group")).toBeInTheDocument();
   });
 
-  it("closes and reopens the inspector and reports reconnecting provider state", async () => {
+  it("closes and reopens the inspector while the provider reconnects", async () => {
     const snapshot = dashboardSnapshot();
     const provider = stateFor(snapshot);
     provider.reconnecting = true;
@@ -541,7 +541,7 @@ describe("dashboard interaction regressions", () => {
     const user = userEvent.setup();
     const { container } = render(<DashboardPage />);
     await screen.findByRole("heading", { name: snapshot.incidents[0]!.title });
-    expect(screen.getByText("Reconnecting")).toHaveClass("is-stale");
+    expect(container.querySelector(".toolbar-caption")).not.toBeInTheDocument();
 
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
     expect(container.querySelector(".workspace-grid")).toHaveClass("is-inspector-open");

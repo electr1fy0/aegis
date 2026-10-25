@@ -3,7 +3,7 @@
 }
 
 .topbar {
-  grid-template-columns: 104px minmax(190px, 1fr) auto minmax(210px, auto);
+  grid-template-columns: 104px minmax(190px, 1fr) auto auto;
   gap: 18px;
   min-height: 68px;
   padding-right: 24px;
@@ -335,4 +335,19 @@
   .nav-link svg {
     display: none;
   }
+}
+
+.shell-detail { position: relative; font-size: 12px; }
+.shell-detail > summary { display: flex; align-items: center; min-height: 36px; cursor: pointer; list-style: none; color: var(--muted-foreground); }
+.shell-detail > summary::-webkit-details-marker { display: none; }
+.shell-detail > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.shell-detail-content { position: absolute; z-index: 70; top: calc(100% + 8px); right: 0; display: grid; gap: 12px; width: min(280px, 85vw); padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--popover); color: var(--foreground); overflow-wrap: anywhere; }
+.shell-detail-content .theme-control { display: grid; grid-column: auto; grid-row: auto; justify-self: stretch; gap: 6px; }
+.shell-matching-warning { color: var(--warning); font-size: 12px; }
+@media (max-width: 780px) {
+  .shell-status-group { position: relative; display: flex; grid-column: 2; grid-row: 1; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .shell-status-group .shell-detail { position: static; }
+  .shell-status-group .shell-freshness { grid-column: auto; grid-row: auto; }
+  .main-nav { grid-row: 3; }
+  .topbar { grid-template-rows: auto auto auto; }
 }

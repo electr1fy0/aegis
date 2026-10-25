@@ -438,7 +438,7 @@ export function ReportPage() {
     shared?.selectedEventId && currentEvent?.event.id !== shared.selectedEventId,
   );
   const isFormDisabled = loadingEvent || selectedEventPending || !currentEvent || !activeDraft || submitting;
-  const timeDescriptionId = timeError ? "event-time-error" : "event-time-help";
+  const timeDescriptionId = timeError ? "event-time-error" : timeMode !== "unknown" ? "event-time-help" : undefined;
 
   const chooseTimeMode = (mode: ReportTimeMode) => {
     let captured = "";
@@ -469,7 +469,7 @@ export function ReportPage() {
         <div className="page-heading-copy">
           <h1 id="report-page-title">New report</h1>
           <p className="page-subtitle">
-            Submit what was observed. A coordinator reviews every report.
+            Describe what you observed; leave unknown details blank.
           </p>
         </div>
       </div>
@@ -495,11 +495,6 @@ export function ReportPage() {
 
       <div className="report-layout">
         <Card className="form-card">
-          <h2>Report details</h2>
-          <p className="form-intro">
-            Use the reporter’s words. Leave details blank when they are unknown.
-          </p>
-
           {currentEvent && (
             <p className="field-hint" id="event-context">
               Submitting to <strong>{currentEvent.event.name}</strong> ({currentEvent.event.timezone}).
@@ -531,7 +526,7 @@ export function ReportPage() {
                 </p>
               ) : (
                 <p className="field-hint" id="report-description-help">
-                  Keep the original wording, including uncertainty or conflicting details. {text.length}/4,000
+                  {text.length}/4,000
                 </p>
               )}
             </div>
@@ -549,7 +544,6 @@ export function ReportPage() {
                     setSubmitError(null);
                   }}
                   disabled={isFormDisabled}
-                  aria-describedby="report-zone-help"
                 >
                   <option value="">Unknown / not provided</option>
                   {currentEvent?.zones.map((zone) => (
@@ -558,13 +552,10 @@ export function ReportPage() {
                     </option>
                   ))}
                 </select>
-                <p className="field-hint" id="report-zone-help">
-                  Leave unknown if the location was not supplied.
-                </p>
               </div>
 
               <div className="form-field">
-                <label htmlFor="report-sublocation">Sublocation</label>
+                <label htmlFor="report-sublocation">Sublocation (optional)</label>
                 <Input
                   id="report-sublocation"
                   name="sublocation"
@@ -576,11 +567,7 @@ export function ReportPage() {
                   placeholder="e.g. inner doorway"
                   maxLength={200}
                   disabled={isFormDisabled}
-                  aria-describedby="report-sublocation-help"
                 />
-                <p className="field-hint" id="report-sublocation-help">
-                  Optional reporter-supplied detail.
-                </p>
               </div>
             </div>
 
@@ -589,15 +576,15 @@ export function ReportPage() {
               <div className="time-mode-options">
                 <label>
                   <input type="radio" name="report-time-mode" value="just-observed" checked={timeMode === "just-observed"} onChange={() => chooseTimeMode("just-observed")} disabled={isFormDisabled} />
-                  <span><strong>Just observed</strong><small>Use the current known time.</small></span>
+                  <span><strong>Just observed</strong></span>
                 </label>
                 <label>
                   <input type="radio" name="report-time-mode" value="earlier" checked={timeMode === "earlier"} onChange={() => chooseTimeMode("earlier")} disabled={isFormDisabled} />
-                  <span><strong>Earlier</strong><small>Enter the time the reporter gave.</small></span>
+                  <span><strong>Earlier</strong></span>
                 </label>
                 <label>
                   <input type="radio" name="report-time-mode" value="unknown" checked={timeMode === "unknown"} onChange={() => chooseTimeMode("unknown")} disabled={isFormDisabled} />
-                  <span><strong>Unknown</strong><small>Leave the event time blank.</small></span>
+                  <span><strong>Unknown</strong></span>
                 </label>
               </div>
               {timeMode === "earlier" && currentEvent && !selectedEventPending && (
@@ -618,7 +605,7 @@ export function ReportPage() {
                     aria-describedby={timeDescriptionId}
                   />
                   <p className="field-hint" id="event-time-help">
-                    Enter the event-local time in {currentEvent.event.timezone}; it will be stored as UTC.
+                    Time in {currentEvent.event.timezone}.
                   </p>
                 </div>
               )}
@@ -627,11 +614,6 @@ export function ReportPage() {
                   {reportedAt
                     ? `Captured at ${reportedAt.replace("T", " ")} in ${currentEvent.event.timezone} when you selected this option.`
                     : `The current time in ${currentEvent.event.timezone} will be captured when you submit.`}
-                </p>
-              )}
-              {timeMode === "unknown" && (
-                <p className="field-hint time-mode-detail" id="event-time-help">
-                  No time will be added. Unknown timing may require manual grouping by the coordinator.
                 </p>
               )}
               {timeError && <p className="form-error" id="event-time-error" role="alert">{timeError}</p>}
@@ -644,9 +626,6 @@ export function ReportPage() {
             )}
 
             <div className="submit-row">
-              <p className="submit-note">
-                Your submission goes to the exercise review board.
-              </p>
               <Button type="submit" size="lg" disabled={isFormDisabled}>
                 {submitting ? "Submitting…" : "Submit report"}
               </Button>
@@ -687,16 +666,9 @@ export function ReportPage() {
           {draftStatus && <p className="draft-status" role="status">{draftStatus}</p>}
         </Card>
 
-        <aside className="report-guidance" aria-labelledby="report-guidance-heading">
-          <h2 id="report-guidance-heading">What happens next</h2>
-          <p>The original wording stays available, including incomplete or conflicting details.</p>
-          <p>Location, event time, and text similarity suggest related reports for a coordinator to inspect.</p>
-          <p>Priority labels order review. A coordinator decides what to do and records any correction.</p>
-          <p className="report-safety-scope">
-            This is a synthetic exercise. It does not contact emergency services, send messages, dispatch responders, or provide a real-world safety map.
-          </p>
-        </aside>
+
       </div>
+      <p className="report-safety-scope">Synthetic exercise only. Reports do not contact emergency services or dispatch responders.</p>
     </section>
   );
 }
