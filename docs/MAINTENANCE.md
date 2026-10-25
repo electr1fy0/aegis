@@ -17,10 +17,12 @@ Both commands verify the source and copied database and refuse to overwrite any 
 ```sh
 make semantic-setup
 make evaluate-semantic
-make backend-semantic
+make dev-semantic
 ```
 
 Preparation installs the separately locked optional environment `.venv-semantic` and explicitly downloads only inference artifacts from `sentence-transformers/all-MiniLM-L6-v2` at commit `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`. It then performs real inference through the application's offline loader and checks that the actual revision is semantic. Regular startup remains local-only and never downloads weights. Remote model code is disabled. `make evaluate-semantic` explicitly sets offline flags.
+
+`make dev-semantic` first requires successful real inference with the pinned local model, then starts both the API and frontend with the semantic environment and offline flags. If inference falls back to lexical mode, the readiness check exits unsuccessfully before either server starts. Use `make backend-semantic` for the API alone, or `make dev` for ordinary development with an explicitly reported fallback when semantic dependencies are absent. The readiness check does not create exercise state.
 
 The optional dependency lock is constrained by `requirements-dev.lock` to keep core API dependencies consistent. Regenerate it with:
 

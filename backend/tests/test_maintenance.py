@@ -122,6 +122,33 @@ def test_model_prepare_downloads_exact_commit_and_verifies_offline_inference(mon
         maintenance.prepare_model()
 
 
+def test_semantic_preflight_requires_successful_inference_without_creating_state(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(maintenance.shutil, "which", lambda _name: "/bin/bun")
+    path = tmp_path / "not-created.db"
+    engine = AnalysisEngine(model_loader=lambda: None)
+    monkeypatch.setattr(maintenance, "AnalysisEngine", lambda: engine)
+    result = maintenance.preflight(path, engine, require_semantic=True)
+    assert result["ready"] is False
+    assert result["semantic_required"] is True
+    assert result["semantic_inference_verified"] is False
+    assert not path.exists()
+    assert maintenance.main(["preflight", "--db", str(path), "--require-semantic"]) == 1
+    assert json.loads(capsys.readouterr().out)["matching"]["engine"] == "lexical"
+
+    class Encoder:
+        def encode(self, _texts, **_kwargs):
+            return [[1.0, 0.0]]
+
+    semantic = AnalysisEngine(model_loader=Encoder)
+    result = maintenance.preflight(path, semantic, require_semantic=True)
+    assert result["ready"] is True
+    assert result["semantic_inference_verified"] is True
+    assert result["matching"]["model_revision"] == MODEL_REVISION
+    assert not path.exists()
+
+
 def test_command_outputs_and_entrypoint(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(maintenance, "prepare_model", lambda: {"verified": True})
     assert maintenance.main(["prepare-model"]) == 0

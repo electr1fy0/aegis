@@ -57,15 +57,21 @@ def backup_database(source: Path, destination: Path) -> dict[str, Any]:
     return {"path": str(destination), "counts": counts}
 
 
-def preflight(database: Path, engine: Any | None = None) -> dict[str, Any]:
+def preflight(
+    database: Path, engine: Any | None = None, *, require_semantic: bool = False
+) -> dict[str, Any]:
     """Read local readiness without creating exercise state."""
     database = database.expanduser().resolve()
     engine = engine if engine is not None else AnalysisEngine()
     scenarios = {name: len(get_scenario(name)) for name in ("demo", "busy", "edge")}
     counts = inspect_database(database) if database.exists() else None
     bun = shutil.which("bun")
+    semantic_verified = False
+    if require_semantic:
+        probe = engine.analyze_report("Synthetic readiness check at the exhibition hall.")
+        semantic_verified = probe["model_revision"] == MODEL_REVISION
     return {
-        "ready": bun is not None,
+        "ready": bun is not None and (not require_semantic or semantic_verified),
         "python": sys.version.split()[0],
         "bun": bun,
         "database": str(database),
@@ -73,6 +79,8 @@ def preflight(database: Path, engine: Any | None = None) -> dict[str, Any]:
         "database_state": "verified" if counts is not None else "will be created on startup",
         "scenarios": scenarios,
         "matching": engine.health(),
+        "semantic_required": require_semantic,
+        "semantic_inference_verified": semantic_verified,
         "pinned_model": MODEL_REVISION,
         "note": "Lexical mode is supported; semantic inference requires the pinned local model.",
     }
@@ -112,6 +120,11 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument(
         "--db", type=Path, default=Path(os.getenv("AEGIS_DB_PATH", "runtime/aegis.sqlite3"))
     )
+    check.add_argument(
+        "--require-semantic",
+        action="store_true",
+        help="Require real offline inference with the pinned model before starting a demo.",
+    )
     commands.add_parser("prepare-model", help="Download the explicitly pinned optional model.")
     evaluate = commands.add_parser("evaluate", help="Run the real local evaluation.")
     evaluate.add_argument("--output", type=Path)
@@ -120,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command in {"backup", "restore"}:
             result = backup_database(args.source, args.destination)
         elif args.command == "preflight":
-            result = preflight(args.db)
+            result = preflight(args.db, require_semantic=args.require_semantic)
         elif args.command == "prepare-model":
             result = prepare_model()
         else:
