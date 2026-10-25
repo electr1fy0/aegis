@@ -51,6 +51,19 @@ export function formatAge(value: string, now = Date.now()): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+export function formatEventAge(value: string, now = Date.now()): string {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return "Time unavailable";
+  const remaining = timestamp - now;
+  if (remaining <= 0) return formatAge(value, now);
+  if (remaining < 60_000) return "Soon";
+  const minutes = Math.ceil(remaining / 60_000);
+  if (minutes < 60) return `In ${minutes}m`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 24) return `In ${hours}h`;
+  return `In ${Math.ceil(hours / 24)}d`;
+}
+
 export function priorityLabel(priority: Priority): string {
   return priorityNames[priority];
 }
@@ -78,8 +91,13 @@ export function firstReportTime(incident: Incident, reports: Report[]): string {
 
 export function engineLabel(health: Health): string {
   const engine = health.engine.trim();
-  if (!health.model_ready) return `${engine || "Matching engine"} · degraded`;
-  if (/lexical/i.test(engine)) return `${engine} · fallback`;
+  if (/lexical/i.test(engine)) return "Lexical matching · fallback";
+  if (/semantic|minilm|sentence/i.test(engine)) {
+    return health.model_ready
+      ? `Semantic matching · ${health.model_revision ?? engine}`
+      : "Semantic matching · unavailable";
+  }
+  if (!health.model_ready) return `${engine || "Matching engine"} · unavailable`;
   return engine || "Matching engine ready";
 }
 
@@ -95,6 +113,7 @@ export function displayStatus(status: string): string {
   return status
     .replaceAll("_", " ")
     .replaceAll("-", " ")
+    .replaceAll(".", " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
@@ -111,5 +130,5 @@ export function incidentMapPoint(incident: Incident, zones: Zone[]): { x: number
 
 export function evidenceScore(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "—";
-  return `${Math.round(value * 100)}%`;
+  return value.toFixed(2);
 }

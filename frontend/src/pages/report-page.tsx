@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, getSnapshot, submitReport } from "../lib/api";
 import type { CurrentEvent, ReportInput, ReportReceipt } from "../lib/types";
+import { hasReportDraftContent, loadReportDraft, saveReportDraft, type ReportDraft, type ReportTimeMode } from "../lib/report-draft";
+import { useSharedSnapshot } from "../hooks/use-snapshot";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
+import "./report-page.css";
 
 interface LocalDateTimeParts {
   year: number;
@@ -18,7 +21,8 @@ interface LocalDateTimeParts {
 }
 
 function createIdempotencyKey(): string {
-  return globalThis.crypto.randomUUID();
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  return `aegis-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 function datePartsAt(timestamp: number, timeZone: string): LocalDateTimeParts | null {
@@ -179,26 +183,76 @@ function priorityVariant(priority: string): "default" | "secondary" | "destructi
   return "secondary";
 }
 
+function isoToDatetimeLocal(value: string, timeZone: string): string | null {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  try {
+    const parts = datePartsAt(timestamp, timeZone);
+    if (!parts) return null;
+    const pad = (part: number) => String(part).padStart(2, "0");
+    return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`;
+  } catch {
+    return null;
+  }
+}
+
+function displayIdentifier(id: string, displayId?: string | null): string {
+  return displayId || id.slice(0, 8);
+}
+
+export function dashboardReceiptHref(eventId: string, incidentId: string): string {
+  try {
+    const url = new URL(window.location.href);
+    url.pathname = "/dashboard";
+    url.searchParams.set("event", eventId);
+    url.searchParams.set("incident", incidentId);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return `/dashboard?event=${encodeURIComponent(eventId)}&incident=${encodeURIComponent(incidentId)}`;
+  }
+}
+
 export function ReportPage() {
+  const shared = useSharedSnapshot();
   const [currentEvent, setCurrentEvent] = useState<CurrentEvent | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [eventError, setEventError] = useState<string | null>(null);
-  const [text, setText] = useState("");
-  const [zoneId, setZoneId] = useState("");
-  const [sublocation, setSublocation] = useState("");
-  const [reportedAt, setReportedAt] = useState("");
+  const [draft, setDraft] = useState<ReportDraft | null>(null);
+  const [draftStatus, setDraftStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [textError, setTextError] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<ReportReceipt | null>(null);
+  const [copyMessage, setCopyMessage] = useState("");
 
   const mountedRef = useRef(false);
+  const currentEventRef = useRef<CurrentEvent | null>(null);
+  const draftRef = useRef<ReportDraft | null>(null);
   const eventRequestRef = useRef<AbortController | null>(null);
   const eventRequestSequenceRef = useRef(0);
   const submittingRef = useRef(false);
-  const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey);
-  const lastAttemptFingerprintRef = useRef<string | null>(null);
+
+  const restoreEvent = useCallback((loadedEvent: CurrentEvent) => {
+    const previousId = currentEventRef.current?.event.id;
+    currentEventRef.current = loadedEvent;
+    setCurrentEvent(loadedEvent);
+    setLoadingEvent(false);
+    setEventError(null);
+    if (previousId !== loadedEvent.event.id || draftRef.current === null) {
+      const restored = loadReportDraft(loadedEvent.event.id, createIdempotencyKey());
+      draftRef.current = restored;
+      setDraft(restored);
+      setDraftStatus(restored.receipt
+        ? "Report receipt restored on this device."
+        : hasReportDraftContent(restored)
+          ? "Saved draft restored."
+          : "");
+      setTextError(null);
+      setTimeError(null);
+      setSubmitError(null);
+      setCopyMessage("");
+    }
+  }, []);
 
   const loadCurrentEvent = useCallback(async () => {
     eventRequestRef.current?.abort();
@@ -212,8 +266,7 @@ export function ReportPage() {
     try {
       const snapshot = await getSnapshot(undefined, controller.signal);
       if (!mountedRef.current || requestSequence !== eventRequestSequenceRef.current) return;
-      const loadedEvent: CurrentEvent = { event: snapshot.event, zones: snapshot.zones };
-      setCurrentEvent(loadedEvent);
+      restoreEvent({ event: snapshot.event, zones: snapshot.zones });
     } catch (error) {
       if (
         controller.signal.aborted ||
@@ -233,92 +286,182 @@ export function ReportPage() {
       }
       if (eventRequestRef.current === controller) eventRequestRef.current = null;
     }
-  }, []);
+  }, [restoreEvent]);
 
   useEffect(() => {
     mountedRef.current = true;
-    void loadCurrentEvent();
+    if (!shared) void loadCurrentEvent();
     return () => {
       mountedRef.current = false;
       eventRequestSequenceRef.current += 1;
       eventRequestRef.current?.abort();
       eventRequestRef.current = null;
     };
-  }, [loadCurrentEvent]);
+  }, [loadCurrentEvent, shared === null]);
+
+  useEffect(() => {
+    if (!shared) return;
+    if (shared.snapshot) {
+      restoreEvent({ event: shared.snapshot.event, zones: shared.snapshot.zones });
+      return;
+    }
+    setLoadingEvent(shared.loading);
+    if (shared.error) setEventError(shared.error);
+    else setEventError(null);
+  }, [shared?.snapshot, shared?.selectedEventId, shared?.loading, shared?.error, restoreEvent]);
+
+  const updateDraft = (changes: Partial<ReportDraft>): ReportDraft | null => {
+    const previous = draftRef.current;
+    if (!previous) return null;
+    const next = { ...previous, ...changes };
+    draftRef.current = next;
+    setDraft(next);
+    const saved = saveReportDraft(next);
+    setDraftStatus(saved ? "Draft saved on this device." : "Draft storage is unavailable; keep this page open.");
+    return next;
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (submittingRef.current || !currentEvent) return;
+    const activeDraft = draftRef.current;
+    const activeEvent = currentEventRef.current;
+    if (submittingRef.current || !activeEvent || !activeDraft) return;
     setTextError(null);
     setTimeError(null);
     setSubmitError(null);
 
-    if (!text.trim()) {
+    if (!activeDraft.text.trim()) {
       setTextError("Enter a report description before submitting.");
       return;
     }
-    if (text.length > 4000) {
+    if (activeDraft.text.length > 4000) {
       setTextError("Keep the description to 4,000 characters or fewer.");
       return;
     }
 
     let eventTimeIso: string | undefined;
-    if (reportedAt) {
-      const converted = datetimeLocalToIso(reportedAt, currentEvent.event.timezone);
+    let localReportedAt = activeDraft.reportedAt;
+    if (activeDraft.timeMode === "just-observed") {
+      localReportedAt = localReportedAt || isoToDatetimeLocal(new Date().toISOString(), activeEvent.event.timezone) || "";
+      if (localReportedAt !== activeDraft.reportedAt) updateDraft({ reportedAt: localReportedAt });
+    }
+    if (activeDraft.timeMode === "earlier" && !localReportedAt) {
+      setTimeError("Choose an earlier event time, or select Unknown if it was not provided.");
+      return;
+    }
+    if (activeDraft.timeMode !== "unknown") {
+      const converted = datetimeLocalToIso(localReportedAt, activeEvent.event.timezone);
       if (!converted) {
         setTimeError(
-          `Choose a valid, unambiguous local time in ${currentEvent.event.timezone}. A time skipped or repeated by a clock change cannot be submitted.`,
+          `Choose a valid, unambiguous local time in ${activeEvent.event.timezone}. A time skipped or repeated by a clock change cannot be submitted.`,
         );
+        return;
+      }
+      if (activeDraft.timeMode === "earlier" && Date.parse(converted) > Date.now()) {
+        setTimeError("This time is after now. Choose Just observed or check the reporter’s time.");
         return;
       }
       eventTimeIso = converted;
     }
 
     const fields: Omit<ReportInput, "idempotency_key"> = {
-      text,
+      text: activeDraft.text,
       source: "form",
-      event_id: currentEvent.event.id,
-      ...(zoneId ? { zone_id: zoneId } : {}),
-      ...(sublocation.trim() ? { sublocation: sublocation.trim() } : {}),
+      event_id: activeEvent.event.id,
+      ...(activeDraft.zoneId ? { zone_id: activeDraft.zoneId } : {}),
+      ...(activeDraft.sublocation.trim() ? { sublocation: activeDraft.sublocation.trim() } : {}),
       ...(eventTimeIso ? { reported_at: eventTimeIso } : {}),
     };
     const fingerprint = JSON.stringify(fields);
-    let currentIdempotencyKey = idempotencyKey;
-    if (
-      lastAttemptFingerprintRef.current !== null &&
-      lastAttemptFingerprintRef.current !== fingerprint
-    ) {
+    let currentIdempotencyKey = activeDraft.idempotencyKey;
+    if (activeDraft.lastAttemptFingerprint !== null && activeDraft.lastAttemptFingerprint !== fingerprint) {
       currentIdempotencyKey = createIdempotencyKey();
-      setIdempotencyKey(currentIdempotencyKey);
     }
-    lastAttemptFingerprintRef.current = fingerprint;
     const input: ReportInput = {
       ...fields,
       idempotency_key: currentIdempotencyKey,
     };
+    const attemptedDraft: ReportDraft = {
+      ...activeDraft,
+      reportedAt: localReportedAt,
+      idempotencyKey: currentIdempotencyKey,
+      lastAttemptFingerprint: fingerprint,
+    };
+    draftRef.current = attemptedDraft;
+    setDraft(attemptedDraft);
+    const savedAttempt = saveReportDraft(attemptedDraft);
+    setDraftStatus(savedAttempt ? "Draft saved on this device." : "Draft storage is unavailable; keep this page open.");
 
     submittingRef.current = true;
     setSubmitting(true);
     try {
       const result = await submitReport(input);
       if (!mountedRef.current) return;
-      setReceipt(result);
-      setText("");
-      setZoneId("");
-      setSublocation("");
-      setReportedAt("");
-      setIdempotencyKey(createIdempotencyKey());
-      lastAttemptFingerprintRef.current = null;
+      const confirmedDraft: ReportDraft = {
+        ...attemptedDraft,
+        text: "",
+        zoneId: "",
+        sublocation: "",
+        timeMode: "unknown",
+        reportedAt: "",
+        idempotencyKey: createIdempotencyKey(),
+        receipt: result,
+      };
+      const savedReceipt = saveReportDraft(confirmedDraft);
+      if (currentEventRef.current?.event.id === activeEvent.event.id) {
+        draftRef.current = confirmedDraft;
+        setDraft(confirmedDraft);
+        setDraftStatus(savedReceipt
+          ? "Report receipt saved on this device."
+          : "Report received. Receipt storage is unavailable; keep this page open.");
+      }
+      setCopyMessage("");
+      void shared?.refresh();
     } catch (error) {
-      if (mountedRef.current) setSubmitError(errorMessage(error));
+      if (mountedRef.current && currentEventRef.current?.event.id === activeEvent.event.id) {
+        setSubmitError(errorMessage(error));
+      }
     } finally {
       submittingRef.current = false;
       if (mountedRef.current) setSubmitting(false);
     }
   };
 
-  const isFormDisabled = loadingEvent || !currentEvent || submitting;
+  const activeDraft = draft;
+  const text = activeDraft?.text ?? "";
+  const zoneId = activeDraft?.zoneId ?? "";
+  const sublocation = activeDraft?.sublocation ?? "";
+  const reportedAt = activeDraft?.reportedAt ?? "";
+  const timeMode = activeDraft?.timeMode ?? "unknown";
+  const receipt: ReportReceipt | null = activeDraft?.receipt ?? null;
+  const selectedEventPending = Boolean(
+    shared?.selectedEventId && currentEvent?.event.id !== shared.selectedEventId,
+  );
+  const isFormDisabled = loadingEvent || selectedEventPending || !currentEvent || !activeDraft || submitting;
   const timeDescriptionId = timeError ? "event-time-error" : "event-time-help";
+
+  const chooseTimeMode = (mode: ReportTimeMode) => {
+    let captured = "";
+    if (mode === "just-observed" && currentEvent) {
+      captured = isoToDatetimeLocal(new Date().toISOString(), currentEvent.event.timezone) ?? "";
+    }
+    updateDraft({ timeMode: mode, reportedAt: mode === "just-observed" ? captured : "" });
+    setTimeError(null);
+    setSubmitError(null);
+  };
+
+  const copyFullId = async (label: string, id: string) => {
+    try {
+      if (!window.navigator.clipboard?.writeText) {
+        setCopyMessage("Clipboard access is unavailable in this browser.");
+        return;
+      }
+      await window.navigator.clipboard.writeText(id);
+      setCopyMessage(`Full ${label.toLowerCase()} copied.`);
+    } catch {
+      setCopyMessage("The ID could not be copied. Select it to copy manually.");
+    }
+  };
 
   return (
     <>
@@ -337,10 +480,15 @@ export function ReportPage() {
           Loading the current exercise and its zones…
         </div>
       )}
+      {selectedEventPending && !loadingEvent && (
+        <div className="status-banner" role="status" aria-live="polite">
+          Loading the selected exercise. Your other event draft stays saved on this device.
+        </div>
+      )}
       {eventError && (
         <div className="status-banner is-error" role="alert">
           <span>{eventError}</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => void loadCurrentEvent()}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void (shared ? shared.refresh() : loadCurrentEvent())}>
             Retry
           </Button>
         </div>
@@ -350,7 +498,7 @@ export function ReportPage() {
         <Card className="form-card">
           <h2>Incident details</h2>
           <p className="form-intro">
-            The description is stored exactly as entered. Unknown details can stay blank and will remain visible for review.
+            Keep the reporter’s wording. Missing details stay unknown and remain visible for review.
           </p>
 
           {currentEvent && (
@@ -367,7 +515,7 @@ export function ReportPage() {
                 name="text"
                 value={text}
                 onChange={(event) => {
-                  setText(event.target.value);
+                  updateDraft({ text: event.target.value });
                   setTextError(null);
                   setSubmitError(null);
                 }}
@@ -398,7 +546,7 @@ export function ReportPage() {
                   className="form-select"
                   value={zoneId}
                   onChange={(event) => {
-                    setZoneId(event.target.value);
+                    updateDraft({ zoneId: event.target.value });
                     setSubmitError(null);
                   }}
                   disabled={isFormDisabled}
@@ -423,7 +571,7 @@ export function ReportPage() {
                   name="sublocation"
                   value={sublocation}
                   onChange={(event) => {
-                    setSublocation(event.target.value);
+                    updateDraft({ sublocation: event.target.value });
                     setSubmitError(null);
                   }}
                   placeholder="e.g. inner doorway"
@@ -437,32 +585,58 @@ export function ReportPage() {
               </div>
             </div>
 
-            <div className="form-field">
-              <label htmlFor="report-event-time">Event time (optional)</label>
-              <Input
-                id="report-event-time"
-                name="reported_at"
-                type="datetime-local"
-                value={reportedAt}
-                onChange={(event) => {
-                  setReportedAt(event.target.value);
-                  setTimeError(null);
-                  setSubmitError(null);
-                }}
-                disabled={isFormDisabled}
-                aria-invalid={timeError ? true : undefined}
-                aria-describedby={timeDescriptionId}
-              />
-              {timeError ? (
-                <p className="form-error" id="event-time-error" role="alert">
-                  {timeError}
-                </p>
-              ) : (
-                <p className="field-hint" id="event-time-help">
-                  Enter the event-local time in {currentEvent?.event.timezone ?? "the event timezone"}; it will be stored as UTC.
+            <fieldset className="form-field time-mode-fieldset" aria-describedby={timeDescriptionId}>
+              <legend>When was this observed?</legend>
+              <div className="time-mode-options">
+                <label>
+                  <input type="radio" name="report-time-mode" value="just-observed" checked={timeMode === "just-observed"} onChange={() => chooseTimeMode("just-observed")} disabled={isFormDisabled} />
+                  <span><strong>Just observed</strong><small>Use the current known time.</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="report-time-mode" value="earlier" checked={timeMode === "earlier"} onChange={() => chooseTimeMode("earlier")} disabled={isFormDisabled} />
+                  <span><strong>Earlier</strong><small>Enter the time the reporter gave.</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="report-time-mode" value="unknown" checked={timeMode === "unknown"} onChange={() => chooseTimeMode("unknown")} disabled={isFormDisabled} />
+                  <span><strong>Unknown</strong><small>Leave the event time blank.</small></span>
+                </label>
+              </div>
+              {timeMode === "earlier" && currentEvent && !selectedEventPending && (
+                <div className="form-field time-mode-detail">
+                  <label htmlFor="report-event-time">Earlier event time</label>
+                  <Input
+                    id="report-event-time"
+                    name="reported_at"
+                    type="datetime-local"
+                    value={reportedAt}
+                    onChange={(event) => {
+                      updateDraft({ reportedAt: event.target.value });
+                      setTimeError(null);
+                      setSubmitError(null);
+                    }}
+                    disabled={isFormDisabled}
+                    aria-invalid={timeError ? true : undefined}
+                    aria-describedby={timeDescriptionId}
+                  />
+                  <p className="field-hint" id="event-time-help">
+                    Enter the event-local time in {currentEvent.event.timezone}; it will be stored as UTC.
+                  </p>
+                </div>
+              )}
+              {timeMode === "just-observed" && currentEvent && !selectedEventPending && (
+                <p className="field-hint time-mode-detail" id="event-time-help">
+                  {reportedAt
+                    ? `Captured at ${reportedAt.replace("T", " ")} in ${currentEvent.event.timezone} when you selected this option.`
+                    : `The current time in ${currentEvent.event.timezone} will be captured when you submit.`}
                 </p>
               )}
-            </div>
+              {timeMode === "unknown" && (
+                <p className="field-hint time-mode-detail" id="event-time-help">
+                  No time will be added. Unknown timing may require manual grouping by the coordinator.
+                </p>
+              )}
+              {timeError && <p className="form-error" id="event-time-error" role="alert">{timeError}</p>}
+            </fieldset>
 
             {submitError && (
               <p className="form-error" role="alert">
@@ -492,11 +666,15 @@ export function ReportPage() {
                   : "The report was saved and remains available to the coordinator."}
               </p>
               <p className="receipt-copy">
-                <strong>Report ID</strong> <span className="mono">{receipt.report.id}</span>
+                <strong>Report ID</strong> <span className="mono" title={receipt.report.id}>{displayIdentifier(receipt.report.id, receipt.report.display_id)}</span>
+                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("report ID", receipt.report.id)}>Copy full ID</Button>
               </p>
               <p className="receipt-copy">
-                <strong>Incident ID</strong> <span className="mono">{receipt.incident.id}</span>
+                <strong>Incident ID</strong> <span className="mono" title={receipt.incident.id}>{displayIdentifier(receipt.incident.id, receipt.incident.display_id)}</span>
+                <Button type="button" variant="ghost" size="xs" onClick={() => void copyFullId("incident ID", receipt.incident.id)}>Copy full ID</Button>
               </p>
+              <p className="receipt-copy"><a className="receipt-dashboard-link" href={dashboardReceiptHref(receipt.report.event_id, receipt.incident.id)}>Open this incident on the operations board</a></p>
+              {copyMessage && <p className="field-hint" role="status">{copyMessage}</p>}
               <p className="receipt-copy">
                 <strong>Priority</strong>{" "}
                 <Badge variant={priorityVariant(receipt.incident.priority)}>
@@ -507,6 +685,7 @@ export function ReportPage() {
               <blockquote className="receipt-copy">{receipt.report.text}</blockquote>
             </section>
           )}
+          {draftStatus && <p className="draft-status" role="status">{draftStatus}</p>}
         </Card>
 
         <Card className="report-guidance">

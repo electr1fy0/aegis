@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -26,8 +26,9 @@ import { Input } from "../components/ui/input";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "../components/ui/native-select";
 import { Textarea } from "../components/ui/textarea";
 import { AppFrame } from "../components/app-frame";
+import { useSnapshot } from "../hooks/use-snapshot";
 import * as format from "../lib/format";
-import { getSnapshot } from "../lib/api";
+import { getEvents, getSnapshot } from "../lib/api";
 import type { Snapshot } from "../lib/types";
 import { getRouter } from "../router";
 import { AboutPage } from "../pages/about-page";
@@ -37,14 +38,15 @@ import { Route as dashboardRoute } from "../routes/dashboard";
 import { Route as reportRoute } from "../routes/report";
 import { Route as evaluationRoute } from "../routes/evaluation";
 import { Route as aboutRoute } from "../routes/about";
-import { healthFixture, snapshotFixture } from "./fixtures";
+import { eventFixture, healthFixture, snapshotFixture } from "./fixtures";
 
 vi.mock("../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/api")>();
-  return { ...actual, getSnapshot: vi.fn() };
+  return { ...actual, getEvents: vi.fn(), getSnapshot: vi.fn() };
 });
 
 const getSnapshotMock = vi.mocked(getSnapshot);
+const getEventsMock = vi.mocked(getEvents);
 const histories: Array<{ destroy: () => void }> = [];
 
 function trackHistory<TRouter extends { history: { destroy: () => void } }>(router: TRouter): TRouter {
@@ -58,12 +60,23 @@ const testDashboardRoute = createRoute({ getParentRoute: () => testRootRoute, pa
 const testReportRoute = createRoute({ getParentRoute: () => testRootRoute, path: "report", component: () => <div>Test report</div> });
 const testEvaluationRoute = createRoute({ getParentRoute: () => testRootRoute, path: "evaluation", component: () => <div>Test evaluation</div> });
 const testAboutRoute = createRoute({ getParentRoute: () => testRootRoute, path: "about", component: AboutPage });
+function FreshnessControls() {
+  const stream = useSnapshot();
+  return (
+    <>
+      <button type="button" onClick={() => stream.applySnapshot(snapshotFixture)}>Reset snapshot time</button>
+      <button type="button" onClick={() => void stream.refresh()}>Refresh exercise snapshot</button>
+    </>
+  );
+}
+const testFreshnessRoute = createRoute({ getParentRoute: () => testRootRoute, path: "freshness", component: FreshnessControls });
 const testRouteTree = testRootRoute.addChildren([
   testIndexRoute,
   testDashboardRoute,
   testReportRoute,
   testEvaluationRoute,
   testAboutRoute,
+  testFreshnessRoute,
 ]);
 
 function makeRouter(initialEntry = "/about") {
@@ -84,6 +97,7 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
+  getEventsMock.mockReset().mockResolvedValue([eventFixture]);
   getSnapshotMock.mockReset();
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
 });
@@ -93,6 +107,9 @@ afterEach(() => {
   for (const history of histories.splice(0)) history.destroy();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  document.documentElement.classList.add("dark");
+  document.documentElement.classList.add("style-nova");
+  document.documentElement.style.colorScheme = "";
 });
 
 describe("format helpers", () => {
@@ -129,12 +146,12 @@ describe("format helpers", () => {
     expect(format.zoneLabel("missing", [])).toBe("Unknown zone");
     expect(format.displayStatus("priority_override-recorded")).toBe("Priority Override Recorded");
 
-    expect(format.engineLabel({ ...healthFixture, engine: "semantic", model_ready: false })).toBe("semantic · degraded");
-    expect(format.engineLabel({ ...healthFixture, engine: "", model_ready: false })).toBe("Matching engine · degraded");
-    expect(format.engineLabel({ ...healthFixture, engine: "lexical", model_ready: true })).toBe("lexical · fallback");
+    expect(format.engineLabel({ ...healthFixture, engine: "semantic", model_ready: false })).toBe("Semantic matching · unavailable");
+    expect(format.engineLabel({ ...healthFixture, engine: "", model_ready: false })).toBe("Matching engine · unavailable");
+    expect(format.engineLabel({ ...healthFixture, engine: "lexical", model_ready: true })).toBe("Lexical matching · fallback");
     expect(format.engineLabel({ ...healthFixture, engine: "", model_ready: true })).toBe("Matching engine ready");
-    expect(format.engineLabel({ ...healthFixture, engine: "semantic", model_ready: true })).toBe("semantic");
-    expect(format.engineLabel({ ...healthFixture, engine: "lexical", model_ready: true })).toBe("lexical · fallback");
+    expect(format.engineLabel({ ...healthFixture, engine: "semantic", model_ready: true })).toBe("Semantic matching · all-MiniLM-L6-v2");
+    expect(format.engineLabel({ ...healthFixture, engine: "lexical", model_ready: true })).toBe("Lexical matching · fallback");
   });
 
   it("orders and filters incidents, audit entries, reports, and map points", () => {
@@ -169,7 +186,7 @@ describe("format helpers", () => {
     expect(format.reportTextPreview("abc", 0)).toBe("…");
     expect(format.evidenceScore(null)).toBe("—");
     expect(format.evidenceScore(Number.NaN)).toBe("—");
-    expect(format.evidenceScore(0.873)).toBe("87%");
+    expect(format.evidenceScore(0.873)).toBe("0.87");
   });
 });
 
@@ -268,12 +285,228 @@ describe("application frame, static overview, and route wiring", () => {
     render(<RouterProvider router={router} />);
 
     expect(await screen.findByRole("heading", { name: "Designed for review, not autopilot" })).toBeInTheDocument();
-    expect(screen.getByText("Aegis Campus Safety Exercise")).toBeInTheDocument();
-    expect(screen.getByText("semantic")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
+    expect(screen.getByText("Semantic matching · all-MiniLM-L6-v2")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "About" })).toHaveClass("is-active");
     expect(screen.getAllByRole("listitem")).toHaveLength(8);
     expect(screen.getByRole("link", { name: /Review measured evaluation/ })).toHaveAttribute("href", "/evaluation");
     expect(getSnapshotMock).toHaveBeenCalledOnce();
+  });
+
+  it("shows shared event freshness and applies system, dark, and light theme choices", async () => {
+    let systemDark = false;
+    const systemChange = { listener: null as (() => void) | null };
+    const media = {
+      get matches() { return systemDark; },
+      media: "(prefers-color-scheme: dark)",
+      onchange: null,
+      addEventListener: (_type: string, callback: EventListenerOrEventListenerObject) => {
+        systemChange.listener = callback as () => void;
+      },
+      removeEventListener: () => { systemChange.listener = null; },
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => true,
+    } as unknown as MediaQueryList;
+    const originalMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
+    const originalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
+    const themeStorage = {
+      getItem: () => "solarized",
+      setItem: vi.fn(),
+      clear: () => undefined,
+      key: () => null,
+      removeItem: () => undefined,
+      length: 0,
+    } as Storage;
+    Object.defineProperty(window, "localStorage", { configurable: true, value: themeStorage });
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: () => media });
+    getSnapshotMock.mockResolvedValue(snapshotFixture);
+    const router = makeRouter("/about");
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText(/^Updated \d+s ago$/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Exercise")).toHaveValue(eventFixture.id);
+    const theme = screen.getByLabelText("Theme");
+    expect(theme).toHaveValue("system");
+    expect(document.documentElement).not.toHaveClass("dark");
+
+    fireEvent.change(theme, { target: { value: "dark" } });
+    expect(themeStorage.setItem).toHaveBeenCalledWith("aegis.theme", "dark");
+    expect(document.documentElement).toHaveClass("dark");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+    fireEvent.change(theme, { target: { value: "light" } });
+    expect(document.documentElement).not.toHaveClass("dark");
+    expect(document.documentElement.style.colorScheme).toBe("light");
+    fireEvent.change(theme, { target: { value: "system" } });
+    systemDark = true;
+    systemChange.listener?.();
+    expect(document.documentElement).toHaveClass("dark");
+    fireEvent.change(theme, { target: { value: "solarized" } });
+    expect(document.documentElement).toHaveClass("dark");
+
+    if (originalMatchMedia) Object.defineProperty(window, "matchMedia", originalMatchMedia);
+    else delete (window as unknown as { matchMedia?: typeof window.matchMedia }).matchMedia;
+    if (originalStorage) Object.defineProperty(window, "localStorage", originalStorage);
+    else delete (window as unknown as { localStorage?: Storage }).localStorage;
+  });
+
+  it.each(["dark", "light"] as const)("restores the saved %s theme and applies changes when storage writes fail", async (preference) => {
+    const originalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
+    const storage = {
+      getItem: () => preference,
+      setItem: () => { throw new Error("storage unavailable"); },
+      clear: () => undefined,
+      key: () => null,
+      removeItem: () => undefined,
+      length: 0,
+    } as Storage;
+    Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+    getSnapshotMock.mockResolvedValue(snapshotFixture);
+    const router = makeRouter("/about");
+    const view = render(<RouterProvider router={router} />);
+
+    try {
+      const theme = await screen.findByLabelText("Theme");
+      expect(theme).toHaveValue(preference);
+      if (preference === "dark") expect(document.documentElement).toHaveClass("dark");
+      else expect(document.documentElement).not.toHaveClass("dark");
+      fireEvent.change(theme, { target: { value: preference === "dark" ? "light" : "dark" } });
+      if (preference === "dark") expect(document.documentElement).not.toHaveClass("dark");
+      else expect(document.documentElement).toHaveClass("dark");
+    } finally {
+      view.unmount();
+      if (originalStorage) Object.defineProperty(window, "localStorage", originalStorage);
+      else delete (window as unknown as { localStorage?: Storage }).localStorage;
+    }
+  });
+
+  it("uses system theme when browser storage is blocked", async () => {
+    const originalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get: () => { throw new Error("storage blocked"); },
+    });
+    getSnapshotMock.mockResolvedValue(snapshotFixture);
+    const router = makeRouter("/about");
+    const view = render(<RouterProvider router={router} />);
+
+    try {
+      const theme = await screen.findByLabelText("Theme");
+      expect(theme).toHaveValue("system");
+      fireEvent.change(theme, { target: { value: "dark" } });
+      expect(document.documentElement).toHaveClass("dark");
+    } finally {
+      view.unmount();
+      if (originalStorage) Object.defineProperty(window, "localStorage", originalStorage);
+      else delete (window as unknown as { localStorage?: Storage }).localStorage;
+    }
+  });
+
+  it("shows retained same-name events with event-local creation times and keeps URL filters", async () => {
+    const older = {
+      ...eventFixture,
+      id: "event-older",
+      created_at: "2026-10-20T12:00:00Z",
+    };
+    const newer = {
+      ...eventFixture,
+      id: "event-newer",
+      created_at: "2026-10-25T12:00:00Z",
+    };
+    const malformedLegacy = {
+      ...eventFixture,
+      id: "event-legacy",
+      name: "Legacy exercise",
+      timezone: "Invalid/Zone",
+      created_at: "not a timestamp",
+    };
+    const invalidZone = {
+      ...eventFixture,
+      id: "event-invalid-zone",
+      name: "Invalid zone exercise",
+      timezone: "Invalid/Zone",
+      created_at: "2026-10-22T12:00:00Z",
+    };
+    getEventsMock.mockResolvedValue([older, newer, malformedLegacy, invalidZone]);
+    getSnapshotMock.mockImplementation(async (eventId) => ({
+      ...snapshotFixture,
+      event: [older, newer, malformedLegacy, invalidZone].find((event) => event.id === eventId) ?? newer,
+    }));
+    window.history.replaceState(null, "", "/about?event=event-older&queue=review");
+    const router = makeRouter("/about");
+    render(<RouterProvider router={router} />);
+
+    const exercise = await screen.findByLabelText("Exercise");
+    await waitFor(() => expect(exercise).toHaveValue("event-older"));
+    const olderOption = exercise.querySelector<HTMLOptionElement>('option[value="event-older"]');
+    const newerOption = exercise.querySelector<HTMLOptionElement>('option[value="event-newer"]');
+    const legacyOption = exercise.querySelector<HTMLOptionElement>('option[value="event-legacy"]');
+    const invalidZoneOption = exercise.querySelector<HTMLOptionElement>('option[value="event-invalid-zone"]');
+    expect(olderOption?.textContent).toContain(eventFixture.name);
+    expect(newerOption?.textContent).toContain(eventFixture.name);
+    expect(olderOption?.textContent).not.toBe(newerOption?.textContent);
+    expect(legacyOption).toHaveTextContent("Legacy exercise");
+    expect(legacyOption?.textContent).not.toContain("Invalid");
+    expect(invalidZoneOption).toHaveTextContent("Invalid zone exercise");
+    expect(invalidZoneOption?.textContent).not.toContain("2026");
+
+    fireEvent.change(exercise, { target: { value: "event-newer" } });
+    expect(exercise).toHaveValue("event-newer");
+    expect(new URL(window.location.href).searchParams.get("event")).toBe("event-newer");
+    expect(new URL(window.location.href).searchParams.get("queue")).toBe("review");
+
+    fireEvent.change(exercise, { target: { value: "event-older" } });
+    fireEvent.change(exercise, { target: { value: "" } });
+    expect(exercise).toHaveValue("event-newer");
+  });
+
+  it("formats minute and hour freshness from the last successful snapshot time", async () => {
+    let now = Date.parse("2026-10-25T12:00:00Z");
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    let freshnessTick: (() => void) | null = null;
+    vi.spyOn(window, "setInterval").mockImplementation((handler) => {
+      freshnessTick = typeof handler === "function" ? handler as () => void : null;
+      return 1 as unknown as ReturnType<typeof window.setInterval>;
+    });
+    getSnapshotMock.mockResolvedValue(snapshotFixture);
+    const router = makeRouter("/freshness");
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByText("Updated 0s ago")).toBeInTheDocument();
+
+    now += 60_000;
+    act(() => freshnessTick?.());
+    expect(screen.getByText("Updated 1m ago")).toBeInTheDocument();
+    now += 3_540_000;
+    act(() => freshnessTick?.());
+    expect(screen.getByText("Updated 1h ago")).toBeInTheDocument();
+  });
+
+  it("shows live update reconnection while keeping the last snapshot visible", async () => {
+    getSnapshotMock.mockResolvedValueOnce(snapshotFixture).mockRejectedValueOnce(new Error("offline"));
+    const router = makeRouter("/freshness");
+    render(<RouterProvider router={router} />);
+    await screen.findByText(/^Updated \d+s ago$/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh exercise snapshot" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Live updates are reconnecting. The last successful snapshot is still shown.",
+    );
+    expect(document.querySelector(".shell-freshness")).toHaveClass("is-reconnecting");
+    expect(screen.getByText(/^Reconnecting · last update \d+s ago$/)).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
+  });
+
+  it("shows loading and unavailable labels when there is no retained event", async () => {
+    let rejectSnapshot!: (reason: Error) => void;
+    getEventsMock.mockResolvedValueOnce([]);
+    getSnapshotMock.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectSnapshot = reject; }));
+    const router = makeRouter("/about");
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByRole("option", { name: "Loading current exercise" })).toBeInTheDocument();
+
+    await act(async () => rejectSnapshot(new Error("backend unavailable")));
+    expect(await screen.findByRole("option", { name: "Exercise unavailable" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Exercise")).toBeDisabled();
   });
 
   it("shows checking then degraded or lexical fallback engine states", async () => {
@@ -282,11 +515,12 @@ describe("application frame, static overview, and route wiring", () => {
     const router = makeRouter("/about");
     render(<RouterProvider router={router} />);
     expect(await screen.findByText("Checking model status")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for first snapshot")).toBeInTheDocument();
     await act(async () => request.resolve({
       ...snapshotFixture,
       health: { ...healthFixture, engine: "lexical", model_ready: true },
     }));
-    expect(await screen.findByText("lexical · fallback")).toBeInTheDocument();
+    expect(await screen.findByText("Lexical matching · fallback")).toBeInTheDocument();
   });
 
   it("shows a connected but unavailable model as degraded", async () => {
@@ -296,7 +530,7 @@ describe("application frame, static overview, and route wiring", () => {
     });
     const router = makeRouter("/about");
     const { container } = render(<RouterProvider router={router} />);
-    expect(await screen.findByText("semantic · degraded")).toBeInTheDocument();
+    expect(await screen.findByText("Semantic matching · unavailable")).toBeInTheDocument();
     expect(container.querySelector(".engine-dot-degraded")).toBeInTheDocument();
   });
 
@@ -305,11 +539,11 @@ describe("application frame, static overview, and route wiring", () => {
     const router = makeRouter("/about");
     const { container } = render(<RouterProvider router={router} />);
     await waitFor(() => expect(container.querySelector(".engine-dot-offline")).toBeInTheDocument());
-    expect(screen.getByText("Loading current exercise")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Aegis Campus Safety Exercise/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Designed for review, not autopilot" })).toBeInTheDocument();
   });
 
-  it("polls the header and clears its interval when the app frame unmounts", async () => {
+  it("shares one refresh stream and clears the freshness timer on unmount", async () => {
     vi.useFakeTimers();
     getSnapshotMock.mockResolvedValue(snapshotFixture);
     const clearIntervalSpy = vi.spyOn(window, "clearInterval");
@@ -321,11 +555,17 @@ describe("application frame, static overview, and route wiring", () => {
     });
     expect(getSnapshotMock).toHaveBeenCalledTimes(1);
     await act(async () => {
-      vi.advanceTimersByTime(5_000);
+      vi.advanceTimersByTime(2_000);
       await Promise.resolve();
       await Promise.resolve();
     });
     expect(getSnapshotMock).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getSnapshotMock).toHaveBeenCalledTimes(3);
     view.unmount();
     expect(clearIntervalSpy).toHaveBeenCalled();
   });

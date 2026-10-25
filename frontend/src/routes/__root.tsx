@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { AppFrame } from "../components/app-frame";
 import "../styles.css";
+import "../components/app-frame.css";
 
 export const Route = createRootRoute({
   head: () => ({
