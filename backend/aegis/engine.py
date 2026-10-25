@@ -24,8 +24,9 @@ from .model_config import MODEL_COMMIT, MODEL_NAME, MODEL_REVISION
 
 LEXICAL_REVISION = "lexical-hash-v1"
 LEXICAL_DIMENSION = 512
+HYBRID_CONFIG_VERSION = "hybrid-context-v2"
 LEXICAL_CONFIG_VERSION = "lexical-context-dev-v2"
-CONFIG_VERSION = f"semantic-context-v1+{LEXICAL_CONFIG_VERSION}+{LOCATION_VERSION}"
+CONFIG_VERSION = f"{HYBRID_CONFIG_VERSION}+{LEXICAL_CONFIG_VERSION}+{LOCATION_VERSION}"
 
 _SCORE_WEIGHTS = {
     "semantic": 0.65,
@@ -33,7 +34,9 @@ _SCORE_WEIGHTS = {
     "time": 0.10,
     "category": 0.05,
 }
-_ATTACH_THRESHOLD = 0.82
+# Selected against development inputs and the frozen challenge_dev fixture only;
+# see evaluation/results/hybrid-development.json. No held-out test data was used.
+_ATTACH_THRESHOLD = 0.76
 _SUGGEST_THRESHOLD = 0.65
 _ANCHOR_SEMANTIC_MINIMUM = 0.62
 _RUNNER_UP_MARGIN = 0.08
@@ -45,6 +48,12 @@ _RUNNER_UP_MARGIN = 0.08
 _LEXICAL_ATTACH_THRESHOLD = 0.33
 _LEXICAL_SUGGEST_THRESHOLD = 0.33
 _LEXICAL_ANCHOR_MINIMUM = 0.05
+# Semantic results are now scored independently from the lexical backstop. The
+# review thresholds are intentionally separate from the automatic attachment
+# thresholds; they may surface a candidate for coordinator review but cannot
+# attach a report.
+_SEMANTIC_REVIEW_THRESHOLD = _SUGGEST_THRESHOLD
+_SEMANTIC_REVIEW_ANCHOR_MINIMUM = 0.20
 _DEFAULT_WINDOW_SECONDS = 20 * 60
 _MISSING_PERSON_WINDOW_SECONDS = 120 * 60
 
@@ -114,32 +123,32 @@ _NEGATION_AFTER_RE = re.compile(
 _NEGATION_CONTRAST_RE = re.compile(r"\b(?:but|however|yet|except|instead|only)\b", re.IGNORECASE)
 
 _EXIT_BLOCKED_RE = re.compile(
-    r"\b(?:exit|door|egress|way\s+out|gate|opening|ramp)(?:\s+(?!(?:is|was|looks|appears|remains|not|isn['\u2019]t|aren['\u2019]t|wasn['\u2019]t|weren['\u2019]t)\b)[a-z0-9-]+){0,2}\s+"
+    r"\b(?:exit|door(?:way)?|egress|way\s+out|gate|opening|ramp)(?:\s+(?!(?:is|was|looks|appears|remains|not|isn['\u2019]t|aren['\u2019]t|wasn['\u2019]t|weren['\u2019]t)\b)[a-z0-9-]+){0,2}\s+"
     r"(?:(?:is|was|looks|appears|remains)\s+(?:(?:now|again|still)\s+)?)?"
     r"(?:blocked|obstructed|unusable|jammed|stuck|impassable|narrowed|"
     r"cannot\s+get\s+past|can['\u2019]t\s+get\s+past|cannot\s+get\s+through|"
     r"can['\u2019]t\s+get\s+through|will\s+not\s+open|won['\u2019]t\s+open|"
     r"cannot\s+open|can['\u2019]t\s+open|will\s+not\s+swing\s+open|"
     r"won['\u2019]t\s+swing\s+open|stuck\s+shut)\b|"
-    r"\b(?:exit|door|egress|way\s+out|gate|opening|ramp)\b[^.!?;\n]{0,80}\b"
+    r"\b(?:exit|door(?:way)?|egress|way\s+out|gate|opening|ramp)\b[^.!?;\n]{0,80}\b"
     r"(?:blocked|obstructed|unusable|jammed|stuck|impassable|narrowed|"
     r"will\s+not\s+open|won['\u2019]t\s+open|cannot\s+open|can['\u2019]t\s+open|"
     r"will\s+not\s+swing\s+open|won['\u2019]t\s+swing\s+open|stuck\s+shut)\b|"
     r"\b(?:jammed|stuck|blocked|obstructed|unusable|narrowed)\b"
-    r"[^.!?;\n]{0,80}\b(?:exit|door|egress|gate|opening|ramp)\b|"
+    r"[^.!?;\n]{0,80}\b(?:exit|door(?:way)?|egress|gate|opening|ramp)\b|"
     r"\b(?:barrier|panel|cart|trolley|object)\b[^.!?;\n]{0,80}\b"
-    r"(?:across|blocking|blocks?)\b[^.!?;\n]{0,50}\b(?:exit|door|gate|opening|ramp)\b|"
-    r"\b(?:blocked|obstructed)\s+(?:exit|door|egress|way\s+out|gate|opening|ramp)\b|"
+    r"(?:across|blocking|blocks?)\b[^.!?;\n]{0,50}\b(?:exit|door(?:way)?|gate|opening|ramp)\b|"
+    r"\b(?:blocked|obstructed)\s+(?:exit|door(?:way)?|egress|way\s+out|gate|opening|ramp)\b|"
     r"\b(?:parked\s+across|blocks?|blocking|obstructing|obstructed|"
-    r"narrows?|narrowed)\b[^.!?;\n]{0,80}\b(?:exit|ramp|door|passage|walkway|route)\b",
+    r"narrows?|narrowed)\b[^.!?;\n]{0,80}\b(?:exit|ramp|door(?:way)?|passage|walkway|route)\b",
     re.IGNORECASE,
 )
 _EXIT_CLEAR_RE = re.compile(
-    r"\b(?:exit|door|egress|way\s+out|gate|opening|passage|ramp)(?:\s+(?!(?:is|was|looks|appears|remains|not|isn['\u2019]t|aren['\u2019]t|wasn['\u2019]t|weren['\u2019]t)\b)[a-z0-9-]+){0,2}\s+"
+    r"\b(?:exit|door(?:way)?|egress|way\s+out|gate|opening|passage|ramp)(?:\s+(?!(?:is|was|looks|appears|remains|not|isn['\u2019]t|aren['\u2019]t|wasn['\u2019]t|weren['\u2019]t)\b)[a-z0-9-]+){0,2}\s+"
     r"(?:(?:is|was|looks|appears|remains)\s+(?:(?:now|again|still)\s+)?)?"
     r"(?:clear|open|unblocked|unobstructed|accessible|passable|moving\s+freely)\b|"
     r"\b(?:clear|open|unblocked|unobstructed|passable|moving\s+freely)\s+"
-    r"(?:exit|door|egress|way\s+out|gate|opening|passage|ramp)\b",
+    r"(?:exit|door(?:way)?|egress|way\s+out|gate|opening|passage|ramp)\b",
     re.IGNORECASE,
 )
 _EXIT_NEGATED_BLOCK_RE = re.compile(
@@ -156,7 +165,8 @@ _RESPONSIVE_RE = re.compile(r"\b(?:responsive|awake\s+and\s+alert|conscious)\b",
 _PERSON_MISSING_RE = re.compile(
     r"\b(?:missing|lost|can['\u2019]t\s+locate|cannot\s+locate|can['\u2019]t\s+find|"
     r"cannot\s+find|unable\s+to\s+locate|last\s+seen|separated\s+from|"
-    r"(?:has|have)\s+not\s+returned|not\s+returned|didn['\u2019]t\s+return)\b",
+    r"(?:has|have)\s+not\s+(?:returned|come\s+back)|not\s+(?:returned|come\s+back)|"
+    r"didn['\u2019]t\s+return)\b",
     re.IGNORECASE,
 )
 _PERSON_FOUND_RE = re.compile(
@@ -198,18 +208,26 @@ _MEDICAL_RE = re.compile(
     r"\b(?:medical\s+(?:incident|emergency|help)|injured|injury|hurt|hurts|"
     r"wounded|bleeding|sore|painful|in\s+pain|collapsed|unconscious|"
     r"unresponsive|not\s+responsive|not\s+breathing|ambulance|dizzy|"
-    r"twisted\s+(?:an?\s+)?(?:ankle|wrist))\b",
+    r"call(?:ing)?\s+(?:(?:a|the)\s+)?medic|medic(?:al)?\s+help|"
+    r"(?:twisted|sprained)\s+(?:(?:my|his|her|their|someone['\u2019]s)\s+)?"
+    r"(?:an?\s+)?(?:ankle|wrist)|fractured\s+(?:an?\s+)?(?:ankle|wrist|arm|leg))\b",
     re.IGNORECASE,
 )
-_FACILITY_RE = re.compile(
-    r"\b(?:broken|leak|leaking|spilled|spill|spreading|puddle|wet|slick|slippery|"
-    r"liquid|water|faulty|outage|power\s+failure|lighting|light|elevator|lift|"
-    r"air\s+conditioning|HVAC|water\s+leak|toilet|restroom|equipment|"
-    r"facility|fixture|projector|monitor|screen|display|printer|label|"
-    r"handrail|rail|mat|raised\s+edge|folded|curled|crowded|narrowed|"
-    r"obstructing|obstructed|walkway|passage|wobbly|blank|no\s+(?:image|picture)|"
-    r"lost\s+(?:its\s+)?(?:picture|signal|audio)|"
-    r"will\s+not\s+open|won['\u2019]t\s+open|stuck\s+shut)\b",
+_FACILITY_OBJECT_RE = re.compile(
+    r"\b(?:water|liquid|elevator|lift|air\s+conditioning|HVAC|toilet|restroom|"
+    r"equipment|facility|fixture|projector|monitor|screen|display|printer|label|"
+    r"handrail|rail|mat|raised\s+edge|walkway|passage|floor|lamp|fan|light|"
+    r"ceiling|cooler|dispenser|counter|machine)\b",
+    re.IGNORECASE,
+)
+_FACILITY_FAULT_RE = re.compile(
+    r"\b(?:broken|break|leak(?:s|ed|ing)?|spilled|spill|spreading|puddle|wet|slick|"
+    r"slippery|faulty|outage|power\s+failure|went\s+out|flickering|rattling|"
+    r"fault|malfunction|damaged|cracked|loose|wobbly|wobbling|shaking|shakes|"
+    r"loose|raised|folded|curled|crowded|narrowed|obstructing|obstructed|"
+    r"blank|no\s+(?:image|picture)|lost\s+(?:its\s+)?(?:picture|signal|audio)|"
+    r"will\s+not\s+open|won['\u2019]t\s+open|stuck\s+shut|hot)\b|"
+    r"\b(?:power\s+failure|power\s+outage|water\s+leak|lighting\s+outage)\b",
     re.IGNORECASE,
 )
 _COLORED_ENTITY_RE = re.compile(
@@ -221,6 +239,12 @@ _COLORED_ENTITY_RE = re.compile(
 _NAMED_ENTITY_RE = re.compile(
     r"\b(?:person|student|child|man|woman|boy|girl)\s+"
     r"(?:named|called)\s+(?P<name>[A-Z][a-z]{1,24})\b",
+    re.IGNORECASE,
+)
+_EXPLICIT_DISTINCT_EVENT_RE = re.compile(
+    r"\b(?:(?:another|different|new|separate)\s+(?:incident|event|emergency)|"
+    r"(?:not|unrelated\s+to)\s+(?:the\s+same|this)\s+(?:incident|event)|"
+    r"not\s+the\s+same\s+(?:incident|event))\b",
     re.IGNORECASE,
 )
 
@@ -358,7 +382,24 @@ def _phrase_is_uncertain(text: str, match: re.Match[str]) -> bool:
 
 
 def _has_person_context(text: str, match: re.Match[str]) -> bool:
-    return bool(_PERSON_CONTEXT_RE.search(_nearby_clause(text, match.start())))
+    clause = _nearby_clause(text, match.start())
+    return bool(_PERSON_CONTEXT_RE.search(clause))
+
+
+def _facility_fault_match(text: str) -> re.Match[str] | None:
+    """Return an affirmative fault cue tied to a facility object or clear outage."""
+    for match in _FACILITY_FAULT_RE.finditer(text):
+        if _is_negated(text, match) or _is_hypothetical(text, match):
+            continue
+        clause = _nearby_clause(text, match.start())
+        standalone_fault = re.search(
+            r"\b(?:puddle|outage|power\s+failure|power\s+outage|lighting\s+outage)\b",
+            match.group(0),
+            re.IGNORECASE,
+        )
+        if standalone_fault or _FACILITY_OBJECT_RE.search(clause):
+            return match
+    return None
 
 
 def _claim_matches(
@@ -456,9 +497,8 @@ def _classify_category(text: str, claims: Sequence[dict[str, Any]]) -> str:
                 and not _is_hypothetical(text, match)
             ):
                 return "missing_person"
-    for match in _FACILITY_RE.finditer(text):
-        if not _is_negated(text, match) and not _is_hypothetical(text, match):
-            return "facility_issue"
+    if _facility_fault_match(text) is not None:
+        return "facility_issue"
     return "other"
 
 
@@ -714,10 +754,16 @@ def _priority_for_text(
         )
 
     if category == "facility_issue":
+        fault = _facility_fault_match(text)
+        if fault is None:
+            return (
+                "UNASSESSED",
+                "Rule U0: no affirmative facility fault is supported; human assessment required.",
+                ["Facility equipment or location was mentioned without a supported fault cue."],
+            )
         has_location = bool(_normalise_text(zone_id))
         if has_location:
-            match = _FACILITY_RE.search(text)
-            phrase = match.group(0) if match else "reported facility issue"
+            phrase = fault.group(0)
             return (
                 "P2",
                 f"P2 rule FAC-1: facility issue “{phrase}” has a reporter-supplied zone; "
@@ -745,6 +791,30 @@ def _report_text(report: dict[str, Any]) -> str:
 def _report_id(report: dict[str, Any]) -> str:
     value = report.get("id")
     return str(value) if value is not None else ""
+
+
+def _pair_ambiguity_reasons(incoming: dict[str, Any], existing: dict[str, Any]) -> list[str]:
+    """Find report-level conflicts that need review before auto-attachment."""
+    texts = (_report_text(incoming), _report_text(existing))
+    reasons: list[str] = []
+    if any(_UNCERTAIN_RE.search(text) or _HYPOTHETICAL_RE.search(text) for text in texts):
+        reasons.append(
+            "Uncertain or hypothetical wording prevents automated incident identity; "
+            "review this candidate."
+        )
+    if any(_EXPLICIT_DISTINCT_EVENT_RE.search(text) for text in texts):
+        reasons.append(
+            "The report text describes a distinct incident or event; do not attach automatically."
+        )
+    if any(
+        _mentions_other_zone(text, report.get("zone_id"))
+        for text, report in zip(texts, (incoming, existing), strict=True)
+    ):
+        reasons.append(
+            "Report text names a different known zone than its form selection; "
+            "review location before grouping."
+        )
+    return _dedupe(reasons)
 
 
 class AnalysisEngine:
@@ -886,7 +956,7 @@ class AnalysisEngine:
 
     def _pair_analysis(
         self, incoming: dict[str, Any], existing: dict[str, Any]
-    ) -> tuple[dict[str, Any], bool, bool]:
+    ) -> tuple[dict[str, Any], bool, bool, dict[str, Any]]:
         incoming_text = _report_text(incoming)
         existing_text = _report_text(existing)
         shared_entities = _shared_entities(incoming_text, existing_text)
@@ -898,23 +968,13 @@ class AnalysisEngine:
         existing_embedding = existing.get("embedding")
         incoming_revision = incoming.get("model_revision")
         existing_revision = existing.get("model_revision")
-        semantic_mode = incoming_revision == MODEL_REVISION and existing_revision == MODEL_REVISION
-        lexical_mode = not semantic_mode
-        semantic_score: float | None = None
-        if incoming_embedding is not None and existing_embedding is not None and semantic_mode:
-            semantic_score = _cosine(incoming_embedding, existing_embedding)
-        if semantic_score is None:
-            lexical_mode = True
-            semantic_score = _cosine(_lexical_vector(incoming_text), _lexical_vector(existing_text))
-            if semantic_score is not None:
-                reasons.append(
-                    "Text similarity uses the local lexical-hash fallback, not MiniLM semantics."
-                )
-            else:
-                missing_fields.append("semantic")
-                reasons.append(
-                    "Text similarity is unavailable because one report has no usable text."
-                )
+        dense_available = (
+            incoming_revision == MODEL_REVISION and existing_revision == MODEL_REVISION
+        )
+        dense_score = None
+        if dense_available and incoming_embedding is not None and existing_embedding is not None:
+            dense_score = _cosine(incoming_embedding, existing_embedding)
+        lexical_score = _cosine(_lexical_vector(incoming_text), _lexical_vector(existing_text))
 
         location_score, location_hard, same_sublocation, location_reasons, location_missing = (
             _location_comparison(incoming, existing, bool(shared_entities))
@@ -942,24 +1002,64 @@ class AnalysisEngine:
                 + "."
             )
 
-        components = {
-            "semantic": semantic_score,
+        ambiguity_reasons = _pair_ambiguity_reasons(incoming, existing)
+        reasons.extend(ambiguity_reasons)
+
+        context_components = {
             "location": location_score,
             "time": time_score,
             "category": category_score,
         }
-        total_score = _weighted_score(components)
+        lexical_total = _weighted_score({"semantic": lexical_score, **context_components})
+        semantic_total = (
+            _weighted_score({"semantic": dense_score, **context_components})
+            if dense_score is not None
+            else None
+        )
+        if dense_score is not None:
+            semantic_score = dense_score
+            total_score = semantic_total
+            if lexical_score is not None:
+                reasons.append(
+                    "Text similarity uses pinned MiniLM cosine "
+                    f"{dense_score:.3f}; the independent lexical-hash cosine is "
+                    f"{lexical_score:.3f}."
+                )
+            else:
+                reasons.append(
+                    "Text similarity uses pinned MiniLM; lexical-hash text similarity is "
+                    "unavailable."
+                )
+            reasons.append("Composite total_score uses pinned MiniLM plus the context components.")
+        else:
+            semantic_score = lexical_score
+            total_score = lexical_total
+            if lexical_score is not None:
+                reasons.append(
+                    "Text similarity uses the local lexical-hash fallback; stored vectors were not "
+                    "compared across model revisions."
+                )
+            else:
+                missing_fields.append("semantic")
+                reasons.append(
+                    "Text similarity is unavailable because one report has no usable text."
+                )
+            reasons.append("Composite total_score uses the local lexical-hash signal.")
         hard_incompatible = location_hard or time_hard or category_hard
         specifically_located = same_sublocation or bool(shared_entities)
         if not specifically_located:
             missing_fields.append("specific_location_or_entity")
-        if len(components) > len([value for value in components.values() if value is not None]):
+        if len(context_components) + 1 > sum(
+            value is not None for value in (semantic_score, *context_components.values())
+        ):
             reasons.append(
                 "Missing score components were omitted and available weights were renormalized."
             )
         if hard_incompatible:
             decision = "separate"
-        elif total_score >= (_LEXICAL_SUGGEST_THRESHOLD if lexical_mode else _SUGGEST_THRESHOLD):
+        elif total_score >= (
+            _SUGGEST_THRESHOLD if dense_score is not None else _LEXICAL_SUGGEST_THRESHOLD
+        ):
             decision = "suggest"
         else:
             decision = "separate"
@@ -975,13 +1075,25 @@ class AnalysisEngine:
             "reasons": _dedupe(reasons),
             "missing_fields": _dedupe(missing_fields),
         }
-        return evidence, hard_incompatible, specifically_located
+        route_scores = {
+            "dense_available": dense_score is not None,
+            "dense_score": dense_score,
+            "dense_total": semantic_total,
+            "lexical_score": lexical_score,
+            "lexical_total": lexical_total,
+            "ambiguity_reasons": ambiguity_reasons,
+            "revision_mismatch": incoming_revision != existing_revision,
+            "explicit_distinct_event": any(
+                _EXPLICIT_DISTINCT_EVENT_RE.search(text) for text in (incoming_text, existing_text)
+            ),
+        }
+        return evidence, hard_incompatible, specifically_located, route_scores
 
     def score_pair(self, incoming: dict[str, Any], existing: dict[str, Any]) -> dict[str, Any]:
         """Return an inspectable pair score; it is a ranking signal, not a probability."""
         if not isinstance(incoming, dict) or not isinstance(existing, dict):
             raise TypeError("incoming and existing reports must be dictionaries")
-        evidence, _, _ = self._pair_analysis(incoming, existing)
+        evidence, _, _, _ = self._pair_analysis(incoming, existing)
         return evidence
 
     def choose_group(
@@ -1001,11 +1113,18 @@ class AnalysisEngine:
 
         incoming_id = _report_id(incoming)
         all_evidence: list[dict[str, Any]] = []
-        ranked: list[dict[str, Any]] = []
+        potential_conflict_review_reasons: list[str] = []
+        lexical_candidates: list[dict[str, Any]] = []
+        semantic_candidates: list[dict[str, Any]] = []
+        semantic_review_candidates: list[dict[str, Any]] = []
         rejected_any = False
         missing_gate_any = False
         anchor_gate_any = False
         hard_mismatch_any = False
+        mixed_revision_any = False
+
+        def with_potential_conflicts(reasons: list[str]) -> list[str]:
+            return _dedupe([*reasons, *potential_conflict_review_reasons])
 
         for group in groups:
             if not isinstance(group, dict):
@@ -1016,11 +1135,8 @@ class AnalysisEngine:
             if not group_id or not isinstance(reports, list) or not reports:
                 continue
 
-            pair_results = [
-                self._pair_analysis(incoming, report)
-                for report in reports
-                if isinstance(report, dict)
-            ]
+            candidate_reports = [report for report in reports if isinstance(report, dict)]
+            pair_results = [self._pair_analysis(incoming, report) for report in candidate_reports]
             if not pair_results:
                 continue
             pair_evidence = [result[0] for result in pair_results]
@@ -1040,65 +1156,144 @@ class AnalysisEngine:
 
             hard_mismatch = any(result[1] for result in pair_results)
             hard_mismatch_any = hard_mismatch_any or hard_mismatch
-            anchor_evidence, anchor_hard, anchor_specific = pair_results[0]
-            anchor_similarity = anchor_evidence["semantic_score"]
-            lexical_mode = any(
-                "local lexical-hash fallback" in reason for reason in anchor_evidence["reasons"]
+            explicit_separation = any(
+                result[3]["explicit_distinct_event"] for result in pair_results
             )
+            if explicit_separation:
+                for evidence in pair_evidence:
+                    evidence["decision"] = "separate"
+                    evidence["reasons"].append(
+                        "A report explicitly describes a different incident or event; "
+                        "the candidate group is not eligible."
+                    )
+                continue
+            for candidate_report, result in zip(candidate_reports, pair_results, strict=True):
+                evidence, hard, specifically_located, _ = result
+                if hard or not specifically_located:
+                    continue
+                for conflict in self.detect_conflicts([incoming, candidate_report]):
+                    report_ids = conflict["report_ids"]
+                    values = conflict["values"]
+                    spans = conflict["spans"]
+                    warning = (
+                        "Potential conflicting or changing accounts; compare report IDs "
+                        f"{report_ids[0]} and {report_ids[1]}: {conflict['field']} is "
+                        f"{values[0]} (“{spans[0]}”) versus {values[1]} (“{spans[1]}”)."
+                    )
+                    evidence["reasons"].append(warning)
+                    potential_conflict_review_reasons.append(warning)
             times_known = all(
                 "time" not in evidence["missing_fields"] for evidence in pair_evidence
             )
-            specific = anchor_specific
-            required_context = not anchor_hard and times_known and specific and not hard_mismatch
+            anchor_evidence, anchor_hard, anchor_specific, _ = pair_results[0]
+            required_context = (
+                not anchor_hard and times_known and anchor_specific and not hard_mismatch
+            )
             if not required_context:
-                missing_gate_any = missing_gate_any or not times_known or not specific
-                for evidence, hard, _ in pair_results:
-                    if hard:
+                missing_gate_any = missing_gate_any or not times_known or not anchor_specific
+                if hard_mismatch:
+                    for evidence in pair_evidence:
                         evidence["decision"] = "separate"
-                    elif evidence["decision"] != "separate":
-                        evidence["decision"] = "suggest"
-                continue
-            anchor_minimum = _LEXICAL_ANCHOR_MINIMUM if lexical_mode else _ANCHOR_SEMANTIC_MINIMUM
-            if anchor_similarity is None or anchor_similarity < anchor_minimum:
-                anchor_gate_any = True
-                anchor_evidence["decision"] = "suggest"
-                anchor_evidence["reasons"].append(
-                    "Anchor similarity is below the prototype minimum of "
-                    f"{anchor_minimum:.2f}; do not bridge through another member."
-                )
+                        evidence["reasons"].append(
+                            "The candidate group contains a hard mismatch with another "
+                            "member; no pair in this group is eligible."
+                        )
+                else:
+                    for evidence in pair_evidence:
+                        if evidence["decision"] != "separate":
+                            evidence["decision"] = "suggest"
                 continue
 
-            representatives = pair_results[:4]
-            candidate_score = sum(
-                float(result[0]["total_score"] or 0.0) for result in representatives
-            ) / len(representatives)
-            ranked.append(
-                {
+            route_details = [result[3] for result in pair_results]
+            ambiguity_reasons = _dedupe(
+                reason for route in route_details for reason in route["ambiguity_reasons"]
+            )
+
+            def candidate_for_route(
+                route_name: str,
+                anchor_minimum: float,
+                *,
+                group_id: str = group_id,
+                route_details: list[dict[str, Any]] = route_details,
+                anchor_evidence: dict[str, Any] = anchor_evidence,
+                pair_evidence: list[dict[str, Any]] = pair_evidence,
+                ambiguity_reasons: list[str] = ambiguity_reasons,
+            ) -> dict[str, Any] | None:
+                nonlocal anchor_gate_any, mixed_revision_any
+                score_key = "dense_score" if route_name == "semantic" else "lexical_score"
+                total_key = "dense_total" if route_name == "semantic" else "lexical_total"
+                if route_name == "semantic" and not all(
+                    route["dense_available"] for route in route_details
+                ):
+                    mixed_revision_any = mixed_revision_any or any(
+                        route["revision_mismatch"] for route in route_details
+                    )
+                    return None
+                if any(
+                    route[score_key] is None or route[total_key] is None for route in route_details
+                ):
+                    return None
+                anchor_similarity = route_details[0][score_key]
+                if anchor_similarity < anchor_minimum:
+                    anchor_gate_any = True
+                    if anchor_evidence["decision"] != "separate":
+                        anchor_evidence["decision"] = "suggest"
+                    anchor_evidence["reasons"].append(
+                        f"{route_name.capitalize()} anchor similarity is below "
+                        f"{anchor_minimum:.2f}; do not bridge through another member."
+                    )
+                    return None
+                representatives = route_details
+                candidate_score = sum(float(route[total_key]) for route in representatives) / len(
+                    representatives
+                )
+                return {
                     "group_id": group_id,
+                    "route": route_name,
                     "score": candidate_score,
+                    "member_count": len(representatives),
+                    "anchor_total": route_details[0][total_key],
+                    "anchor_similarity": anchor_similarity,
+                    "dense_available": all(route["dense_available"] for route in route_details),
+                    "anchor_dense_available": route_details[0]["dense_available"],
+                    "dense_anchor_score": route_details[0]["dense_score"],
                     "anchor_evidence": anchor_evidence,
                     "pair_evidence": pair_evidence,
-                    "lexical_mode": lexical_mode,
+                    "ambiguity_reasons": ambiguity_reasons,
                 }
+
+            lexical_candidate = candidate_for_route("lexical", _LEXICAL_ANCHOR_MINIMUM)
+            if lexical_candidate is not None:
+                lexical_candidates.append(lexical_candidate)
+
+            semantic_review_candidate = candidate_for_route(
+                "semantic", _SEMANTIC_REVIEW_ANCHOR_MINIMUM
             )
+            if semantic_review_candidate is not None:
+                semantic_review_candidates.append(semantic_review_candidate)
+                if semantic_review_candidate["anchor_similarity"] >= _ANCHOR_SEMANTIC_MINIMUM:
+                    semantic_candidates.append(semantic_review_candidate)
 
         if not incoming_id:
             return {
                 "incident_id": None,
                 "evidence": all_evidence,
-                "review_reasons": [
-                    "Incoming report has no stable ID; retain it as a singleton for review."
-                ],
+                "review_reasons": with_potential_conflicts(
+                    ["Incoming report has no stable ID; retain it as a singleton for review."]
+                ),
             }
         if not groups or not all_evidence:
             return {
                 "incident_id": None,
                 "evidence": all_evidence,
-                "review_reasons": [
-                    "No usable candidate incident is available; retain this report as a singleton."
-                ],
+                "review_reasons": with_potential_conflicts(
+                    [
+                        "No usable candidate incident is available; retain this report as "
+                        "a singleton."
+                    ]
+                ),
             }
-        if not ranked:
+        if not lexical_candidates and not semantic_review_candidates:
             reasons: list[str] = []
             if rejected_any:
                 reasons.append(
@@ -1119,57 +1314,283 @@ class AnalysisEngine:
                     "A known location, time, category, or entity incompatibility keeps this "
                     "report separate."
                 )
+            if mixed_revision_any:
+                reasons.append(
+                    "Pinned MiniLM comparison is unavailable for at least one candidate because "
+                    "its stored vector uses a different revision; lexical scores were "
+                    "kept separate."
+                )
             return {
                 "incident_id": None,
                 "evidence": all_evidence,
-                "review_reasons": _dedupe(reasons),
+                "review_reasons": with_potential_conflicts(reasons),
             }
 
-        ranked.sort(key=lambda candidate: (-candidate["score"], candidate["group_id"]))
-        best = ranked[0]
-        runner_up_score = ranked[1]["score"] if len(ranked) > 1 else None
-        margin = float("inf") if runner_up_score is None else best["score"] - runner_up_score
-        attach_threshold = _LEXICAL_ATTACH_THRESHOLD if best["lexical_mode"] else _ATTACH_THRESHOLD
-        if best["score"] < attach_threshold:
-            best["anchor_evidence"]["decision"] = "suggest"
-            best["anchor_evidence"]["reasons"].append(
-                "Candidate score is below the prototype attachment threshold of "
-                f"{attach_threshold:.2f}."
+        def ranked(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return sorted(
+                candidates, key=lambda candidate: (-candidate["score"], candidate["group_id"])
             )
-            return {
-                "incident_id": None,
-                "evidence": all_evidence,
-                "review_reasons": [
-                    "Best candidate score is below "
-                    f"{attach_threshold:.2f}; retain this report as a reviewable singleton."
-                ],
-            }
-        if margin < _RUNNER_UP_MARGIN:
-            best["anchor_evidence"]["decision"] = "suggest"
-            best["anchor_evidence"]["reasons"].append(
-                "Best-versus-runner-up margin is below the prototype minimum of 0.08."
-            )
-            return {
-                "incident_id": None,
-                "evidence": all_evidence,
-                "review_reasons": [
-                    "Candidate margin is below 0.08; similar incidents remain ambiguous for "
-                    "human review."
-                ],
-            }
 
-        best["anchor_evidence"]["decision"] = "attach"
-        best["anchor_evidence"]["reasons"].append(
-            "This anchor comparison passed the versioned "
-            f"{'lexical-context' if best['lexical_mode'] else 'MiniLM'} score, margin, time, "
-            "and specific-context gates."
+        lexical_ranked = ranked(lexical_candidates)
+        semantic_ranked = ranked(semantic_candidates)
+        semantic_review_ranked = ranked(semantic_review_candidates)
+        for index, candidate in enumerate(semantic_review_ranked):
+            runner_up_score = (
+                semantic_review_ranked[index + 1]["score"]
+                if index + 1 < len(semantic_review_ranked)
+                else None
+            )
+            candidate["review_runner_up_score"] = runner_up_score
+            candidate["review_margin"] = (
+                float("inf") if runner_up_score is None else candidate["score"] - runner_up_score
+            )
+
+        def route_winner(
+            candidates: list[dict[str, Any]], threshold: float
+        ) -> dict[str, Any] | None:
+            if not candidates:
+                return None
+            best_candidate = candidates[0]
+            runner_up = candidates[1]["score"] if len(candidates) > 1 else None
+            margin = float("inf") if runner_up is None else best_candidate["score"] - runner_up
+            best_candidate["margin"] = margin
+            if best_candidate["score"] < threshold or margin < _RUNNER_UP_MARGIN:
+                return None
+            if (
+                best_candidate["route"] == "lexical"
+                and best_candidate["anchor_dense_available"]
+                and best_candidate["dense_anchor_score"] < _ANCHOR_SEMANTIC_MINIMUM
+            ):
+                best_candidate["anchor_evidence"]["reasons"].append(
+                    "Lexical candidate has pinned MiniLM anchor corroboration "
+                    f"{best_candidate['dense_anchor_score']:.3f}, below the "
+                    f"{_ANCHOR_SEMANTIC_MINIMUM:.2f} minimum; keep it for review."
+                )
+                return None
+            if best_candidate["ambiguity_reasons"]:
+                return None
+            return best_candidate
+
+        lexical_winner = route_winner(lexical_ranked, _LEXICAL_ATTACH_THRESHOLD)
+        semantic_winner = route_winner(semantic_ranked, _ATTACH_THRESHOLD)
+        semantic_suggestion = (
+            semantic_review_ranked[0]
+            if semantic_review_ranked
+            and semantic_review_ranked[0]["score"] >= _SEMANTIC_REVIEW_THRESHOLD
+            else None
         )
+        semantic_alternatives = (
+            [semantic_review_ranked[1]]
+            if semantic_suggestion is not None
+            and len(semantic_review_ranked) > 1
+            and semantic_review_ranked[0]["review_margin"] < _RUNNER_UP_MARGIN
+            else []
+        )
+        lexical_suggestion = (
+            lexical_ranked[0]
+            if lexical_ranked and lexical_ranked[0]["score"] >= _LEXICAL_SUGGEST_THRESHOLD
+            else None
+        )
+
+        strict_winners = [
+            winner for winner in (lexical_winner, semantic_winner) if winner is not None
+        ]
+        strict_ids = {winner["group_id"] for winner in strict_winners}
+        primary_suggestions = [
+            candidate
+            for candidate in (lexical_suggestion, semantic_suggestion)
+            if candidate is not None
+        ]
+        suggestions = [*primary_suggestions, *semantic_alternatives]
+        primary_suggestion_ids = {candidate["group_id"] for candidate in primary_suggestions}
+        dissenting_suggestions = [
+            candidate
+            for candidate in primary_suggestions
+            if strict_ids and candidate["group_id"] not in strict_ids
+        ]
+        route_disagreement = len(strict_ids) > 1 or bool(dissenting_suggestions)
+
+        def select_route(candidate: dict[str, Any], decision: str, reason: str) -> None:
+            evidence = candidate["anchor_evidence"]
+            route = candidate["route"]
+            # The chosen route and its aggregate score are stated explicitly. The public
+            # semantic_score remains the dense cosine whenever both vectors are compatible.
+            evidence["total_score"] = _rounded(candidate["anchor_total"])
+            for existing_reason in list(evidence["reasons"]):
+                if existing_reason.startswith("Composite total_score uses "):
+                    evidence["reasons"].remove(existing_reason)
+            if route == "lexical":
+                evidence["reasons"].append(
+                    "This candidate uses the independent local lexical-hash route; dense results "
+                    "are shown separately and were not mixed into its score."
+                )
+                evidence["reasons"].append(
+                    "Composite total_score uses the local lexical-hash similarity plus "
+                    "context components."
+                )
+            else:
+                evidence["reasons"].append(
+                    "This candidate uses the pinned MiniLM route; lexical-hash results were "
+                    "scored independently and were not mixed into its score."
+                )
+                evidence["reasons"].append(
+                    "Composite total_score uses pinned MiniLM similarity plus context components."
+                )
+            evidence["reasons"].append(reason)
+            evidence["reasons"].append(
+                f"Candidate group rank score {candidate['score']:.3f} is the mean of all "
+                f"{candidate['member_count']} {route} pair composites and is used for "
+                "threshold and margin checks; "
+                "total_score remains the anchor pair composite."
+            )
+            corroborating_route = candidate.get("corroborating_route")
+            if isinstance(corroborating_route, dict):
+                evidence["reasons"].append(
+                    "The independent "
+                    f"{corroborating_route['name']} route also proposed this incident "
+                    f"(anchor composite {corroborating_route['score']:.3f}); total_score "
+                    f"reports the selected {route} route."
+                )
+            evidence["decision"] = decision
+
+        if route_disagreement:
+            for candidate in suggestions + strict_winners:
+                select_route(
+                    candidate,
+                    "suggest",
+                    "Lexical and MiniLM routes disagree on the leading incident; "
+                    "coordinator review is required.",
+                )
+            return {
+                "incident_id": None,
+                "evidence": all_evidence,
+                "review_reasons": with_potential_conflicts(
+                    [
+                        "Lexical and MiniLM routes do not establish one incident; keep this "
+                        "report separate for human review."
+                    ]
+                ),
+            }
+
+        if strict_winners:
+            chosen = strict_winners[0]
+            select_route(
+                chosen,
+                "attach",
+                "This candidate passed its versioned route score, margin, known-time, "
+                "specific-context, "
+                "all-member compatibility, and coordinator-rejection gates.",
+            )
+            for candidate in semantic_alternatives:
+                select_route(
+                    candidate,
+                    "suggest",
+                    "This close MiniLM runner-up remains visible for coordinator review; "
+                    "it does not override the independently supported attachment.",
+                )
+            return {
+                "incident_id": chosen["group_id"],
+                "evidence": all_evidence,
+                "review_reasons": with_potential_conflicts(
+                    ["Provisional grouping only; coordinator confirmation remains required."]
+                    + (
+                        [
+                            "MiniLM candidate margin is below 0.08; the close runner-up "
+                            "remains visible for review."
+                        ]
+                        if semantic_alternatives
+                        else []
+                    )
+                ),
+            }
+
+        review_candidates_by_group: dict[str, dict[str, Any]] = {}
+        for candidate in suggestions:
+            current = review_candidates_by_group.get(candidate["group_id"])
+            if current is None:
+                review_candidates_by_group[candidate["group_id"]] = candidate
+                continue
+            # Both score spaces may propose the same incident. Select one route
+            # so shared anchor evidence is not overwritten by the second route.
+            selected_candidate = candidate if candidate["route"] == "semantic" else current
+            alternate_candidate = current if selected_candidate is candidate else candidate
+            review_candidates_by_group[candidate["group_id"]] = {
+                **selected_candidate,
+                "corroborating_route": {
+                    "name": alternate_candidate["route"],
+                    "score": alternate_candidate["anchor_total"],
+                },
+            }
+        review_candidates = list(review_candidates_by_group.values())
+        for candidate in review_candidates:
+            select_route(
+                candidate,
+                "suggest",
+                "This route can propose a review candidate but cannot attach it without "
+                "passing the independent attachment gates.",
+            )
+        review_reasons: list[str] = []
+        if review_candidates:
+            if len(primary_suggestion_ids) > 1:
+                review_reasons.append(
+                    "Lexical and MiniLM review suggestions point to different incidents; "
+                    "coordinator review is required."
+                )
+            if any(
+                candidate["route"] == "lexical"
+                and candidate["anchor_dense_available"]
+                and candidate["dense_anchor_score"] < _ANCHOR_SEMANTIC_MINIMUM
+                for candidate in review_candidates
+            ):
+                review_reasons.append(
+                    "Anchor similarity is insufficient; a strong member match cannot "
+                    "create a transitive bridge."
+                )
+            if any(candidate["ambiguity_reasons"] for candidate in review_candidates):
+                review_reasons.extend(
+                    reason
+                    for candidate in review_candidates
+                    for reason in candidate["ambiguity_reasons"]
+                )
+            if semantic_alternatives:
+                review_reasons.append(
+                    "MiniLM candidate margin is below 0.08; the close runner-up is shown "
+                    "for coordinator review."
+                )
+            if not semantic_alternatives and any(
+                candidate["margin"] < _RUNNER_UP_MARGIN
+                for candidate in review_candidates
+                if "margin" in candidate
+            ):
+                review_reasons.append(
+                    "The candidate margin is below 0.08; similar incidents remain "
+                    "ambiguous for human review."
+                )
+        else:
+            if lexical_ranked and lexical_ranked[0]["score"] < _LEXICAL_ATTACH_THRESHOLD:
+                review_reasons.append(
+                    "Best lexical candidate score is below "
+                    f"{_LEXICAL_ATTACH_THRESHOLD:.2f}; retain this report as a "
+                    "reviewable singleton."
+                )
+            if (
+                semantic_review_ranked
+                and semantic_review_ranked[0]["score"] < _SEMANTIC_REVIEW_THRESHOLD
+            ):
+                review_reasons.append(
+                    "Best MiniLM candidate score is below "
+                    f"{_SEMANTIC_REVIEW_THRESHOLD:.2f}; retain this report as a "
+                    "reviewable singleton."
+                )
+            if mixed_revision_any:
+                review_reasons.append(
+                    "Pinned MiniLM comparison was unavailable for a mixed-revision "
+                    "candidate; lexical scores were not compared with dense vectors."
+                )
         return {
-            "incident_id": best["group_id"],
+            "incident_id": None,
             "evidence": all_evidence,
-            "review_reasons": [
-                "Provisional grouping only; coordinator confirmation remains required."
-            ],
+            "review_reasons": with_potential_conflicts(review_reasons),
         }
 
     def assess_priority(self, reports: list[dict[str, Any]]) -> dict[str, Any]:

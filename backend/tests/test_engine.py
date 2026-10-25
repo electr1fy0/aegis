@@ -662,8 +662,11 @@ def test_choose_group_threshold_margin_rejections_and_bad_candidates() -> None:
         incoming,
         [_candidate_group(vector=[0.72, math.sqrt(1 - 0.72**2)])],
     )
-    assert below_threshold["incident_id"] is None
-    assert any("below 0.82" in reason for reason in below_threshold["review_reasons"])
+    assert below_threshold["incident_id"] == "incident-1"
+    assert below_threshold["evidence"][0]["decision"] == "attach"
+    assert any(
+        "lexical-hash route" in reason for reason in below_threshold["evidence"][0]["reasons"]
+    )
 
     ambiguous = engine.choose_group(
         incoming,
@@ -873,7 +876,7 @@ def test_lexical_fallback_uses_dev_calibrated_context_gates_for_grouping() -> No
     }
 
     assert incoming["model_revision"] == LEXICAL_REVISION
-    assert engine.config_version == "semantic-context-v1+lexical-context-dev-v2+location-aliases-v1"
+    assert engine.config_version == "hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1"
     evidence = engine.score_pair(incoming, existing)
     assert evidence["semantic_score"] < 0.82
     assert evidence["decision"] == "suggest"
@@ -882,4 +885,4 @@ def test_lexical_fallback_uses_dev_calibrated_context_gates_for_grouping() -> No
     decision = engine.choose_group(incoming, [{"id": "group-1", "reports": [existing]}])
     assert decision["incident_id"] == "group-1"
     assert decision["evidence"][0]["decision"] == "attach"
-    assert any("lexical-context" in reason for reason in decision["evidence"][0]["reasons"])
+    assert any("lexical-hash route" in reason for reason in decision["evidence"][0]["reasons"])
