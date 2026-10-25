@@ -1,25 +1,25 @@
 # Verification record
 
-Verified on 24 October 2026 using Python 3.14.7, Bun 1.4.2, and the locked project dependencies on macOS ARM64.
+Baseline verified on 24 October 2026; the forty workflow improvements were reviewed and reverified on 25 October 2026 using Python 3.14.7, Bun 1.4.2, and the locked project dependencies on macOS ARM64.
 
 ## Completed checks
 
-`make verify` and `bun run e2e` completed successfully after the review fixes. Dependency audits also completed without known vulnerabilities. See `REVIEW.md` for the findings and matching tradeoff.
+The verification commands and Chromium scenarios cover the review fixes and the workflow improvements. Dependency audits completed without known vulnerabilities on 24 October; the regular dependency locks are unchanged. See `REVIEW.md` for the original findings and `IMPROVEMENTS.md` for the forty implemented changes.
 
 | Check | Result |
 | --- | --- |
-| Backend/API/engine/evaluation tests | 196 passed |
-| Backend statement coverage | 2,414 / 2,414; 100% |
-| Backend branch coverage | 844 / 844; 100% |
-| Frontend interaction/unit tests | 140 passed |
-| Frontend statement coverage | 834 / 834; 100% |
-| Frontend branch coverage | 565 / 565; 100% |
-| Frontend function coverage | 245 / 245; 100% |
-| Frontend line coverage | 745 / 745; 100% |
+| Backend/API/engine/evaluation tests | 223 passed |
+| Backend statement coverage | 2,843 / 2,843; 100% |
+| Backend branch coverage | 950 / 950; 100% |
+| Frontend interaction/unit tests | 337 passed |
+| Frontend statement coverage | 2,053 / 2,053; 100% |
+| Frontend branch coverage | 1,545 / 1,545; 100% |
+| Frontend function coverage | 537 / 537; 100% |
+| Frontend line coverage | 1,742 / 1,742; 100% |
 | Strict TypeScript, including test/config files | Passed |
 | Vite client and SSR production builds | Passed |
 | Built server handler requests | `/dashboard`, `/report`, `/evaluation`, `/about`: HTTP 200 |
-| Playwright Chromium smoke | Passed through all 24 replay steps, intake, review, audit and evaluation; no uncaught browser errors |
+| Playwright Chromium smoke | 2 passed: 24-step replay, intake, review, audit, evaluation, drafts, receipts, notes, titles, reset, undo, history, safe export and responsive views; no browser console errors |
 | Ruff lint and formatting | Passed; enforced by `make verify` |
 | Locked Python dependencies (`pip-audit`) | No known vulnerabilities |
 | Locked frontend dependencies (`bun audit`) | No known vulnerabilities |
@@ -45,12 +45,23 @@ The review and tests caught and fixed:
 - Conflict reopening reusing an old version and the previous reason.
 - Request timeouts failing to cover response-body reads.
 - An incomplete confirmation payload missing its target incident.
+- Late responses from another exercise switching the currently selected event.
+- Retried submissions changing their captured observation time or submission identity.
+- Saved receipt data referring to a different exercise or malformed display IDs.
+- Source links attributing reasons to the wrong report pair.
+- Report analysis events being mislabeled as coordinator decisions.
+- Long queue rows overlapping after the desktop workspace was bounded.
+- Spreadsheet exports interpreting formula-leading coordinator text as formulas.
 
 ## Measured replay and evaluation
 
 The real API replay retained 24 reports in 8 incident groups, exposed 3 opposing report-pair conflicts, and recorded 50 audit entries. All six explicit evaluation checks passed.
 
-The active engine in this environment is the clearly labelled lexical fallback. On the fixed 60-report synthetic regression set it measured precision 1.000, recall 0.621212, F1 0.766355, zero false merge pairs, 25 missed pairs, and 100% review rate. See `evaluation/results/latest.json` for the complete measured result and limitations. MiniLM weights were unavailable; encoder injection tests do not establish that real MiniLM inference ran here.
+The ordinary environment uses the clearly labelled lexical fallback. On the fixed 60-report synthetic regression set it measured precision 1.000, recall 0.621212, F1 0.766355, zero false merge pairs, 25 missed pairs, and 100% review rate. See `evaluation/results/latest.json` for the complete measured result and limitations.
+
+The separate locked semantic environment executed real 384-dimensional offline MiniLM inference at model commit `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`. Its unchanged conservative grouping policy measured precision 1.000, recall 0.030303, F1 0.058824, zero false merge pairs and 64 missed pairs on the same fixture. Semantic mode therefore remains optional. `evaluation/results/semantic.json` records the real run; no thresholds were tuned against test labels.
+
+Read-only preflight and both-service startup/shutdown were exercised. SQLite online backup and restore to a new path preserved the test database's two events, 24 reports and 51 audit records. Desktop, laptop, mobile and print views were inspected; the mobile workspace had no horizontal overflow.
 
 ## Environmental limits
 

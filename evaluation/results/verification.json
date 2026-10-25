@@ -1,35 +1,36 @@
 {
+  "verified_on": "2026-10-25",
   "backend": {
-    "covered_lines": 2414,
-    "num_statements": 2414,
+    "covered_lines": 2843,
+    "num_statements": 2843,
     "percent_covered": 100.0,
-    "covered_branches": 844,
-    "num_branches": 844,
+    "covered_branches": 950,
+    "num_branches": 950,
     "missing_lines": 0,
     "excluded_lines": 0
   },
   "frontend": {
     "lines": {
-      "total": 745,
-      "covered": 745,
+      "total": 1742,
+      "covered": 1742,
       "skipped": 0,
       "pct": 100
     },
     "statements": {
-      "total": 834,
-      "covered": 834,
+      "total": 2053,
+      "covered": 2053,
       "skipped": 0,
       "pct": 100
     },
     "functions": {
-      "total": 245,
-      "covered": 245,
+      "total": 537,
+      "covered": 537,
       "skipped": 0,
       "pct": 100
     },
     "branches": {
-      "total": 565,
-      "covered": 565,
+      "total": 1545,
+      "covered": 1545,
       "skipped": 0,
       "pct": 100
     },
@@ -41,16 +42,20 @@
     }
   },
   "tests": {
-    "backend": 196,
-    "frontend": 140,
-    "browser": 1
+    "backend": 223,
+    "frontend": 337,
+    "browser": 2
   },
   "checks": {
     "lint": "passed",
     "format": "passed",
     "typecheck": "passed",
     "production_build": "passed",
-    "browser_smoke": "passed",
+    "browser_smoke": "passed"
+  },
+  "dependency_audits": {
+    "verified_on": "2026-10-24",
+    "scope": "unchanged regular dependency locks",
     "bun_audit": "no known vulnerabilities",
     "pip_audit": "no known vulnerabilities"
   }

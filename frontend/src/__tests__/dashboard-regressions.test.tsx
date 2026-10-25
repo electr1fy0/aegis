@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSnapshot, type SnapshotState } from "../hooks/use-snapshot";
-import { DashboardPage } from "../pages/dashboard-page";
+import { DashboardPage, GroupingReviewForm } from "../pages/dashboard-page";
 import type { Snapshot } from "../lib/types";
 import {
   auditFixture,
@@ -157,6 +157,29 @@ async function renderDashboard(snapshot = dashboardSnapshot()) {
   const view = render(<DashboardPage />);
   await screen.findByRole("heading", { name: snapshot.incidents[0]!.title });
   return { ...view, user, state };
+}
+
+async function renderWithEarlyArrow(snapshot: Snapshot, key: "ArrowDown" | "ArrowUp") {
+  const writes: string[] = [];
+  let deliveredEarlyKey = false;
+  const fakeStorage = {
+    getItem(storageKey: string) {
+      if (storageKey === `aegis.dashboard.view.v1:${eventFixture.id}` && !deliveredEarlyKey) {
+        const page = document.querySelector<HTMLElement>(".dashboard-page");
+        if (page) {
+          deliveredEarlyKey = true;
+          page.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+        }
+      }
+      return null;
+    },
+    setItem(_storageKey: string, value: string) { writes.push(value); },
+  };
+  replaceProperty(window, "localStorage", fakeStorage);
+  useSnapshotMock.mockReturnValue(stateFor(snapshot));
+  render(<DashboardPage />);
+  await screen.findByRole("heading", { name: snapshot.incidents[0]!.title });
+  return { deliveredEarlyKey, writes };
 }
 
 beforeEach(() => {
@@ -410,29 +433,57 @@ describe("dashboard interaction regressions", () => {
 
   it("uses the last visible group for reverse navigation before selection is initialized", async () => {
     const snapshot = multiLocationSnapshot();
-    const writes: string[] = [];
-    let deliveredEarlyKey = false;
-    const fakeStorage = {
-      getItem(key: string) {
-        if (key === `aegis.dashboard.view.v1:${eventFixture.id}` && !deliveredEarlyKey) {
-          const page = document.querySelector<HTMLElement>(".dashboard-page");
-          if (page) {
-            deliveredEarlyKey = true;
-            page.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
-          }
-        }
-        return null;
-      },
-      setItem(_key: string, value: string) { writes.push(value); },
-    };
-    replaceProperty(window, "localStorage", fakeStorage);
-    useSnapshotMock.mockReturnValue(stateFor(snapshot));
-
-    render(<DashboardPage />);
-    await screen.findByRole("heading", { name: snapshot.incidents[0]!.title });
-
+    const { deliveredEarlyKey, writes } = await renderWithEarlyArrow(snapshot, "ArrowUp");
     expect(deliveredEarlyKey).toBe(true);
-    expect(writes.some((value) => JSON.parse(value)[`${eventFixture.id}:incident-003`])).toBe(true);
+    expect(writes.some((value) => {
+      const saved = JSON.parse(value) as Record<string, unknown>;
+      return Object.keys(saved).length === 1 && Boolean(saved[`${eventFixture.id}:incident-003`]);
+    })).toBe(true);
+  });
+
+  it("uses the first visible group for forward navigation before selection is initialized", async () => {
+    const { deliveredEarlyKey, writes } = await renderWithEarlyArrow(multiLocationSnapshot(), "ArrowDown");
+    expect(deliveredEarlyKey).toBe(true);
+    expect(writes.some((value) => {
+      const saved = JSON.parse(value) as Record<string, unknown>;
+      return Object.keys(saved).length === 1 && Boolean(saved[`${eventFixture.id}:incident-001`]);
+    })).toBe(true);
+  });
+
+  it("leaves Escape unconsumed when no inspector or coordinator action is open", async () => {
+    const { container } = await renderDashboard();
+    const page = container.querySelector(".dashboard-page")!;
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    page.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(container.querySelector(".workspace-grid")).toHaveClass("is-inspector-closed");
+  });
+
+  it("cancels the title editor from its header and form controls", async () => {
+    const { user } = await renderDashboard();
+    await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Guest collapsed near Main Stage/ }));
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    expect(screen.getByRole("textbox", { name: "Incident title" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel title edit" }));
+    expect(screen.queryByRole("textbox", { name: "Incident title" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit title" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("textbox", { name: "Incident title" })).not.toBeInTheDocument();
+  });
+
+  it("highlights a claim that ends at the final character of the report", async () => {
+    const snapshot = dashboardSnapshot();
+    snapshot.reports[0] = {
+      ...snapshot.reports[0]!,
+      text: "Guest needs help",
+      claims: [{ field: "reported_condition", value: "needs help", span: "needs help" }],
+    };
+    await renderDashboard(snapshot);
+    const mark = screen.getByText("needs help", { selector: "mark" });
+    expect(mark).toBeInTheDocument();
+    expect(mark.parentElement).toHaveTextContent("Guest needs help");
+    expect(mark.parentElement?.textContent).toBe("Guest needs help");
   });
 
   it("clears contextual group selection and closes the inspector on Escape", async () => {
@@ -545,5 +596,108 @@ describe("dashboard interaction regressions", () => {
       method: "POST",
       body: JSON.stringify({ expected_version: 7 }),
     }));
+  });
+
+  it.each(["move", "merge"] as const)("keeps a removed %s target visible in the preview and rebases stale versions explicitly", async (mode) => {
+    const snapshot = multiLocationSnapshot();
+    const source = snapshot.incidents[0]!;
+    const target = snapshot.incidents[1]!;
+    const selectedIncidentIds = mode === "merge" ? [target.id, source.id] : [];
+    const selectedReportIds = mode === "move" ? [source.report_ids[0]!] : [];
+    const onCancel = vi.fn();
+    const onSaved = vi.fn();
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: { code: "stale_version", message: "The selected group is no longer available." } }),
+    } as Response);
+    replaceProperty(globalThis, "fetch", fetchMock);
+
+    const view = render(
+      <GroupingReviewForm
+        mode={mode}
+        incident={source}
+        incidents={[source, target]}
+        selectedReportIds={selectedReportIds}
+        selectedIncidentIds={selectedIncidentIds}
+        onCancel={onCancel}
+        onSaved={onSaved}
+      />,
+    );
+    const identityLabel = mode === "move" ? "Destination group" : "Keep group identity";
+    const previewPrefix = mode === "move" ? "Destination:" : "Group identity:";
+    if (mode === "move") {
+      await user.selectOptions(screen.getByRole("combobox", { name: identityLabel }), target.id);
+    }
+    expect(screen.getByText(`${previewPrefix} ${target.title}`)).toBeInTheDocument();
+
+    view.rerender(
+      <GroupingReviewForm
+        mode={mode}
+        incident={source}
+        incidents={[source]}
+        selectedReportIds={selectedReportIds}
+        selectedIncidentIds={selectedIncidentIds}
+        onCancel={onCancel}
+        onSaved={onSaved}
+      />,
+    );
+    expect(screen.getByText(`${previewPrefix} Selected group`)).toBeInTheDocument();
+
+    const reason = screen.getByRole("textbox", { name: "Coordinator reason" });
+    await user.type(reason, "Reviewed the latest reports.");
+    await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("older incident version");
+    const conflict = screen.getByRole("status");
+    expect(within(conflict).getByText(`${target.title} is no longer available in the current event snapshot.`)).toBeInTheDocument();
+    expect(within(conflict).getByRole("button", { name: "Use latest version and keep reason" })).toBeEnabled();
+    expect(reason).toHaveValue("Reviewed the latest reports.");
+    expect(onSaved).not.toHaveBeenCalled();
+    const firstInput = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as { expected_versions: Record<string, number> };
+    expect(firstInput.expected_versions).toEqual({ [source.id]: source.version, [target.id]: target.version });
+
+    await user.click(within(conflict).getByRole("button", { name: "Use latest version and keep reason" }));
+    expect(reason).toHaveValue("Reviewed the latest reports.");
+    expect(screen.queryByText(`${target.title} is no longer available in the current event snapshot.`)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save coordinator decision" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const rebasedInput = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string) as { expected_versions: Record<string, number> };
+    expect(rebasedInput.expected_versions).toEqual({ [source.id]: source.version, [target.id]: source.version });
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("shows a destination that arrives after a move form opens", async () => {
+    const snapshot = multiLocationSnapshot();
+    const source = snapshot.incidents[0]!;
+    const target = snapshot.incidents[1]!;
+    const user = userEvent.setup();
+    const view = render(
+      <GroupingReviewForm
+        mode="move"
+        incident={source}
+        incidents={[source]}
+        selectedReportIds={[source.report_ids[0]!]}
+        selectedIncidentIds={[]}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("option", { name: target.title })).not.toBeInTheDocument();
+    view.rerender(
+      <GroupingReviewForm
+        mode="move"
+        incident={source}
+        incidents={[source, target]}
+        selectedReportIds={[source.report_ids[0]!]}
+        selectedIncidentIds={[]}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    await user.selectOptions(screen.getByRole("combobox", { name: "Destination group" }), target.id);
+    expect(screen.getByText(`Destination: ${target.title}`)).toBeInTheDocument();
   });
 });

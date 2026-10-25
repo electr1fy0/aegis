@@ -744,6 +744,19 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Queue filters were broadened to show this related group.")).toBeInTheDocument();
   });
 
+  it("opens a visible related group without changing compatible queue filters", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[0] = {
+      ...snapshot.incidents[0]!,
+      evidence: [{ ...evidenceFixture, report_id: reportOne.id, candidate_report_id: reportThree.id, total_score: 0.77, reasons: ["Same exit reports"], missing_fields: [] }],
+    };
+    const { user } = await renderDashboard(snapshot);
+    await user.click(within(document.querySelector(".candidate-card")!).getByRole("button", { name: "Open group" }));
+
+    expect(await screen.findByRole("heading", { name: "Exit A barrier reports conflict" })).toBeInTheDocument();
+    expect(screen.queryByText("Queue filters were broadened to show this related group.")).not.toBeInTheDocument();
+  });
+
   it("toggles source report selection and confirms only that selected report", async () => {
     const { user } = await renderDashboard();
     const reportCheckbox = screen.getByRole("checkbox", { name: "Select report report-101 for a coordinator action" });
@@ -1032,6 +1045,22 @@ describe("DashboardPage", () => {
     expect(advanceReplayMock).toHaveBeenCalledWith("session-1");
   });
 
+  it("announces completion when advancing a replay does not move its cursor", async () => {
+    const { user } = await renderDashboard();
+    const replay = { session_id: "session-steady", event_id: eventFixture.id, cursor: 0, total: 1, scenario: "busy" as const };
+    const started = boardSnapshot();
+    started.replay = replay;
+    const unchanged = boardSnapshot();
+    unchanged.replay = replay;
+    startReplayMock.mockResolvedValueOnce(started);
+    advanceReplayMock.mockResolvedValueOnce(unchanged);
+
+    await user.click(screen.getByText("Replay"));
+    await user.click(screen.getByRole("button", { name: "Start replay" }));
+    await user.click(await screen.findByRole("button", { name: "Next report" }));
+    expect(await screen.findByText("Replay is complete.")).toBeInTheDocument();
+  });
+
   it("clears a replay notice after its announced duration", async () => {
     await renderDashboard();
     vi.useFakeTimers();
@@ -1113,8 +1142,9 @@ describe("DashboardPage", () => {
     await user.click(within(screen.getByRole("region", { name: "Incident queue" })).getByRole("button", { name: /Exit A barrier reports conflict/ }));
     const targetTimeline = screen.getByRole("region", { name: "Incident timeline" });
     await user.click(within(targetTimeline).getByRole("button", { name: "View all 6" }));
-    expect(within(targetTimeline).getByText("Conflict review")).toBeInTheDocument();
-    expect(within(targetTimeline).getByText(/exit access · coordinator · Conflict Reviewed/)).toBeInTheDocument();
+    expect(within(targetTimeline).getAllByText("Conflict review")).toHaveLength(2);
+    expect(within(targetTimeline).getByText("exit access · coordinator · Conflict Reviewed")).toBeInTheDocument();
+    expect(within(targetTimeline).getByText("exit access · coordinator · Conflict Reviewed · Exit inspected.")).toBeInTheDocument();
   });
 
   it("shows an empty timeline for a group without current reports or decisions", async () => {
@@ -1124,6 +1154,15 @@ describe("DashboardPage", () => {
     await user.click(within(queue).getByRole("button", { name: /Previously resolved facility issue/ }));
 
     expect(screen.getByRole("region", { name: "Incident timeline" })).toHaveTextContent("No report or coordinator events have been recorded.");
+  });
+
+  it("includes unresolved conflict phrases in the print brief when no reason was recorded", async () => {
+    const snapshot = boardSnapshot();
+    snapshot.incidents[1]!.conflicts[0]!.reason = "";
+    await renderDashboard(snapshot);
+
+    const printBrief = document.querySelector(".print-brief") as HTMLElement;
+    expect(within(printBrief).getByText("Unresolved question (exit_access): Exit A is blocked / Exit A is clear now")).toBeInTheDocument();
   });
 
   it("links evidence phrases to their exact source report and scopes conflict highlights per report", async () => {

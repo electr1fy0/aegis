@@ -8,8 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SnapshotProvider, useSnapshot } from "../hooks/use-snapshot";
 import { getEvents, getSnapshot } from "../lib/api";
 import type { EventInfo, Snapshot } from "../lib/types";
+import type { SnapshotState } from "../hooks/use-snapshot";
 import { DashboardPage } from "../pages/dashboard-page";
 import { eventFixture, makeIncident, makeSnapshot, snapshotFixture } from "./fixtures";
+
+const snapshotHookOverride = vi.hoisted(() => ({ state: undefined as unknown }));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children, ...props }: { to: string; children: ReactNode; className?: string }) => (
@@ -20,6 +23,16 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/api")>();
   return { ...actual, getEvents: vi.fn(), getSnapshot: vi.fn() };
+});
+
+vi.mock("../hooks/use-snapshot", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../hooks/use-snapshot")>();
+  return {
+    ...actual,
+    useSnapshot: vi.fn(() => snapshotHookOverride.state === undefined
+      ? actual.useSnapshot()
+      : snapshotHookOverride.state),
+  };
 });
 
 const getEventsMock = vi.mocked(getEvents);
@@ -82,6 +95,21 @@ function eventSnapshot(event: EventInfo): Snapshot {
   });
 }
 
+function snapshotState(snapshot: Snapshot | null, error: string | null = null): SnapshotState {
+  return {
+    snapshot,
+    loading: false,
+    error,
+    refresh: vi.fn(async () => undefined),
+    applySnapshot: vi.fn(),
+    events: snapshot ? [snapshot.event] : [],
+    selectedEventId: snapshot?.event.id,
+    selectEvent: vi.fn(),
+    lastUpdated: null,
+    reconnecting: false,
+  };
+}
+
 beforeEach(() => {
   window.history.replaceState({}, "", "/dashboard");
   window.sessionStorage.clear();
@@ -89,6 +117,7 @@ beforeEach(() => {
   installStorage();
   getEventsMock.mockReset();
   getSnapshotMock.mockReset();
+  snapshotHookOverride.state = undefined;
   getEventsMock.mockResolvedValue([eventFixture]);
   getSnapshotMock.mockResolvedValue(makeSnapshot());
 });
@@ -263,6 +292,75 @@ describe("dashboard saved state", () => {
 
     expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
     await waitFor(() => expect(JSON.parse(dashboardStorage.get("aegis.dashboard.read-reports.v1") ?? "{}")).toHaveProperty(`${eventFixture.id}:incident-001`));
+  });
+
+  it("drops read-report entries whose values are not string arrays", async () => {
+    dashboardStorage.set("aegis.dashboard.read-reports.v1", JSON.stringify({
+      [`${eventFixture.id}:bad-shape`]: "report-001",
+      [`${eventFixture.id}:bad-item`]: ["report-001", 17],
+    }));
+    renderDashboard();
+
+    expect(await screen.findByRole("heading", { name: "Incident queue" })).toBeInTheDocument();
+    await waitFor(() => {
+      const saved = JSON.parse(dashboardStorage.get("aegis.dashboard.read-reports.v1") ?? "{}") as Record<string, unknown>;
+      expect(saved).not.toHaveProperty(`${eventFixture.id}:bad-shape`);
+      expect(saved).not.toHaveProperty(`${eventFixture.id}:bad-item`);
+      expect(saved).toHaveProperty(`${eventFixture.id}:incident-001`);
+    });
+  });
+
+  it("shows the generic unavailable message when there is no snapshot or backend error", () => {
+    snapshotHookOverride.state = snapshotState(null);
+    render(<DashboardPage />);
+
+    expect(screen.getByText("The backend has not returned a current event snapshot.")).toBeInTheDocument();
+  });
+
+  it("uses the engine name in the matcher tooltip when the model revision is undefined", async () => {
+    const health = { ...snapshotFixture.health, model_revision: undefined } as unknown as Snapshot["health"];
+    const snapshot = makeSnapshot({ health });
+    snapshotHookOverride.state = snapshotState(snapshot);
+    const { container } = render(<DashboardPage />);
+
+    await screen.findByRole("heading", { name: "Incident queue" });
+    expect(container.querySelector(".matcher-label")).toHaveAttribute("title", snapshot.health.engine);
+  });
+
+  it("keeps the report section closed when the selected incident has no unread reports", async () => {
+    window.history.replaceState({}, "", `/dashboard?event=${eventFixture.id}&incident=incident-001`);
+    dashboardStorage.set("aegis.dashboard.read-reports.v1", JSON.stringify({
+      [`${eventFixture.id}:incident-001`]: snapshotFixture.incidents[0]!.report_ids,
+    }));
+    snapshotHookOverride.state = snapshotState(makeSnapshot());
+    render(<DashboardPage />);
+
+    await screen.findByRole("heading", { name: "Guest collapsed near Main Stage" });
+    expect(screen.queryByText("New", { exact: true })).not.toBeInTheDocument();
+  });
+
+  it("restores an invalid saved inspector scroll as zero", async () => {
+    const second = makeIncident({
+      id: "incident-002",
+      title: "Secondary incident",
+      priority: "P2",
+      suggested_priority: "P2",
+      report_ids: [],
+      evidence: [],
+      conflicts: [],
+    });
+    getSnapshotMock.mockResolvedValue(makeSnapshot({ incidents: [...snapshotFixture.incidents, second] }));
+    dashboardStorage.set(`aegis.dashboard.inspector.v1:${eventFixture.id}:${second.id}`, "not-a-number");
+    renderDashboard();
+
+    await screen.findByRole("heading", { name: "Guest collapsed near Main Stage" });
+    const inspector = document.querySelector(".inspector-panel .inspector-content");
+    expect(inspector).not.toBeNull();
+    Object.defineProperty(inspector, "scrollTop", { configurable: true, value: 23, writable: true });
+    fireEvent.click(within(screen.getByLabelText("Incidents matching queue filters")).getByRole("button", { name: /Secondary incident/ }));
+
+    await screen.findByRole("heading", { name: "Secondary incident" });
+    await waitFor(() => expect(inspector).toHaveProperty("scrollTop", 0));
   });
 
   it("renders a safe initial dashboard state during server rendering", () => {

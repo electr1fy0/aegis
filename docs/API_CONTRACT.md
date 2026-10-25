@@ -22,6 +22,8 @@ The API validates the raw Host header against `AEGIS_ALLOWED_HOSTS` (default `lo
 - Replay: `{session_id,event_id,cursor,total,scenario}` or null.
 - Snapshot: `{event,zones,incidents,reports,audit,counts,health,replay}`. Counts: `{reports,incidents,review,conflicts}`. All incidents/reports remain in snapshot; filtering is a UI operation.
 
+Workflow extensions: Report includes `display_id`, `model_revision` and `confirmed`; Incident includes `display_id`, `notes`, `original_title` and `title_override`; Evidence includes its historical `created_at`. Display IDs are stable and unique within an event and entity kind. Notes are `{id,text,actor,created_at}`. Snapshot also includes `undoable_actions: [{audit_id,incident_id,action,expected_version}]`, computed by the server from current state. Optional legacy response fields have defaults.
+
 Zones: `stage` Main Stage (230,180), `exit-a` Exit A (120,430), `exit-b` Exit B (820,430), `food` Food Court (720,180), `registration` Registration (470,430), `hall` Exhibition Hall (470,180). Labels are illustrative, not a real safety map.
 
 ## Endpoints
@@ -29,6 +31,7 @@ Zones: `stage` Main Stage (230,180), `exit-a` Exit A (120,430), `exit-b` Exit B 
 - `GET /api/health` -> Health.
 - `GET /api/snapshot?event_id=...` -> Snapshot. Omitted event ID uses current exercise event.
 - `GET /api/events/current` -> `{event,zones}`.
+- `GET /api/events` -> Event[] newest first, including retained earlier exercises.
 - `GET /api/reports` -> Report[]. `event_id` optional.
 - `GET /api/incidents` -> Incident[]. `event_id` optional.
 - `GET /api/incidents/{id}` -> Incident.
@@ -37,6 +40,11 @@ Zones: `stage` Main Stage (230,180), `exit-a` Exit A (120,430), `exit-b` Exit B 
 - `POST /api/reviews/grouping`: `{action,report_ids,incident_ids?,target_incident_id?,reason,expected_versions}` -> Snapshot. Actions confirm/reject/move/merge/split. `expected_versions` maps every affected incident ID to version. Confirm selected membership; reject a candidate pairing using target_incident_id, retaining separate report; move selected reports to target; merge incident_ids into target (or first ID); split selected reports into a new incident. All operations validate same event, update atomically, and retain rejection constraints. Rejecting an existing membership must split it into its own incident. Empty/no-op/invalid actions return validation errors.
 - `POST /api/incidents/{id}/priority`: `{priority,reason,expected_version}` -> Snapshot.
 - `POST /api/incidents/{id}/status`: `{status,reason,expected_version}` -> Snapshot.
+- `POST /api/incidents/{id}/notes`: `{text,expected_version}` -> Snapshot. Text is nonblank, at most 2,000 characters; the note, incident version, and audit entry commit together.
+- `POST /api/incidents/{id}/title`: `{title,reason,expected_version}` -> Snapshot. Title is nonblank, at most 120 characters; source wording and original title remain available.
+- `POST /api/incidents/{id}/priority/reset`: `{reason,expected_version}` -> Snapshot. Removes the override and recomputes its review warning; resetting an absent override is 409.
+- `POST /api/audit/{audit_id}/undo`: `{reason,expected_version}` -> Snapshot. Compensates the eligible latest priority override/reset or status change. Later incident changes, deleted incidents, stale versions, unsupported actions and already compensated actions cannot be undone. Original audit records remain.
+- `POST /api/reports/{id}/retry`: `{expected_version}` -> Snapshot. Retries pending/failed analysis in the owning incident; the existing receipt and coordinator membership are preserved. Completed analysis is not retryable.
 - `POST /api/conflicts/{id}/review`: `{status,reason,expected_version}` -> Snapshot. Version is owning incident version.
 - `POST /api/demo/session`: `{scenario}` -> Snapshot, where scenario demo/busy/edge. Creates new exercise event; never deletes history.
 - `POST /api/demo/session/{id}/next`: `{}` -> Snapshot. Ingest next fixture using ordinary ingestion. Exhausted replay returns unchanged snapshot, no duplicate insertion. `{id}` is session_id.
@@ -52,6 +60,8 @@ Reason fields min 3 max 1000 characters, trimmed. Versions must be positive JSON
 - checks: `[{name,passed,detail}]`.
 - latency: `{p50_ms,p95_ms}`.
 - limitations/failures: string arrays.
+
+Evaluation also includes `error_examples` (up to 40 actual Aegis missed/false report pairs, original texts and recorded comparison reasons) and nullable `workload` (`reports`, `review_reports`, `proposed_groups`, `confirmation_groups`, `split_operations`, `merge_operations`, `basis`). Correction counts are calculated from the synthetic truth partition and are not measured operator time or clicks. Runtime failures remain separate from grouping mistakes.
 
 Measurements must be produced by executable evaluation code. Runtime may compute/cached-load real results locally.
 

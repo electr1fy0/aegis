@@ -405,13 +405,11 @@ export function DashboardPage() {
       setCriteria(compatibleCriteria);
       return;
     }
-    if (!selectedIsVisible) {
-      setSelectedIncidentId(visibleIncidents[0]?.id ?? null);
-      setSelectedReportIds([]);
-      setReviewMode(null);
-      setPriorityOpen(false);
-      setStatusOpen(false);
-    }
+    setSelectedIncidentId(visibleIncidents[0]?.id ?? null);
+    setSelectedReportIds([]);
+    setReviewMode(null);
+    setPriorityOpen(false);
+    setStatusOpen(false);
   }, [snapshot, visibleIncidents, selectedIncidentId, criteria]);
 
   useEffect(() => {
@@ -697,13 +695,11 @@ export function DashboardPage() {
           onGroupingSaved={onGroupingSaved}
           onNotice={setNotice}
           onSelectIncident={(incidentId) => {
-            const related = snapshot.incidents.find((incident) => incident.id === incidentId);
-            if (related) {
-              const compatibleCriteria = criteriaForIncident(related, criteria, snapshot.reports, snapshot.zones);
-              if (compatibleCriteria !== criteria) {
-                setCriteria(compatibleCriteria);
-                setNotice({ kind: "success", message: "Queue filters were broadened to show this related group." });
-              }
+            const related = snapshot.incidents.find((incident) => incident.id === incidentId)!;
+            const compatibleCriteria = criteriaForIncident(related, criteria, snapshot.reports, snapshot.zones);
+            if (compatibleCriteria !== criteria) {
+              setCriteria(compatibleCriteria);
+              setNotice({ kind: "success", message: "Queue filters were broadened to show this related group." });
             }
             selectIncident(incidentId);
           }}
@@ -927,6 +923,7 @@ interface SchematicMapProps {
 
 function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, onSelect, onShowUnlocated }: SchematicMapProps) {
   const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
+  const expandedZone = zones.find((zone) => zone.id === expandedZoneId);
   const located = zones.flatMap((zone) => {
     const groups = incidents.filter((incident) => incident.zone_id === zone.id);
     return groups.length ? [{ zone, groups: sortIncidentsByPriority(groups) }] : [];
@@ -990,9 +987,9 @@ function SchematicMap({ incidents, zones, selectedIncidentId, unlocatedCount, on
             })}
           </svg>
         </div>
-        {expandedZoneId && (
-          <div className="map-group-list" aria-label={`Groups in ${zones.find((zone) => zone.id === expandedZoneId)?.label ?? "this zone"}`}>
-            <strong>{zones.find((zone) => zone.id === expandedZoneId)?.label} · groups at this location</strong>
+        {expandedZone && (
+          <div className="map-group-list" aria-label={`Groups in ${expandedZone.label}`}>
+            <strong>{expandedZone.label} · groups at this location</strong>
             {incidents.filter((incident) => incident.zone_id === expandedZoneId).map((incident) => (
               <button key={incident.id} type="button" className={selectedIncidentId === incident.id ? "is-selected" : ""} onClick={() => onSelect(incident.id)}>
                 <span className={`priority-rail priority-rail-${incident.priority}`} /><span>{incident.title}</span><span>{incident.priority} · {incident.report_ids.length} reports</span>
@@ -1064,8 +1061,8 @@ function IncidentInspector({
   const [reportSectionOpen, setReportSectionOpen] = useState(true);
   const inspectorContentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (unreadReportIds.length > 0) setReportSectionOpen(true);
-  }, [unreadReportIds.length]);
+    if (newReportIds.length > 0) setReportSectionOpen(true);
+  }, [newReportIds.length]);
   useEffect(() => {
     if (!incident) return;
     setReportSectionOpen(true);

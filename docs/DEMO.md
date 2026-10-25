@@ -1,10 +1,10 @@
 # Four-minute demonstration
 
-Start the backend and frontend using the README. Use synthetic data throughout. Keep the engine status visible and describe the active method accurately.
+After setup, run `make dev` to start both services. Use synthetic data throughout. Keep the engine status visible and describe the active method accurately.
 
 | Time | Action | Explain |
 | --- | --- | --- |
-| 0:00–0:25 | Open Operations and start Demo replay | Several reports may describe one event; a coordinator needs to review the evidence |
+| 0:00–0:25 | Open Operations, expand Replay, choose Demo and start replay | Several reports may describe one event; a coordinator needs to review the evidence |
 | 0:25–1:05 | Advance reports through a duplicate family | Grouping retains original text and shows supporting context |
 | 1:05–1:35 | Select a group and inspect priority and matching evidence | Similarity is a ranking signal; priority comes from explicit exercise rules |
 | 1:35–2:00 | Show the incomplete singleton and unlocated tray | Unknown information remains visible |
@@ -18,6 +18,8 @@ Suggested pitch:
 
 > Aegis combines contextual report matching, visible evidence and reversible human review. It helps a coordinator organise fragmented accounts while preserving uncertainty and conflicting information.
 
-In this build, the offline lexical fallback is the measured method. The optional MiniLM adapter has a local-only loading path; do not claim its weights ran unless `/api/health` and the actual evaluation demonstrate that they did.
+Normal development uses the measured lexical fallback. The separate pinned MiniLM environment has also executed real offline inference, but its current grouping policy performed worse on the synthetic fixture. Compare the saved results in `docs/IMPROVEMENTS.md`; describe the active `/api/health` mode accurately during the demo.
 
 For a correction, select a report, open the relevant coordinator action, enter a specific reason, and save. If the incident changed while the form was open, review the new evidence before explicitly rebasing to the latest version. A stale edit should fail safely.
+
+For a longer walkthrough, show a recovered intake draft, the receipt's incident link, a coordinator note, an audited priority reset and eligible undo. Switch exercises from the header to show retained history. Export an exercise brief from the compact Export menu.

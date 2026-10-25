@@ -30,6 +30,8 @@ bun run dev
 
 The API defaults to `http://127.0.0.1:8000`; the frontend development server proxies `/api` there. Use the URL printed by Vite. SQLite state persists at `runtime/aegis.sqlite3`. Override `AEGIS_DB_PATH`, `AEGIS_HOST`, and `AEGIS_PORT` explicitly in the shell if needed. The `.env.example` documents variables; the API does not silently load a local `.env` file.
 
+After setup, `make dev` starts both services and `make preflight` checks local readiness without creating an exercise. See [maintenance commands](docs/MAINTENANCE.md) for verified backups, restore to a new path, and the separately locked semantic environment. SQLite upgrades are additive and versioned; existing exercises remain available through the header selector.
+
 The default bind is local because this is a synthetic, single-coordinator prototype without production authentication. Requests validate the Host header, reject changes from untrusted browser origins, and require JSON for POST bodies. `AEGIS_ALLOWED_HOSTS` defaults to `localhost,127.0.0.1,::1`; set an explicit comma-separated list only for an intentionally configured host. Host checks are not authentication. Keep the app local until access control and an operational deployment policy are implemented.
 
 ## Frontend requirements
@@ -46,14 +48,15 @@ During the original implementation, outbound shell networking was blocked, so th
 
 The engine attempts to load `sentence-transformers/all-MiniLM-L6-v2` from a local model cache. When its optional package or weights are unavailable, it uses an explicitly labelled, deterministic lexical-hash matcher. The dashboard exposes the active method and the evaluation labels its measurements accordingly.
 
-To enable the semantic adapter on a connected development machine, install the optional dependency and cache the model before starting the app:
+To prepare the pinned semantic adapter on a connected development machine:
 
 ```sh
-uv pip install --python .venv/bin/python 'sentence-transformers>=5'
-.venv/bin/python -c 'from sentence_transformers import SentenceTransformer; SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")'
+make semantic-setup
+make evaluate-semantic
+make backend-semantic
 ```
 
-Restart Aegis and check `/api/health`. The application loader itself uses local-only loading. An adapter tested with an injected encoder is not evidence that MiniLM weights were executed in this environment.
+Preparation uses `.venv-semantic`, preserving the ordinary development environment. Check `/api/health` after starting that environment. The application loader itself uses local-only loading and an exact model commit. Real 384-dimensional offline MiniLM inference and the benchmark have been executed; the [semantic result](evaluation/results/semantic.json) performs worse than the lexical method under the current conservative gates, so semantic mode remains optional. See the [implementation and measurement record](docs/IMPROVEMENTS.md).
 
 Similarity and composite scores are ranking signals, not calibrated probabilities. Priority comes from the documented exercise policy. Unknown information remains visible, and more reports do not establish that an account is true.
 
@@ -67,6 +70,8 @@ Similarity and composite scores are ranking signals, not calibrated probabilitie
 6. Open evaluation to show measured outcomes and limitations.
 
 The report form also accepts fresh synthetic wording. Replay executes the ordinary ingestion path; it does not supply expected incident labels to the matcher. Starting another exercise preserves the earlier event's history.
+
+Open the compact Replay menu for scenario controls. Intake restores event-scoped drafts and stable submission retries; explicit time choices preserve unknown timing. The queue supports search, filters, keyboard navigation and related-report comparison. Notes, title edits, priority reset and eligible undo are audited. The Export menu provides a printable exercise brief and JSON/CSV with source references. [All forty workflow improvements](docs/IMPROVEMENTS.md) are mapped to their implemented behavior.
 
 ## Verification
 
