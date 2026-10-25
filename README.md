@@ -53,10 +53,12 @@ To prepare the pinned semantic adapter on a connected development machine:
 ```sh
 make semantic-setup
 make evaluate-semantic
-make backend-semantic
+make dev-semantic
 ```
 
-Preparation uses `.venv-semantic`, preserving the ordinary development environment. Check `/api/health` after starting that environment. The application loader itself uses local-only loading and an exact model commit. Real 384-dimensional offline MiniLM inference and the benchmark have been executed; the [semantic result](evaluation/results/semantic.json) performs worse than the lexical method under the current conservative gates, so semantic mode remains optional. See the [implementation and measurement record](docs/IMPROVEMENTS.md).
+Preparation uses `.venv-semantic`, preserving the ordinary development environment. `make dev-semantic` verifies real offline inference before starting both services; `make backend-semantic` starts only the API. Check `/api/health` to confirm the actual mode. The loader uses local-only loading and an exact model commit; real 384-dimensional offline MiniLM inference has been executed.
+
+Semantic mode combines independently scored MiniLM and lexical evidence, explicit context checks, and coordinator review. The original semantic comparison used uncalibrated prototype gates and an easy context partition; it was not a verdict on the usefulness of semantic matching. The evaluator now includes a forced-lexical production comparison under the same decision policy. A separate context-matched development challenge tests different people, equipment and uncertain accounts at the same place and time. See [matching and measurement](docs/MATCHING.md) for the method, reproducible commands, results and limitations. The runtime uses one cached model, with no paid API or second inference service.
 
 Similarity and composite scores are ranking signals, not calibrated probabilities. Priority comes from the documented exercise policy. Unknown information remains visible, and more reports do not establish that an account is true.
 

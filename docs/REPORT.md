@@ -29,9 +29,9 @@ flowchart TD
 | Area | Implementation |
 | --- | --- |
 | Frontend | TanStack Start, React, TypeScript, Bun and Vite |
-| Components | shadcn Base UI primitives and official Nova style rules; neutral/orange preset |
+| Components | shadcn Base UI/Nova primitives and restrained neutral surfaces |
 | Backend | FastAPI, Pydantic, Python 3.14 and SQLite |
-| Text matching | Optional local-only MiniLM adapter; deterministic lexical-hash fallback |
+| Text matching | Pinned local MiniLM plus independently scored lexical evidence; labelled lexical fallback |
 | Human review | Version-checked coordinator mutations with retained source reports |
 | Reproducibility | Versioned synthetic JSON, replay through normal ingestion, executable evaluation |
 
@@ -39,9 +39,11 @@ The requested `b3PkSQ` preset was decoded using the official cached registry. Sh
 
 ## Method and contribution
 
-The semantic adapter supports the pretrained `sentence-transformers/all-MiniLM-L6-v2` encoder. The verification environment did not contain its package and weights, so the measured run used the explicitly labelled lexical-hash fallback. No encoder training or real MiniLM inference is claimed for that run.
+The semantic environment runs the pretrained `sentence-transformers/all-MiniLM-L6-v2` encoder at a pinned revision. Real offline inference, evaluation and ingestion through the API have been executed. `make dev-semantic` requires successful inference before starting the demo. No model training or paid inference API is used.
 
-Candidate checks combine text similarity, compatible time, location and category evidence. Automatic provisional attachment requires specific shared location or entity context and checks against the group's members; similarity chains alone cannot collapse distinct incidents. Lexical and semantic modes have separate, versioned thresholds. The lexical composite threshold was calibrated on development fixtures. Matching version 2 additionally requires at least 0.05 lexical anchor similarity so shared context cannot attach textually unrelated reports. This conservative correction lowers synthetic recall; see `docs/REVIEW.md`.
+Candidate checks combine text similarity, compatible time, location and category evidence. The hybrid scores lexical and semantic routes independently, checks every group member, retains the first-report anchor, and exposes close alternatives. A compatible semantic anchor must corroborate a lexical attachment. Source-supported uncertainty, conflicting location information and coordinator rejections stay reviewable. The selected semantic composite threshold is 0.76; anchor corroboration is 0.62. These are development operating choices, not probabilities.
+
+Two integration defects were corrected: bare equipment/location nouns no longer establish a facility fault, and a fallback member cannot weaken the semantic anchor's safeguards. Group ranking now includes all members, and evidence distinguishes the pair score from the group mean. Supported opposing claims remain visible even when their reports are left in different provisional groups; a coordinator can compare and merge them without losing the original accounts. See `docs/MATCHING.md` for the full method and calibration record.
 
 Priority follows the documented exercise rules. Low confidence does not delete a report or hide it from review. Supported opposing claims produce a conflicting-or-changing account flag. A later reassuring account does not automatically close an incident or cancel an unresolved urgent claim.
 
@@ -59,18 +61,25 @@ All reports and identities are synthetic. The schematic locations are illustrati
 
 Runtime inputs and ground-truth labels live in separate files. The matcher never reads incident-family labels. Categories and coordination patterns recur across splits, and test cases were inspected during engineering. These results therefore describe a small synthetic regression set, not untouched operational generalisation.
 
+A separate development challenge contains 48 context-matched pairs (96 report records): 18 same-event scenarios, 18 explicitly distinct scenarios and 12 underdetermined scenarios. Pair members share known location and time, preventing those fields alone from separating them. Cases were frozen before scoring, then used for development calibration; they are not an independent test set. Labels encode synthetic author assumptions and cannot make unavailable identity information observable.
+
 ## Measured results
 
-The saved measurement is `evaluation/results/latest.json`. Pairwise grouping metrics count report pairs; the review rate describes reports deferred for human attention.
+The saved measurements are `evaluation/results/latest.json` and `evaluation/results/semantic.json`. Pairwise grouping metrics count report pairs; the review rate describes reports with a review reason. Semantic and forced-lexical production runs use the same ordered input and decision policy.
 
 | Method | Precision | Recall | F1 | False merge pairs | Missed pairs | Review rate |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Token-set Jaccard baseline | 1.000 | 0.061 | 0.114 | 0 | 62 | 8.3% |
-| Aegis contextual lexical fallback | 1.000 | 0.621 | 0.766 | 0 | 25 | 100% |
+| Aegis contextual lexical fallback | 1.000 | 0.652 | 0.789 | 0 | 23 | 100% |
+| Aegis hybrid with real MiniLM | 1.000 | 0.197 | 0.329 | 0 | 53 | 96.7% |
 
-All six explicit evaluation checks passed: retention, fixture cardinality, explicit P0 cases, negative priority controls, changing-report visibility, and incomplete-report reviewability. These are finite fixture checks, not proof of unrestricted natural-language understanding.
+Hybrid recall improves from the original semantic prototype's 0.030, but it still leaves more same-event pairs apart than lexical matching on this easy-context regression set. Its benefit appears in the context-matched development challenge: hybrid attaches 12 of 18 same-event pairs and no explicitly distinct pairs, while current lexical settings attach 17 same-event pairs but also 15 of 18 distinct pairs. Both methods surface candidates for all 18 same-event scenarios. Hybrid still proposes membership on 4 of 12 underdetermined scenarios and suggests 17 distinct scenarios, so review remains necessary and noisy.
 
-The complete API replay retained 24 reports in 8 groups, exposed 3 conflicting report pairs, and recorded 50 audit events. A conflict count is a count of opposing report evidence, not a count of independently verified events. The fallback deliberately marks its limitations for review, explaining the 100% review rate; that should not be presented as coordinator workload eliminated.
+A development sweep also calibrated a more conservative lexical control to the same zero-distinct-attachment target. At lexical thresholds of 0.60 or higher it met that target, but recovered none of the original development stream's 66 same-event pairs. The hybrid recovered 22 of 66. These matched-budget diagnostics support a limited development-data benefit from dense evidence; they do not establish operational accuracy. A small STS cross-encoder was tested and rejected because it did not provide sufficient benefit. Its weights remain outside the runtime.
+
+All six explicit evaluation checks passed: retention, fixture cardinality, explicit P0 cases, negative priority controls, changing-report claim detection, and incomplete-report reviewability. Policy and conflict-detector checks supply ground-truth memberships; passing them does not establish that automatic grouping joined those reports. These are finite component checks, not proof of unrestricted natural-language understanding.
+
+The real-model API replay retained all 24 reports in 19 provisional groups with 50 audit entries; no within-group conflict objects appeared automatically. A separate fresh-intake API check grouped two projector paraphrases, kept a sound-monitor problem separate at the same location/time, retained an incomplete unassessed report, and preserved blocked/clear doorway claims through coordinator review. Conflicts count opposing report evidence, not verified events. Group counts and review flags should not be presented as measured coordinator time saved.
 
 ## Engineering verification
 

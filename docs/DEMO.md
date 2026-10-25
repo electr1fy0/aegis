@@ -1,6 +1,6 @@
 # Four-minute demonstration
 
-After setup, run `make dev` to start both services. Use synthetic data throughout. Keep the engine status visible and describe the active method accurately.
+Prepare the model once with `make semantic-setup`, then run `make dev-semantic` to verify offline inference and start both services. Use synthetic data throughout. Keep the engine status visible and describe the active method accurately.
 
 | Time | Action | Explain |
 | --- | --- | --- |
@@ -18,7 +18,15 @@ Suggested pitch:
 
 > Aegis combines contextual report matching, visible evidence and reversible human review. It helps a coordinator organise fragmented accounts while preserving uncertainty and conflicting information.
 
-Normal development uses the measured lexical fallback. The separate pinned MiniLM environment has also executed real offline inference, but its current grouping policy performed worse on the synthetic fixture. Compare the saved results in `docs/IMPROVEMENTS.md`; describe the active `/api/health` mode accurately during the demo.
+Ordinary `make dev` can use the labelled lexical fallback; use `make dev-semantic` for the AI demonstration. The hybrid improves semantic regression recall from 3.0% to 19.7%, while retaining more singletons than lexical matching. On the context-matched development challenge it avoids all 18 explicitly distinct attachments, versus 15 false attachments with current lexical settings. Four underdetermined cases still receive provisional membership and suggestions remain noisy. Describe both the benefit and the tradeoff; see `docs/MATCHING.md`.
+
+For a short, repeatable semantic demonstration, submit these three reports to one available zone, using the same specific spot (`west display row`) and a known event time within one minute:
+
+1. “The projector at the west display row has lost its picture; the screen is blank.”
+2. “There is no image on the west-row projection screen, although the presentation is running.”
+3. “The sound monitor by the west displays has lost audio, although its picture remains.”
+
+The real-model API rehearsal grouped the first two and kept the third separate. Open the evidence to compare the independently scored signals. Use a fresh exercise so unrelated candidates do not change the runner-up margin. For blocked/clear accounts that remain in separate groups, inspect the source-cited potential-conflict warning, then merge explicitly with a reason to show the retained conflict. The 24-step semantic replay retained all reports but produced 19 groups and no automatic within-group conflict objects; do not present it as a perfect replay.
 
 For a correction, select a report, open the relevant coordinator action, enter a specific reason, and save. If the incident changed while the form was open, review the new evidence before explicitly rebasing to the latest version. A stale edit should fail safely.
 

@@ -32,6 +32,8 @@ uv pip compile pyproject.toml --extra semantic --constraint requirements-dev.loc
 
 `make evaluate` measures the regular environment. The current lexical and semantic settings have different conservative gates; installing an encoder alone does not establish improved grouping quality. Keep the synthetic benchmark limitations alongside any comparison.
 
+`make evaluate-challenge` measures the separate context-matched development challenge with the ordinary runtime engine; add `--mode lexical` when invoking `scripts/evaluate_challenge.py` directly for a forced fallback comparison. This challenge is development data, not an independent test set. `MATCHING.md` records the calibrated operating point, fair lexical control, actual model use and observed failures.
+
 To save a fresh measured result:
 
 ```sh

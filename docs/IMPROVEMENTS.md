@@ -47,13 +47,15 @@ The forty improvements stay within the existing four routes. The queue is the ma
 
 ## Evaluation evidence
 
-Both environments were executed against the unchanged 60-report synthetic regression fixture. Normal development remains lexical. Optional semantic inference is not enabled merely because weights exist in the cache.
+Both environments were executed against the unchanged 60-report synthetic regression fixture. Use `make dev-semantic` to require real offline inference and start both services; ordinary development keeps its labelled lexical fallback.
 
 | Measured Aegis method | Precision | Recall | F1 | Missed pairs | False merges |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Contextual lexical | 1.000 | 0.621 | 0.766 | 25 | 0 |
-| Pinned MiniLM plus context | 1.000 | 0.030 | 0.059 | 64 | 0 |
+| Contextual lexical | 1.000 | 0.652 | 0.789 | 23 | 0 |
+| Hybrid with pinned MiniLM | 1.000 | 0.197 | 0.329 | 53 | 0 |
 
-The current semantic gates are conservative and perform worse on this fixture. No thresholds were changed using the test labels. These measurements do not establish real-world accuracy. Ground-truth partition corrections estimate grouping operations; they do not measure operator time or clicks.
+The original semantic prototype recalled 0.030 on this fixture; its uncalibrated gates and category-boundary defects did not establish that lexical matching was intrinsically superior. The development-calibrated hybrid improves that result while preserving a conservative attachment policy. Lexical recall still exceeds hybrid recall on this easy-context fixture. On the new context-matched development challenge, hybrid attaches 12/18 duplicate scenarios with 0/18 distinct-case false attachments; current lexical settings attach 17/18 duplicates but falsely attach 15/18 distinct cases. A separately calibrated lexical control meets the zero-false-attachment target only with a large recall loss.
 
-See [the lexical result](../evaluation/results/latest.json), [the real semantic result](../evaluation/results/semantic.json), and [local maintenance commands](MAINTENANCE.md).
+Four underdetermined hybrid cases still receive provisional membership and related suggestions remain noisy. No thresholds were selected using test labels. These synthetic measurements do not establish real-world accuracy. Ground-truth partition corrections estimate grouping operations; they do not measure operator time or clicks. The runtime uses one local cached model; a small tested reranker was rejected rather than added without a useful gain.
+
+See [matching and calibration](MATCHING.md), [the lexical result](../evaluation/results/latest.json), [the real semantic result](../evaluation/results/semantic.json), and [local maintenance commands](MAINTENANCE.md).

@@ -2,6 +2,8 @@
 
 Baseline verified on 24 October 2026; the forty workflow improvements were reviewed and reverified on 25 October 2026 using Python 3.14.7, Bun 1.4.2, and the locked project dependencies on macOS ARM64.
 
+The original combined workflow/UI checks below are a historical snapshot. The semantic matching review at the end supersedes its backend and evaluation measurements.
+
 ## Completed checks
 
 The verification commands and Chromium scenarios cover the review fixes and the workflow improvements. Dependency audits completed without known vulnerabilities on 24 October; the regular dependency locks are unchanged. See `REVIEW.md` for the original findings and `IMPROVEMENTS.md` for the forty implemented changes.
@@ -53,13 +55,13 @@ The review and tests caught and fixed:
 - Long queue rows overlapping after the desktop workspace was bounded.
 - Spreadsheet exports interpreting formula-leading coordinator text as formulas.
 
-## Measured replay and evaluation
+## Earlier replay and evaluation, before the hybrid review
 
 The real API replay retained 24 reports in 8 incident groups, exposed 3 opposing report-pair conflicts, and recorded 50 audit entries. All six explicit evaluation checks passed.
 
-The ordinary environment uses the clearly labelled lexical fallback. On the fixed 60-report synthetic regression set it measured precision 1.000, recall 0.621212, F1 0.766355, zero false merge pairs, 25 missed pairs, and 100% review rate. See `evaluation/results/latest.json` for the complete measured result and limitations.
+At this earlier verification stage, the ordinary lexical environment measured precision 1.000, recall 0.621212, F1 0.766355, zero false merge pairs, 25 missed pairs, and 100% review rate. Those figures are historical; `evaluation/results/latest.json` now records the later hybrid-review measurement.
 
-The separate locked semantic environment executed real 384-dimensional offline MiniLM inference at model commit `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`. Its unchanged conservative grouping policy measured precision 1.000, recall 0.030303, F1 0.058824, zero false merge pairs and 64 missed pairs on the same fixture. Semantic mode therefore remains optional. `evaluation/results/semantic.json` records the real run; no thresholds were tuned against test labels.
+The separately locked semantic environment then executed real 384-dimensional offline MiniLM inference at model commit `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`. Its prototype gates measured precision 1.000, recall 0.030303, F1 0.058824, zero false merge pairs and 64 missed pairs. This exposed an integration/calibration problem, not a general verdict on semantic matching. `evaluation/results/semantic.json` now records the subsequent development-calibrated hybrid run.
 
 Read-only preflight and both-service startup/shutdown were exercised. SQLite online backup and restore to a new path preserved the test database's two events, 24 reports and 51 audit records. Desktop, laptop, mobile and print views were inspected; the mobile workspace had no horizontal overflow.
 
@@ -77,3 +79,27 @@ Full source coverage records execution of the included code paths; it does not p
 The interface uses solid neutral surfaces, a single blue action color, grouped summary counts, a list-based queue, and simpler inspector sections. Report intake, About and Evaluation use the same restrained hierarchy. Existing shadcn primitives remain unchanged. Application styles contain no custom gradients, shadows, glows or backdrop blur.
 
 All 337 frontend tests pass with 100% statement, branch, function and line coverage; both Chromium workflows, TypeScript and production builds pass. Browser checks at 390, 1280 and 1440 pixels found no horizontal overflow, custom visual effects or map-label collisions. Mobile navigation keeps visible labels, and export menus remain above the laptop inspector. The unit-test timeout is ten seconds to accommodate longer multi-step interactions; assertions and coverage thresholds are unchanged.
+
+## Semantic matching review — 25 October 2026
+
+The final matcher is `hybrid-context-v2+lexical-context-dev-v2+location-aliases-v1`, engine SHA-256 `71b9f608aee586f48c754b751c8e7d3c1684c5b0c35fe48233567a221698ab6f`. Parameters were frozen using only original development data and the new context-matched development challenge before running the fixed regression evaluation.
+
+| Check | Result |
+| --- | --- |
+| Full backend tests | 273 passed |
+| Statement coverage | 3,045 / 3,045; 100% |
+| Branch coverage | 1,046 / 1,046; 100% |
+| Coverage exclusions | 0 lines; application and fixture-generator scope unchanged |
+| Ruff lint and formatting | Passed |
+| Clean committed-tree verification | 273 tests and both 100% coverage gates passed from an exported committed tree; all 134 tracked blobs matched commit `edcddd8` |
+| Offline semantic startup | Real pinned inference succeeded without creating exercise state |
+| Fixed 60-report regression | Hybrid precision 1.000, recall 0.196970, F1 0.329114; 0 false merge pairs, 53 missed pairs |
+| Paired production lexical comparison | Precision 1.000, recall 0.651515, F1 0.788991; 0 false merge pairs, 23 missed pairs |
+| Real-model API replay | All 24 reports analyzed and retained in 19 groups, 50 audit entries; 0 automatic within-group conflict objects |
+| Fresh real-model API intake | Projector paraphrases grouped; distinct sound-monitor fault separate; incomplete report visible/unassessed; opposing doorway claims retained through coordinator review |
+
+The source-claim detector checks use supplied ground-truth memberships, so their success does not prove automatic grouping success. Development G04 remains split; the clear report carries an explicit source-cited warning referencing the earlier blocked account. Pair warnings and within-group conflict objects are recorded separately.
+
+The 48-pair development challenge and a matched-budget lexical threshold control demonstrate the conservative tradeoff, not unseen-data accuracy. Hybrid attaches 12/18 duplicate cases with 0/18 known-distinct false attachments; current lexical settings attach 17/18 duplicates with 15/18 false attachments. Both expose candidates for all duplicate scenarios. Four underdetermined hybrid scenarios still receive provisional membership and suggestions are noisy. The small cross-encoder trial did not justify another runtime model.
+
+See `MATCHING.md`, `evaluation/results/hybrid-development.json` and the refreshed lexical/semantic results for provenance and full limitations. The clean export used installed dependencies but no untracked application files. One third-party Starlette TestClient deprecation warning remained visible; it was not suppressed. The earlier frontend figures above record their own verification stage and are not a new frontend test run for this backend change.

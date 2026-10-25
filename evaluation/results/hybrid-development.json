@@ -2062,6 +2062,16 @@
     "fixed_regression_measurements": [
       "evaluation/results/latest.json",
       "evaluation/results/semantic.json"
-    ]
+    ],
+    "clean_committed_tree": {
+      "source_commit": "edcddd8eaa1e89be0dff4e317896e9466080333d",
+      "export_matches_commit_tree": true,
+      "verified_tracked_blobs": 134,
+      "tests_passed": 273,
+      "statement_coverage_percent": 100,
+      "branch_coverage_percent": 100,
+      "dependencies": "Installed locked dependencies reused; no untracked application files used."
+    },
+    "fixed_regression_measured_after_profile_freeze": true
   }
 }

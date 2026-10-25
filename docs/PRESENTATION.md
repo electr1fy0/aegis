@@ -10,7 +10,7 @@ One board combines contextual grouping, source evidence, explicit priorities, co
 
 ## 3. Architecture and method
 
-TanStack Start and shadcn frontend; FastAPI and SQLite backend. Persist the report, analyse it, propose an incident group, explain the priority, and let the coordinator decide. Present the actual lexical fallback measurements and the optional local MiniLM adapter separately.
+TanStack Start and shadcn frontend; FastAPI and SQLite backend. Persist the report, analyse it, propose an incident group, explain the priority, and let the coordinator decide. The pinned local MiniLM and lexical routes are scored independently; real offline inference is verified before demo startup. Show source-cited evidence and the active mode.
 
 ## 4. Live demonstration
 
@@ -18,12 +18,12 @@ Use `docs/DEMO.md`. Show one duplicate family, one incomplete report, opposing e
 
 ## 5. Evaluation
 
-144 synthetic reports across the demo/development/test files. On the fixed 60-report regression set, contextual lexical grouping measured precision 1.000, recall 0.621 and F1 0.766, with 25 missed pairs and no false merge pairs. All reports still carry review flags in this degraded mode. Show the baseline and the actual limitations.
+144 original synthetic reports across demo/development/test, plus a 48-pair development challenge. On the fixed 60-report regression set, hybrid MiniLM recall improved from 0.030 to 0.197, with precision 1.000; lexical recall remains higher at 0.652. On the harder context-matched development challenge, hybrid grouped 12/18 duplicate cases with 0/18 distinct-case false attachments, versus lexical's 17/18 duplicates and 15/18 false attachments. Both cover all duplicate cases as candidates. Show the conservative lexical control, four underdetermined hybrid attachments and noisy suggestions. These are development and synthetic regression measurements, not operational accuracy.
 
 ## 6. Human oversight and limitations
 
-No dispatch, no hidden reports, no automatic conflict resolution, and no diagnostic claims. All records are synthetic. Explain the small dataset, narrow claim rules, missing real MiniLM execution, and the conservative matching tradeoff. The live Chromium workflow has passed.
+No dispatch, no hidden reports, no automatic conflict resolution, and no diagnostic claims. All records are synthetic. Explain the small dataset, narrow claim rules, observed grouping failures and conservative matching tradeoff. Real offline MiniLM, API ingestion and coordinator conflict review have passed; passing component checks does not prove correct automatic membership.
 
 ## 7. Implemented and next
 
-Implemented: incident board, form, evidence, policy, corrections, audit, replay, measured evaluation and automated checks. Next: a larger independent dataset, cached semantic model evaluation, real-device accessibility checks, access control and operational validation. SDG 11 is the primary intended alignment; health outcomes were not measured.
+Implemented: incident board, form, hybrid evidence, policy, corrections, audit, replay, fair evaluation and automated checks. A tested small reranker was rejected because it did not improve the useful tradeoff. Next: a larger independent dataset, real-device accessibility checks, access control and operational validation. SDG 11 is the primary intended alignment; health outcomes were not measured.

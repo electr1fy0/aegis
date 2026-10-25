@@ -1,8 +1,8 @@
 # Synthetic fixtures
 
 All report text, event times, and incident-family labels here are fabricated
-for a campus event coordination prototype. The six zone coordinates are
-illustrative points on a schematic, not a real campus map. No personal or
+for a campus event coordination prototype. Map regions provide illustrative
+exercise context; their overlay coordinates are schematic. No personal or
 operational records are included.
 
 Regenerate the JSON files by running python3 data/generate_fixtures.py from
@@ -44,3 +44,20 @@ same-label pairs left in different predicted groups. The baseline is token-set
 Jaccard similarity with simple zone and 20-minute time gates, not TF-IDF.
 Semantic results are emitted only if the active engine reports semantic mode
 and supplies valid embeddings for every report.
+
+## Context-matched development challenge
+
+`evaluation/challenge_dev.json` is a separate hand-authored development fixture,
+not output from `generate_fixtures.py`. Its 48 pairs share the exact same known
+location and event time within each pair: 18 same-event scenarios, 18 distinct
+events, and 12 deliberately underdetermined cases. The initial cases and a
+balanced extension were frozen before model scoring; the file documents the
+label assumptions and freeze provenance. It is used during development and is
+not an independent test set.
+
+Run `scripts/evaluate_challenge.py` in the semantic environment to measure actual
+production decisions in both report arrival orders; `--mode lexical` forces
+the local lexical comparator. The output includes a fixture hash and per-case
+evidence. False attachments on known distinct events, review targets on
+unknown identity, and suggestions are separate measurements. See
+`docs/MATCHING.md` for the method and interpretation.
