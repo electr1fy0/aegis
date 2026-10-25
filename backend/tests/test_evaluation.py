@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from backend.aegis import evaluation
@@ -51,6 +52,7 @@ class StubEngine:
         fail_conflicts: bool = False,
         malformed_conflicts: bool = False,
         semantic_vectors: bool = True,
+        lexical_fallback_for_text: str | None = None,
     ) -> None:
         self.mode = mode
         self.model_ready = model_ready
@@ -68,6 +70,7 @@ class StubEngine:
         self.fail_conflicts = fail_conflicts
         self.malformed_conflicts = malformed_conflicts
         self.semantic_vectors = semantic_vectors
+        self.lexical_fallback_for_text = lexical_fallback_for_text
 
     def health(self) -> dict[str, object] | None:
         if self.fail_health:
@@ -93,7 +96,12 @@ class StubEngine:
             raise RuntimeError("analysis failure")
         if text == self.malformed_analysis_for:
             return None
-        embedding = [1.0, 0.0] if self.mode == "semantic" and self.semantic_vectors else None
+        semantic_available = self.mode == "semantic" and self.semantic_vectors
+        is_lexical_fallback = text == self.lexical_fallback_for_text
+        embedding = [1.0, 0.0] if semantic_available else None
+        model_revision = "stub-model-v1" if embedding is not None else None
+        if semantic_available and is_lexical_fallback:
+            model_revision = "lexical-hash-v1"
         reasons = ["review this report"] if zone_id is None or reported_at is None else []
         return {
             "category": "other",
@@ -102,7 +110,7 @@ class StubEngine:
             "priority_reason": "Stub policy.",
             "review_reasons": reasons,
             "embedding": embedding,
-            "model_revision": "stub-model-v1" if embedding is not None else None,
+            "model_revision": model_revision,
         }
 
     def choose_group(
@@ -243,6 +251,26 @@ class MetricAndParsingTests(unittest.TestCase):
                     {"embedding": [1, 0]},
                     {"embedding": [0, 1]},
                 ]
+            )
+        )
+        self.assertTrue(
+            evaluation._all_embeddings_match_revision(
+                [
+                    {"embedding": [1, 0], "model_revision": "model-v1"},
+                    {"embedding": [0, 1], "model_revision": "model-v1"},
+                ],
+                "model-v1",
+            )
+        )
+        self.assertFalse(
+            evaluation._all_embeddings_match_revision(
+                [{"embedding": [1, 0], "model_revision": "lexical-hash-v1"}],
+                "model-v1",
+            )
+        )
+        self.assertFalse(
+            evaluation._all_embeddings_match_revision(
+                [{"embedding": [1, 0], "model_revision": "model-v1"}], None
             )
         )
 
@@ -578,7 +606,9 @@ class EvaluationEntryPointTests(unittest.TestCase):
         self.assertIn("Lexical Jaccard baseline", methods)
         self.assertIn("Aegis contextual lexical (degraded)", methods)
         self.assertFalse(any("Semantic" in method for method in methods))
+        self.assertNotIn("Aegis contextual lexical (forced fallback)", methods)
         self.assertIn("lexical/degraded mode", " ".join(result["limitations"]))
+        self.assertIn("not production engine paths or calibrated probabilities", " ".join(result["limitations"]))
         self.assertEqual(
             self._all_check_names(result),
             {
@@ -596,17 +626,79 @@ class EvaluationEntryPointTests(unittest.TestCase):
         self.assertEqual(result["failures"], [])
 
     def test_semantic_mode_adds_embedding_baseline_only_with_real_vectors(self) -> None:
-        semantic = evaluation.run_evaluation(StubEngine(mode="semantic", model_ready=True))
+        with patch(
+            "backend.aegis.engine._load_local_sentence_transformer",
+            side_effect=AssertionError("forced lexical comparison must not load MiniLM"),
+        ):
+            semantic = evaluation.run_evaluation(StubEngine(mode="semantic", model_ready=True))
         self.assertIn("Semantic cosine baseline", [row["method"] for row in semantic["results"]])
         self.assertIn("Aegis semantic + context", [row["method"] for row in semantic["results"]])
+        self.assertIn(
+            "Aegis contextual lexical (forced fallback)",
+            [row["method"] for row in semantic["results"]],
+        )
+        self.assertTrue(
+            any("same ordered raw reports" in item for item in semantic["limitations"])
+        )
+        self.assertEqual(semantic["failures"], [])
         missing_vectors = evaluation.run_evaluation(
             StubEngine(mode="semantic", model_ready=True, semantic_vectors=False)
         )
         self.assertNotIn(
             "Semantic cosine baseline", [row["method"] for row in missing_vectors["results"]]
         )
+        self.assertNotIn(
+            "Aegis contextual lexical (forced fallback)",
+            [row["method"] for row in missing_vectors["results"]],
+        )
         self.assertTrue(
-            any("embeddings were not available" in item for item in missing_vectors["limitations"])
+            any("valid embedding from the reported semantic revision" in item for item in missing_vectors["limitations"])
+        )
+
+    def test_diagnostic_semantic_comparator_uses_lexical_context_eligibility(self) -> None:
+        original = evaluation._run_comparator
+        policies: list[tuple[Any, float, bool]] = []
+
+        def record_policy(reports, scorer, threshold, *, require_context):
+            policies.append((scorer, threshold, require_context))
+            return original(reports, scorer, threshold, require_context=require_context)
+
+        with patch.object(evaluation, "_run_comparator", side_effect=record_policy):
+            result = evaluation.run_evaluation(StubEngine(mode="semantic", model_ready=True))
+        self.assertEqual(len(policies), 2)
+        self.assertIs(policies[1][0], evaluation._cosine)
+        self.assertEqual(policies[0][1], evaluation._LEXICAL_THRESHOLD)
+        self.assertEqual([policy[2] for policy in policies], [True, True])
+        self.assertEqual(policies[1][1], evaluation._SEMANTIC_THRESHOLD)
+        self.assertTrue(any("fixed at 0.78" in item for item in result["limitations"]))
+
+    def test_mixed_semantic_and_lexical_provenance_omits_paired_semantic_rows(self) -> None:
+        semantic = evaluation.run_evaluation(
+            StubEngine(
+                mode="semantic",
+                model_ready=True,
+                lexical_fallback_for_text=(
+                    "A person could be in trouble somewhere in the venue; "
+                    "no further details were provided."
+                ),
+            )
+        )
+        methods = [row["method"] for row in semantic["results"]]
+        self.assertIn("Aegis mixed model + context", methods)
+        self.assertNotIn("Semantic cosine baseline", methods)
+        self.assertNotIn("Aegis contextual lexical (forced fallback)", methods)
+        self.assertTrue(semantic["model"].startswith("mixed revisions:"))
+        self.assertTrue(any("only 59 of 60 reports" in item for item in semantic["limitations"]))
+
+    def test_forced_lexical_initialization_failure_is_not_hidden(self) -> None:
+        with patch.dict(sys.modules, {"backend.aegis.engine": None}):
+            result = evaluation.run_evaluation(StubEngine(mode="semantic", model_ready=True))
+        methods = [row["method"] for row in result["results"]]
+        self.assertIn("Aegis semantic + context", methods)
+        self.assertNotIn("Aegis contextual lexical (forced fallback)", methods)
+        self.assertTrue(any("Unable to initialize forced lexical" in item for item in result["failures"]))
+        self.assertTrue(
+            any("forced-lexical production comparison could not be initialized" in item for item in result["limitations"])
         )
 
     def test_lexical_or_unknown_engine_mode_is_named_without_semantic_claim(self) -> None:

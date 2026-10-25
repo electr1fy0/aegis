@@ -122,6 +122,19 @@ def _create_engine(engine: Any | None) -> tuple[Any | None, str | None]:
         return None, f"Unable to initialize AnalysisEngine: {type(exc).__name__}: {exc}"
 
 
+def _create_forced_lexical_engine() -> tuple[Any | None, str | None]:
+    """Create the production engine with MiniLM explicitly disabled."""
+    try:
+        from .engine import AnalysisEngine
+
+        return AnalysisEngine(model_loader=lambda: None), None
+    except Exception as exc:
+        return None, (
+            "Unable to initialize forced lexical AnalysisEngine: "
+            f"{type(exc).__name__}: {exc}"
+        )
+
+
 def _as_review_reasons(value: Any) -> list[str]:
     if not isinstance(value, (list, tuple)):
         return []
@@ -323,6 +336,15 @@ def _all_embeddings_available(reports: Sequence[Mapping[str, Any]]) -> bool:
     if not vectors or any(vector is None for vector in vectors):
         return False
     return len({len(vector) for vector in vectors if vector is not None}) == 1
+
+
+def _all_embeddings_match_revision(
+    reports: Sequence[Mapping[str, Any]], revision: str | None
+) -> bool:
+    """Require usable vectors and exact, consistent model provenance for every report."""
+    if not isinstance(revision, str) or not revision or not _all_embeddings_available(reports):
+        return False
+    return all(report.get("model_revision") == revision for report in reports)
 
 
 def _run_engine(
@@ -625,10 +647,11 @@ def _review_workload(
 def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
     """Run the held-out test split and return the API's Evaluation shape.
 
-    A semantic cosine baseline is included only when the active engine truthfully
-    reports semantic mode and supplies usable embeddings. The engine result name
-    reflects its reported mode, including lexical fallback. Without an engine,
-    only the explicit lexical baseline is scored and latency is unavailable.
+    When the active engine uses one semantic revision for every report, its
+    production path is compared with the same production path forced to lexical
+    hashing. Diagnostic Jaccard/cosine comparators remain separate and do not
+    reproduce the production engine's full decision policy. Without an engine,
+    only the explicit lexical diagnostic is scored and latency is unavailable.
     """
     generated_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     failures: list[str] = []
@@ -639,6 +662,11 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
         "grouping on this process and hardware.",
         "The lexical baseline uses token-set Jaccard similarity with simple zone/time gates; "
         "it is not TF-IDF.",
+        "The Jaccard and fixed-threshold cosine rows are diagnostic comparators, not production "
+        "engine paths or calibrated probabilities. They use simple anchor-based zone/time "
+        "eligibility and do not reproduce all production context, ambiguity, and review rules.",
+        "The diagnostic cosine threshold is fixed at 0.78 and was not calibrated or selected "
+        "using this test split. Its context eligibility matches the Jaccard diagnostic.",
     ]
     try:
         dataset_version, raw_reports, labels = _load_split()
@@ -676,6 +704,7 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
             failures.append(f"Engine health failed: {type(exc).__name__}: {exc}")
             active_engine = None
     mode = _engine_mode(health) if active_engine is not None else "unavailable"
+    health_mode = mode
     model = _model_name(health, mode)
     config_version = (
         getattr(active_engine, "config_version", None) if active_engine is not None else None
@@ -708,6 +737,23 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
         for index, report in enumerate(raw_reports, start=1):
             predictions[report["id"]] = f"unavailable-{index:03d}"
     model, mode = _observed_model(health, mode, prepared)
+    semantic_reference_revision = (
+        health.get("model_revision")
+        if isinstance(health.get("model_revision"), str)
+        else model if mode == "semantic" else None
+    )
+    matching_semantic_embeddings = sum(
+        report.get("model_revision") == semantic_reference_revision
+        and _as_vector(report.get("embedding")) is not None
+        for report in prepared
+    )
+    if health_mode == "semantic" and matching_semantic_embeddings < len(prepared):
+        limitations.append(
+            "The health report identified semantic mode, but only "
+            f"{matching_semantic_embeddings} of {len(prepared)} reports had a valid embedding "
+            "from the reported semantic revision; remaining reports used fallback, failed, or "
+            "had unknown provenance. Mixed or incomplete semantic comparisons are omitted."
+        )
 
     report_ids = [report["id"] for report in raw_reports]
     lexical_predictions, lexical_reviews = _run_comparator(
@@ -725,29 +771,70 @@ def run_evaluation(engine: Any | None = None) -> dict[str, Any]:
         engine_method, method_limitations = _format_engine_method(mode, health.get("model_ready"))
         limitations.extend(method_limitations)
         results.append(_metric_row(engine_method, report_ids, truth, predictions, review_ids))
-        if "semantic" in mode and health.get("model_ready") is not False:
-            if _all_embeddings_available(prepared):
-                semantic_predictions, semantic_reviews = _run_comparator(
-                    prepared,
-                    _cosine,
-                    _SEMANTIC_THRESHOLD,
-                    require_context=False,
-                )
-                results.insert(
-                    1,
-                    _metric_row(
-                        "Semantic cosine baseline",
-                        report_ids,
-                        truth,
-                        semantic_predictions,
-                        semantic_reviews,
-                    ),
+        reported_revision = semantic_reference_revision if mode == "semantic" else None
+        if (
+            mode == "semantic"
+            and health.get("model_ready") is not False
+            and _all_embeddings_match_revision(prepared, reported_revision)
+        ):
+            forced_lexical_engine, lexical_init_error = _create_forced_lexical_engine()
+            if forced_lexical_engine is None:
+                failures.append(lexical_init_error or "Unable to initialize forced lexical engine")
+                limitations.append(
+                    "The paired forced-lexical production comparison could not be initialized."
                 )
             else:
-                limitations.append(
-                    "Semantic embeddings were not available for every test report; a separate "
-                    "semantic baseline was not computed."
+                forced_lexical_failures: list[str] = []
+                lexical_predictions, lexical_reviews, _lexical_prepared, _lexical_latencies = (
+                    _run_engine(forced_lexical_engine, raw_reports, forced_lexical_failures)
                 )
+                failures.extend(
+                    f"Forced lexical comparison: {failure}"
+                    for failure in forced_lexical_failures
+                )
+                results.append(
+                    _metric_row(
+                        "Aegis contextual lexical (forced fallback)",
+                        report_ids,
+                        truth,
+                        lexical_predictions,
+                        lexical_reviews,
+                    )
+                )
+                limitations.append(
+                    "The forced-lexical row reruns the production grouping, context, ambiguity, "
+                    "and review rules with MiniLM disabled over the same ordered raw reports; "
+                    "its latency is not included in the active-engine latency summary."
+                )
+
+            semantic_predictions, semantic_reviews = _run_comparator(
+                prepared,
+                _cosine,
+                _SEMANTIC_THRESHOLD,
+                require_context=True,
+            )
+            results.insert(
+                1,
+                _metric_row(
+                    "Semantic cosine baseline",
+                    report_ids,
+                    truth,
+                    semantic_predictions,
+                    semantic_reviews,
+                )
+            )
+        elif mode == "semantic" and health.get("model_ready") is not False:
+            matching_count = sum(
+                report.get("model_revision") == reported_revision
+                and _as_vector(report.get("embedding")) is not None
+                for report in prepared
+            )
+            limitations.append(
+                "Matching semantic embeddings for the reported model revision were available "
+                f"for {matching_count} of {len(prepared)} reports; paired forced-lexical and "
+                "semantic diagnostic rows were omitted to avoid comparing mixed or unknown "
+                "model provenance."
+            )
     else:
         limitations.append(
             "Aegis analysis was unavailable; only the explicit lexical baseline was scored."
